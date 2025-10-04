@@ -1,1 +1,4 @@
 project_id = "fkikaozubngmzcrnhkqe"
+
+[functions.realtime-token]
+verify_jwt = false
