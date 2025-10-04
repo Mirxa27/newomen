@@ -1,4 +1,7 @@
 project_id = "fkikaozubngmzcrnhkqe"
 
 [functions.realtime-token]
-verify_jwt = false
+verify_jwt = true
+
+[functions.ai-content-builder]
+verify_jwt = true

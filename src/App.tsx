@@ -10,6 +10,10 @@ import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Chat from "./pages/Chat";
+import PublicAssessments from "./pages/PublicAssessments";
+import MemberAssessments from "./pages/MemberAssessments";
+import CouplesChallenge from "./pages/CouplesChallenge";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +27,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/assessments" element={<PublicAssessments />} />
           <Route path="/onboarding" element={
             <ProtectedRoute>
               <Onboarding />
@@ -36,6 +41,21 @@ const App = () => (
           <Route path="/chat" element={
             <ProtectedRoute>
               <Chat />
+            </ProtectedRoute>
+          } />
+          <Route path="/member-assessments" element={
+            <ProtectedRoute>
+              <MemberAssessments />
+            </ProtectedRoute>
+          } />
+          <Route path="/couples-challenge/:challengeId?" element={
+            <ProtectedRoute>
+              <CouplesChallenge />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin" element={
+            <ProtectedRoute>
+              <Admin />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
