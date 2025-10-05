@@ -11,22 +11,39 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ArrowLeft, CreditCard, Shield, Bell, User } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import PayPalButton from "@/components/PayPalButton";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+interface UserProfile {
+  id: string;
+  user_id: string;
+  email: string;
+  nickname?: string;
+  avatar_url?: string;
+  subscription_tier?: string;
+  remaining_minutes?: number;
+}
+
+interface Subscription {
+  id: string;
+  user_id: string;
+  status: string;
+  renewal_date?: string;
+}
 
 export default function AccountSettings() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<any>(null);
-  const [subscription, setSubscription] = useState<any>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [showPayPalDialog, setShowPayPalDialog] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<{ name: string; price: string; minutes: number } | null>(null);
   const [notifications, setNotifications] = useState({
     email: true,
     achievements: true,
     weeklyReport: true,
     marketingEmails: false
   });
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const loadData = async () => {
     try {
@@ -58,6 +75,10 @@ export default function AccountSettings() {
     }
   };
 
+  useEffect(() => {
+    loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const handlePasswordReset = async () => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(profile.email);
@@ -73,6 +94,8 @@ export default function AccountSettings() {
     if (!confirm("Are you sure you want to cancel your subscription?")) return;
 
     try {
+      if (!subscription?.id) return;
+      
       const { error } = await supabase
         .from("subscriptions")
         .update({ status: "cancelled" })
@@ -84,6 +107,90 @@ export default function AccountSettings() {
     } catch (error) {
       console.error("Error:", error);
       toast.error("Failed to cancel subscription");
+    }
+  };
+
+  const handleUpgradePlan = (planName: string, price: string, minutes: number) => {
+    setSelectedPlan({ name: planName, price, minutes });
+    setShowPayPalDialog(true);
+  };
+
+  const handlePaymentSuccess = async (orderId: string) => {
+    try {
+      if (!profile?.id || !selectedPlan) return;
+
+      // Create or update subscription
+      const { error: subError } = await supabase
+        .from("subscriptions")
+        .upsert({
+          user_id: profile.id,
+          status: "active",
+          plan_name: selectedPlan.name,
+          amount: parseFloat(selectedPlan.price),
+          payment_id: orderId,
+          renewal_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+        });
+
+      if (subError) throw subError;
+
+      // Update profile tier and add minutes
+      const newTier = selectedPlan.name.toLowerCase();
+      const { error: profileError } = await supabase
+        .from("user_profiles")
+        .update({
+          subscription_tier: newTier,
+          remaining_minutes: (profile.remaining_minutes || 0) + selectedPlan.minutes,
+        })
+        .eq("id", profile.id);
+
+      if (profileError) throw profileError;
+
+      toast.success(`Successfully upgraded to ${selectedPlan.name} plan!`);
+      setShowPayPalDialog(false);
+      setSelectedPlan(null);
+      loadData();
+    } catch (error) {
+      console.error("Error updating subscription:", error);
+      toast.error("Failed to update subscription. Please contact support.");
+    }
+  };
+
+  const handleExportData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Fetch all user data
+      const [profileData, conversationsData, assessmentsData, achievementsData] = await Promise.all([
+        supabase.from("user_profiles").select("*").eq("user_id", user.id).single(),
+        supabase.from("conversations").select("*").eq("user_id", user.id),
+        supabase.from("assessment_results").select("*").eq("user_id", user.id),
+        supabase.from("user_achievements").select("*").eq("user_id", user.id),
+      ]);
+
+      const exportData = {
+        profile: profileData.data,
+        conversations: conversationsData.data,
+        assessments: assessmentsData.data,
+        achievements: achievementsData.data,
+        exportDate: new Date().toISOString(),
+      };
+
+      // Create and download JSON file
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `newomen-data-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success("Data exported successfully!");
+    } catch (error) {
+      console.error("Error exporting data:", error);
+      toast.error("Failed to export data");
     }
   };
 
@@ -206,7 +313,10 @@ export default function AccountSettings() {
                         <h4 className="font-semibold">Growth Plan</h4>
                         <p className="text-2xl font-bold gradient-text">$22</p>
                         <p className="text-sm text-muted-foreground">100 minutes</p>
-                        <Button className="w-full" onClick={() => toast.info("PayPal integration coming soon")}>
+                        <Button 
+                          className="w-full" 
+                          onClick={() => handleUpgradePlan("Growth", "22", 100)}
+                        >
                           Upgrade to Growth
                         </Button>
                       </div>
@@ -214,7 +324,10 @@ export default function AccountSettings() {
                         <h4 className="font-semibold">Transformation Plan</h4>
                         <p className="text-2xl font-bold gradient-text">$222</p>
                         <p className="text-sm text-muted-foreground">1000 minutes</p>
-                        <Button className="w-full" onClick={() => toast.info("PayPal integration coming soon")}>
+                        <Button 
+                          className="w-full" 
+                          onClick={() => handleUpgradePlan("Transformation", "222", 1000)}
+                        >
                           Upgrade to Transformation
                         </Button>
                       </div>
@@ -286,7 +399,7 @@ export default function AccountSettings() {
                 </div>
 
                 <div className="pt-4">
-                  <Button variant="outline" onClick={() => toast.info("Data export feature coming soon")}>
+                  <Button variant="outline" onClick={handleExportData}>
                     Download My Data
                   </Button>
                 </div>
@@ -358,6 +471,28 @@ export default function AccountSettings() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* PayPal Dialog */}
+        <Dialog open={showPayPalDialog} onOpenChange={setShowPayPalDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Upgrade to {selectedPlan?.name} Plan</DialogTitle>
+              <DialogDescription>
+                Complete your payment to unlock {selectedPlan?.minutes} minutes of conversation time
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              {selectedPlan && (
+                <PayPalButton
+                  amount={selectedPlan.price}
+                  planName={selectedPlan.name}
+                  onSuccess={handlePaymentSuccess}
+                  onError={() => setShowPayPalDialog(false)}
+                />
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

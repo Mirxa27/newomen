@@ -10,21 +10,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ArrowLeft, Search, UserPlus, Check, X, Users } from "lucide-react";
 
+interface UserProfile {
+  id: string;
+  user_id: string;
+  nickname?: string;
+  avatar_url?: string;
+}
+
 interface Connection {
   id: string;
   requester_id: string;
   receiver_id: string;
   status: string;
   created_at: string;
-  requester?: any;
-  receiver?: any;
+  requester?: UserProfile;
+  receiver?: UserProfile;
 }
 
 export default function Community() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [pendingRequests, setPendingRequests] = useState<Connection[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string>("");
