@@ -62,12 +62,14 @@ export default function PayPalButton({ amount, planName, onSuccess, onError }: P
 
   useEffect(() => {
     if (scriptLoaded && window.paypal && paypalRef.current) {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      
       window.paypal
         .Buttons({
           createOrder: async () => {
             try {
-              // In production, this should call your backend to create a PayPal order
-              const response = await fetch("/api/paypal/create-order", {
+              // Call Supabase edge function to create PayPal order
+              const response = await fetch(`${supabaseUrl}/functions/v1/paypal-create-order`, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
@@ -92,8 +94,8 @@ export default function PayPalButton({ amount, planName, onSuccess, onError }: P
           },
           onApprove: async (data) => {
             try {
-              // In production, this should call your backend to capture the payment
-              const response = await fetch("/api/paypal/capture-order", {
+              // Call Supabase edge function to capture the payment
+              const response = await fetch(`${supabaseUrl}/functions/v1/paypal-capture-order`, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
