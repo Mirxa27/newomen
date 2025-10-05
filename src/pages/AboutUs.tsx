@@ -17,7 +17,7 @@ export default function AboutUs() {
         </div>
 
         <div className="text-center space-y-4">
-          <h1 className="text-5xl font-bold gradient-text">About NewWomen</h1>
+          <h1 className="text-5xl font-bold gradient-text">About Newomen</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Empowering women on their journey of self-discovery and personal transformation
             through AI-powered guidance
@@ -30,7 +30,7 @@ export default function AboutUs() {
           </CardHeader>
           <CardContent className="space-y-4 text-lg">
             <p>
-              NewWomen was created with a singular vision: to make personal growth accessible,
+              Newomen was created with a singular vision: to make personal growth accessible,
               personalized, and transformative for women everywhere. We believe that every woman
               deserves a safe, supportive space to explore her identity, overcome challenges,
               and unlock her full potential.
@@ -115,7 +115,7 @@ export default function AboutUs() {
           </CardHeader>
           <CardContent className="space-y-4 text-lg">
             <p>
-              NewWomen was founded by Katrina, a passionate advocate for women's personal
+              Newomen was founded by Katrina, a passionate advocate for women's personal
               development and mental wellness. Having experienced her own transformative
               journey, she recognized the need for accessible, personalized guidance that
               respects cultural nuances and individual experiences.
@@ -126,7 +126,7 @@ export default function AboutUs() {
               and user experience to create a truly transformative platform.
             </p>
             <p>
-              Today, NewWomen helps thousands of women discover their authentic selves, build
+              Today, Newomen helps thousands of women discover their authentic selves, build
               confidence, and create the lives they truly desire.
             </p>
           </CardContent>

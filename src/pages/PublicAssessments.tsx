@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Clock, CheckCircle } from "lucide-react";
 import { publicAssessments } from "@/data/publicAssessments";
-import Header from "@/components/layout/Header";
 
 interface Assessment {
   id: string;
@@ -105,9 +104,7 @@ export default function PublicAssessments() {
 
   if (!selectedAssessment) {
     return (
-      <>
-        <Header />
-        <div className="min-h-screen bg-background py-12 px-4">
+      <div className="min-h-screen bg-background py-12 px-4">
           <div className="max-w-6xl mx-auto">
             <div className="mb-8 animate-fade-in">
               <h1 className="text-4xl md:text-5xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -179,66 +176,62 @@ export default function PublicAssessments() {
             </Card>
           </div>
         </div>
-      </>
     );
   }
 
   if (showResults) {
     const score = Math.round((Object.keys(answers).length / selectedAssessment.questions.length) * 100);
     return (
-      <>
-        <Header />
-        <div className="min-h-screen bg-background py-12 px-4">
-          <div className="max-w-2xl mx-auto">
-            <Card className="border-2 animate-fade-in">
-              <CardHeader className="text-center">
-                <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                  <CheckCircle className="w-8 h-8 text-primary" />
+      <div className="min-h-screen bg-background py-12 px-4">
+        <div className="max-w-2xl mx-auto">
+          <Card className="border-2 animate-fade-in">
+            <CardHeader className="text-center">
+              <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                <CheckCircle className="w-8 h-8 text-primary" />
+              </div>
+              <CardTitle className="text-2xl">Assessment Complete!</CardTitle>
+              <CardDescription>{selectedAssessment.title}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="text-center p-6 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg">
+                <div className="text-6xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
+                  {score}%
                 </div>
-                <CardTitle className="text-2xl">Assessment Complete!</CardTitle>
-                <CardDescription>{selectedAssessment.title}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="text-center p-6 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg">
-                  <div className="text-6xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
-                    {score}%
-                  </div>
-                  <p className="text-muted-foreground">Completion Score</p>
-                </div>
-                
-                <div className="bg-muted p-6 rounded-lg space-y-4">
-                  <h3 className="font-semibold text-center">Unlock Your Full Potential</h3>
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex items-center">
-                      <CheckCircle className="w-4 h-4 text-primary mr-2" />
-                      Get detailed analysis and personalized insights
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="w-4 h-4 text-primary mr-2" />
-                      Track your progress over time
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="w-4 h-4 text-primary mr-2" />
-                      Access 20+ advanced assessments
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="w-4 h-4 text-primary mr-2" />
-                      AI-powered coaching and recommendations
-                    </li>
-                  </ul>
-                  <Button onClick={() => navigate("/auth")} className="w-full" size="lg">
-                    Create Free Account
-                  </Button>
-                </div>
-
-                <Button onClick={resetAssessment} variant="outline" className="w-full">
-                  Take Another Assessment
+                <p className="text-muted-foreground">Completion Score</p>
+              </div>
+              
+              <div className="bg-muted p-6 rounded-lg space-y-4">
+                <h3 className="font-semibold text-center">Unlock Your Full Potential</h3>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-primary mr-2" />
+                    Get detailed analysis and personalized insights
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-primary mr-2" />
+                    Track your progress over time
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-primary mr-2" />
+                    Access 20+ advanced assessments
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-primary mr-2" />
+                    AI-powered coaching and recommendations
+                  </li>
+                </ul>
+                <Button onClick={() => navigate("/auth")} className="w-full" size="lg">
+                  Create Free Account
                 </Button>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+
+              <Button onClick={resetAssessment} variant="outline" className="w-full">
+                Take Another Assessment
+              </Button>
+            </CardContent>
+          </Card>
         </div>
-      </>
+      </div>
     );
   }
 
@@ -246,51 +239,48 @@ export default function PublicAssessments() {
   const progress = ((currentQuestion + 1) / selectedAssessment.questions.length) * 100;
 
   return (
-    <>
-      <Header />
-      <div className="min-h-screen bg-background py-12 px-4">
-        <div className="max-w-2xl mx-auto">
-          <Card className="animate-fade-in">
-            <CardHeader>
-              <div className="flex items-center justify-between mb-4">
-                <Button variant="ghost" size="sm" onClick={resetAssessment}>
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Assessments
-                </Button>
-                <span className="text-sm text-muted-foreground font-medium">
-                  Question {currentQuestion + 1} of {selectedAssessment.questions.length}
-                </span>
-              </div>
-              <Progress value={progress} className="mb-4 h-2" />
-              <CardTitle className="text-xl">{selectedAssessment.title}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold mb-6">{question.text}</h3>
-                <RadioGroup value={answers[currentQuestion] || ""} onValueChange={handleAnswerChange}>
-                  {question.options.map((option: string, idx: number) => (
-                    <div key={idx} className="flex items-center space-x-3 p-4 rounded-lg border hover:border-primary hover:bg-primary/5 transition-all cursor-pointer">
-                      <RadioGroupItem value={option} id={`option-${idx}`} />
-                      <Label htmlFor={`option-${idx}`} className="flex-1 cursor-pointer font-medium">{option}</Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-              </div>
+    <div className="min-h-screen bg-background py-12 px-4">
+      <div className="max-w-2xl mx-auto">
+        <Card className="animate-fade-in">
+          <CardHeader>
+            <div className="flex items-center justify-between mb-4">
+              <Button variant="ghost" size="sm" onClick={resetAssessment}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Assessments
+              </Button>
+              <span className="text-sm text-muted-foreground font-medium">
+                Question {currentQuestion + 1} of {selectedAssessment.questions.length}
+              </span>
+            </div>
+            <Progress value={progress} className="mb-4 h-2" />
+            <CardTitle className="text-xl">{selectedAssessment.title}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-6">{question.text}</h3>
+              <RadioGroup value={answers[currentQuestion] || ""} onValueChange={handleAnswerChange}>
+                {question.options.map((option: string, idx: number) => (
+                  <div key={idx} className="flex items-center space-x-3 p-4 rounded-lg border hover:border-primary hover:bg-primary/5 transition-all cursor-pointer">
+                    <RadioGroupItem value={option} id={`option-${idx}`} />
+                    <Label htmlFor={`option-${idx}`} className="flex-1 cursor-pointer font-medium">{option}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
 
-              <div className="flex justify-between pt-4 border-t">
-                <Button variant="outline" onClick={handlePrevious} disabled={currentQuestion === 0}>
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Previous
-                </Button>
-                <Button onClick={handleNext} size="lg">
-                  {currentQuestion === selectedAssessment.questions.length - 1 ? "Finish" : "Next"}
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            <div className="flex justify-between pt-4 border-t">
+              <Button variant="outline" onClick={handlePrevious} disabled={currentQuestion === 0}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Previous
+              </Button>
+              <Button onClick={handleNext} size="lg">
+                {currentQuestion === selectedAssessment.questions.length - 1 ? "Finish" : "Next"}
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </>
+    </div>
   );
 }

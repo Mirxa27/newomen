@@ -15,7 +15,7 @@ const Landing = () => {
           
           <h1 className="text-6xl md:text-8xl font-bold leading-tight">
             Transform Your Life with{" "}
-            <span className="gradient-text">NewWomen</span>
+            <span className="gradient-text">Newomen</span>
           </h1>
           
           <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto">
@@ -49,7 +49,7 @@ const Landing = () => {
       <section className="py-24 px-4">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-5xl font-bold text-center mb-16">
-            Why Choose <span className="gradient-text">NewWomen</span>
+            Why Choose <span className="gradient-text">Newomen</span>
           </h2>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -139,7 +139,7 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
-              <h3 className="font-bold text-lg mb-4 gradient-text">NewWomen</h3>
+              <h3 className="font-bold text-lg mb-4 gradient-text">Newomen</h3>
               <p className="text-sm text-muted-foreground">
                 AI-powered personal growth platform for women
               </p>
@@ -168,7 +168,7 @@ const Landing = () => {
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-white/10 text-center text-sm text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} NewWomen. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Newomen. All rights reserved.</p>
           </div>
         </div>
       </footer>

@@ -1,7 +1,8 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "newomen",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Newomen - AI-Powered Personal Growth Platform",
   "type": "module",
   "scripts": {
     "dev": "vite",

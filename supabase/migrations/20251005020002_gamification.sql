@@ -1,27 +1,65 @@
--- Create achievements table
-CREATE TABLE IF NOT EXISTS public.achievements (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  title TEXT NOT NULL,
-  description TEXT,
-  badge_url TEXT,
-  category TEXT,
-  unlock_criteria JSONB NOT NULL,
-  crystal_reward INTEGER DEFAULT 0,
-  is_hidden BOOLEAN DEFAULT false,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+-- Alter achievements table to add new columns
+DO $$ 
+BEGIN
+  -- Add category column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'achievements' 
+    AND column_name = 'category'
+  ) THEN
+    ALTER TABLE public.achievements ADD COLUMN category TEXT;
+  END IF;
+  
+  -- Add is_hidden column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'achievements' 
+    AND column_name = 'is_hidden'
+  ) THEN
+    ALTER TABLE public.achievements ADD COLUMN is_hidden BOOLEAN DEFAULT false;
+  END IF;
+  
+  -- Add is_active column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'achievements' 
+    AND column_name = 'is_active'
+  ) THEN
+    ALTER TABLE public.achievements ADD COLUMN is_active BOOLEAN DEFAULT true;
+  END IF;
+  
+  -- Add updated_at column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'achievements' 
+    AND column_name = 'updated_at'
+  ) THEN
+    ALTER TABLE public.achievements ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+  END IF;
+  
+  -- Ensure unlock_criteria is NOT NULL (may have existing NULL values)
+  -- Update existing NULLs to empty object
+  UPDATE public.achievements SET unlock_criteria = '{}'::jsonb WHERE unlock_criteria IS NULL;
+  ALTER TABLE public.achievements ALTER COLUMN unlock_criteria SET NOT NULL;
+END $$;
 
--- Create user_achievements table
-CREATE TABLE IF NOT EXISTS public.user_achievements (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  achievement_id UUID REFERENCES public.achievements(id) ON DELETE CASCADE,
-  earned_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  progress_data JSONB,
-  UNIQUE(user_id, achievement_id)
-);
+-- Alter user_achievements table to add new columns
+DO $$ 
+BEGIN
+  -- Add progress_data column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'user_achievements' 
+    AND column_name = 'progress_data'
+  ) THEN
+    ALTER TABLE public.user_achievements ADD COLUMN progress_data JSONB;
+  END IF;
+END $$;
 
 -- Create crystal_transactions table
 CREATE TABLE IF NOT EXISTS public.crystal_transactions (
@@ -55,44 +93,52 @@ ALTER TABLE public.crystal_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.level_thresholds ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for achievements
+DROP POLICY IF EXISTS "Anyone can view active achievements" ON public.achievements;
 CREATE POLICY "Anyone can view active achievements"
   ON public.achievements
   FOR SELECT
   USING (is_active = true);
 
+DROP POLICY IF EXISTS "Admins can manage achievements" ON public.achievements;
 CREATE POLICY "Admins can manage achievements"
   ON public.achievements
   FOR ALL
   USING (auth.email() = 'admin@newomen.me');
 
 -- RLS Policies for user_achievements
+DROP POLICY IF EXISTS "Users can view their own achievements" ON public.user_achievements;
 CREATE POLICY "Users can view their own achievements"
   ON public.user_achievements
   FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Admins can view all user achievements" ON public.user_achievements;
 CREATE POLICY "Admins can view all user achievements"
   ON public.user_achievements
   FOR ALL
   USING (auth.email() = 'admin@newomen.me');
 
 -- RLS Policies for crystal_transactions
+DROP POLICY IF EXISTS "Users can view their own transactions" ON public.crystal_transactions;
 CREATE POLICY "Users can view their own transactions"
   ON public.crystal_transactions
   FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Admins can view all transactions" ON public.crystal_transactions;
 CREATE POLICY "Admins can view all transactions"
   ON public.crystal_transactions
   FOR ALL
   USING (auth.email() = 'admin@newomen.me');
 
 -- RLS Policies for level_thresholds
+DROP POLICY IF EXISTS "Anyone can view level thresholds" ON public.level_thresholds;
 CREATE POLICY "Anyone can view level thresholds"
   ON public.level_thresholds
   FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Admins can manage level thresholds" ON public.level_thresholds;
 CREATE POLICY "Admins can manage level thresholds"
   ON public.level_thresholds
   FOR ALL
@@ -108,11 +154,13 @@ CREATE INDEX IF NOT EXISTS idx_crystal_transactions_type ON public.crystal_trans
 CREATE INDEX IF NOT EXISTS idx_level_thresholds_level ON public.level_thresholds(level);
 
 -- Add update timestamp triggers
+DROP TRIGGER IF EXISTS update_achievements_updated_at ON public.achievements;
 CREATE TRIGGER update_achievements_updated_at
   BEFORE UPDATE ON public.achievements
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_level_thresholds_updated_at ON public.level_thresholds;
 CREATE TRIGGER update_level_thresholds_updated_at
   BEFORE UPDATE ON public.level_thresholds
   FOR EACH ROW

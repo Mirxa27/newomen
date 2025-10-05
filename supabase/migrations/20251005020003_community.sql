@@ -1,31 +1,88 @@
--- Create community_connections table
-CREATE TABLE IF NOT EXISTS public.community_connections (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  requester_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  receiver_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined', 'blocked')),
-  message TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE(requester_id, receiver_id),
-  CHECK (requester_id != receiver_id)
-);
+-- Alter community_connections table to add new columns
+DO $$ 
+BEGIN
+  -- Add message column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'community_connections' 
+    AND column_name = 'message'
+  ) THEN
+    ALTER TABLE public.community_connections ADD COLUMN message TEXT;
+  END IF;
+  
+  -- Add updated_at column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'community_connections' 
+    AND column_name = 'updated_at'
+  ) THEN
+    ALTER TABLE public.community_connections ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+  END IF;
+  
+  -- Update status check constraint to include blocked
+  -- Note: We can't easily alter CHECK constraints, so we'll just ensure the column accepts the new values
+  -- The CHECK constraint will be enforced by the new migration's CREATE TABLE IF NOT EXISTS
+END $$;
 
--- Create couples_challenges table
-CREATE TABLE IF NOT EXISTS public.couples_challenges (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  initiator_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  partner_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'completed', 'expired')),
-  unique_link TEXT UNIQUE,
-  question_set JSONB NOT NULL,
-  responses JSONB,
-  ai_analysis TEXT,
-  compatibility_score INTEGER,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  expires_at TIMESTAMPTZ
-);
+-- Alter couples_challenges table to add new columns
+DO $$ 
+BEGIN
+  -- Add unique_link column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'couples_challenges' 
+    AND column_name = 'unique_link'
+  ) THEN
+    ALTER TABLE public.couples_challenges ADD COLUMN unique_link TEXT UNIQUE;
+  END IF;
+  
+  -- Add responses column if it doesn't exist (different from old initiator_responses/partner_responses)
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'couples_challenges' 
+    AND column_name = 'responses'
+  ) THEN
+    ALTER TABLE public.couples_challenges ADD COLUMN responses JSONB;
+  END IF;
+  
+  -- Add compatibility_score column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'couples_challenges' 
+    AND column_name = 'compatibility_score'
+  ) THEN
+    ALTER TABLE public.couples_challenges ADD COLUMN compatibility_score INTEGER;
+  END IF;
+  
+  -- Add updated_at column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'couples_challenges' 
+    AND column_name = 'updated_at'
+  ) THEN
+    ALTER TABLE public.couples_challenges ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+  END IF;
+  
+  -- Add expires_at column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'couples_challenges' 
+    AND column_name = 'expires_at'
+  ) THEN
+    ALTER TABLE public.couples_challenges ADD COLUMN expires_at TIMESTAMPTZ;
+  END IF;
+  
+  -- Ensure question_set is NOT NULL
+  UPDATE public.couples_challenges SET question_set = '{}'::jsonb WHERE question_set IS NULL;
+  ALTER TABLE public.couples_challenges ALTER COLUMN question_set SET NOT NULL;
+END $$;
 
 -- Create couples_challenge_responses table
 CREATE TABLE IF NOT EXISTS public.couples_challenge_responses (
@@ -38,23 +95,107 @@ CREATE TABLE IF NOT EXISTS public.couples_challenge_responses (
   UNIQUE(challenge_id, user_id, question_index)
 );
 
--- Create subscriptions table
-CREATE TABLE IF NOT EXISTS public.subscriptions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  provider TEXT DEFAULT 'paypal',
-  provider_id TEXT,
-  tier TEXT NOT NULL CHECK (tier IN ('discovery', 'growth', 'transformation')),
-  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'cancelled', 'expired', 'pending')),
-  minutes_included INTEGER NOT NULL,
-  minutes_used INTEGER DEFAULT 0,
-  price DECIMAL(10,2),
-  currency TEXT DEFAULT 'USD',
-  renewal_date TIMESTAMPTZ,
-  cancelled_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+-- Alter subscriptions table to add new columns
+DO $$ 
+BEGIN
+  -- Rename provider_subscription_id to provider_id if needed
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'subscriptions' 
+    AND column_name = 'provider_subscription_id'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'subscriptions' 
+    AND column_name = 'provider_id'
+  ) THEN
+    ALTER TABLE public.subscriptions RENAME COLUMN provider_subscription_id TO provider_id;
+  END IF;
+  
+  -- Add tier column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'subscriptions' 
+    AND column_name = 'tier'
+  ) THEN
+    ALTER TABLE public.subscriptions 
+    ADD COLUMN tier TEXT NOT NULL DEFAULT 'discovery' 
+    CHECK (tier IN ('discovery', 'growth', 'transformation'));
+  END IF;
+  
+  -- Add minutes_included column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'subscriptions' 
+    AND column_name = 'minutes_included'
+  ) THEN
+    ALTER TABLE public.subscriptions ADD COLUMN minutes_included INTEGER NOT NULL DEFAULT 0;
+  END IF;
+  
+  -- Add minutes_used column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'subscriptions' 
+    AND column_name = 'minutes_used'
+  ) THEN
+    ALTER TABLE public.subscriptions ADD COLUMN minutes_used INTEGER DEFAULT 0;
+  END IF;
+  
+  -- Add price column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'subscriptions' 
+    AND column_name = 'price'
+  ) THEN
+    ALTER TABLE public.subscriptions ADD COLUMN price DECIMAL(10,2);
+  END IF;
+  
+  -- Add currency column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'subscriptions' 
+    AND column_name = 'currency'
+  ) THEN
+    ALTER TABLE public.subscriptions ADD COLUMN currency TEXT DEFAULT 'USD';
+  END IF;
+  
+  -- Add cancelled_at column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'subscriptions' 
+    AND column_name = 'cancelled_at'
+  ) THEN
+    ALTER TABLE public.subscriptions ADD COLUMN cancelled_at TIMESTAMPTZ;
+  END IF;
+  
+  -- Add updated_at column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'subscriptions' 
+    AND column_name = 'updated_at'
+  ) THEN
+    ALTER TABLE public.subscriptions ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+  END IF;
+  
+  -- Change renewal_date from DATE to TIMESTAMPTZ
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'subscriptions' 
+    AND column_name = 'renewal_date'
+    AND data_type = 'date'
+  ) THEN
+    ALTER TABLE public.subscriptions ALTER COLUMN renewal_date TYPE TIMESTAMPTZ;
+  END IF;
+END $$;
 
 -- Create subscription_transactions table
 CREATE TABLE IF NOT EXISTS public.subscription_transactions (
@@ -68,26 +209,126 @@ CREATE TABLE IF NOT EXISTS public.subscription_transactions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Create wellness_resources table
-CREATE TABLE IF NOT EXISTS public.wellness_resources (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  title TEXT NOT NULL,
-  description TEXT,
-  category TEXT NOT NULL,
-  duration INTEGER, -- in seconds
-  audio_url TEXT,
-  transcript TEXT,
-  is_downloadable BOOLEAN DEFAULT false,
-  download_url TEXT,
-  is_premium BOOLEAN DEFAULT false,
-  required_tier TEXT DEFAULT 'discovery',
-  tags TEXT[],
-  usage_count INTEGER DEFAULT 0,
-  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'draft')),
-  created_by UUID REFERENCES auth.users(id),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+-- Community connections table already exists
+-- Couples challenges table already exists  
+-- Subscriptions table already exists
+-- Create wellness_resources and progress tables below
+
+-- Alter wellness_resources table to add new columns
+DO $$ 
+BEGIN
+  -- Add description column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'wellness_resources' 
+    AND column_name = 'description'
+  ) THEN
+    ALTER TABLE public.wellness_resources ADD COLUMN description TEXT;
+  END IF;
+  
+  -- Add transcript column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'wellness_resources' 
+    AND column_name = 'transcript'
+  ) THEN
+    ALTER TABLE public.wellness_resources ADD COLUMN transcript TEXT;
+  END IF;
+  
+  -- Add is_downloadable column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'wellness_resources' 
+    AND column_name = 'is_downloadable'
+  ) THEN
+    ALTER TABLE public.wellness_resources ADD COLUMN is_downloadable BOOLEAN DEFAULT false;
+  END IF;
+  
+  -- Add download_url column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'wellness_resources' 
+    AND column_name = 'download_url'
+  ) THEN
+    ALTER TABLE public.wellness_resources ADD COLUMN download_url TEXT;
+  END IF;
+  
+  -- Add is_premium column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'wellness_resources' 
+    AND column_name = 'is_premium'
+  ) THEN
+    ALTER TABLE public.wellness_resources ADD COLUMN is_premium BOOLEAN DEFAULT false;
+  END IF;
+  
+  -- Add required_tier column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'wellness_resources' 
+    AND column_name = 'required_tier'
+  ) THEN
+    ALTER TABLE public.wellness_resources ADD COLUMN required_tier TEXT DEFAULT 'discovery';
+  END IF;
+  
+  -- Add tags column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'wellness_resources' 
+    AND column_name = 'tags'
+  ) THEN
+    ALTER TABLE public.wellness_resources ADD COLUMN tags TEXT[];
+  END IF;
+  
+  -- Add usage_count column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'wellness_resources' 
+    AND column_name = 'usage_count'
+  ) THEN
+    ALTER TABLE public.wellness_resources ADD COLUMN usage_count INTEGER DEFAULT 0;
+  END IF;
+  
+  -- Add status column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'wellness_resources' 
+    AND column_name = 'status'
+  ) THEN
+    ALTER TABLE public.wellness_resources 
+    ADD COLUMN status TEXT DEFAULT 'active' 
+    CHECK (status IN ('active', 'inactive', 'draft'));
+  END IF;
+  
+  -- Add created_by column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'wellness_resources' 
+    AND column_name = 'created_by'
+  ) THEN
+    ALTER TABLE public.wellness_resources ADD COLUMN created_by UUID REFERENCES auth.users(id);
+  END IF;
+  
+  -- Add updated_at column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'wellness_resources' 
+    AND column_name = 'updated_at'
+  ) THEN
+    ALTER TABLE public.wellness_resources ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+  END IF;
+END $$;
 
 -- Create user_resource_progress table
 CREATE TABLE IF NOT EXISTS public.user_resource_progress (
@@ -111,38 +352,45 @@ ALTER TABLE public.wellness_resources ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_resource_progress ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for community_connections
+DROP POLICY IF EXISTS "Users can view their own connections" ON public.community_connections;
 CREATE POLICY "Users can view their own connections"
   ON public.community_connections
   FOR SELECT
   USING (requester_id = auth.uid() OR receiver_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can manage their own connections" ON public.community_connections;
 CREATE POLICY "Users can manage their own connections"
   ON public.community_connections
   FOR ALL
   USING (requester_id = auth.uid() OR receiver_id = auth.uid());
 
+DROP POLICY IF EXISTS "Admins can manage all connections" ON public.community_connections;
 CREATE POLICY "Admins can manage all connections"
   ON public.community_connections
   FOR ALL
   USING (auth.email() = 'admin@newomen.me');
 
 -- RLS Policies for couples_challenges
+DROP POLICY IF EXISTS "Users can view their own challenges" ON public.couples_challenges;
 CREATE POLICY "Users can view their own challenges"
   ON public.couples_challenges
   FOR SELECT
   USING (initiator_id = auth.uid() OR partner_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can manage their own challenges" ON public.couples_challenges;
 CREATE POLICY "Users can manage their own challenges"
   ON public.couples_challenges
   FOR ALL
   USING (initiator_id = auth.uid() OR partner_id = auth.uid());
 
+DROP POLICY IF EXISTS "Admins can manage all challenges" ON public.couples_challenges;
 CREATE POLICY "Admins can manage all challenges"
   ON public.couples_challenges
   FOR ALL
   USING (auth.email() = 'admin@newomen.me');
 
 -- RLS Policies for couples_challenge_responses
+DROP POLICY IF EXISTS "Users can view challenge responses they're part of" ON public.couples_challenge_responses;
 CREATE POLICY "Users can view challenge responses they're part of"
   ON public.couples_challenge_responses
   FOR SELECT
@@ -154,28 +402,33 @@ CREATE POLICY "Users can view challenge responses they're part of"
     )
   );
 
+DROP POLICY IF EXISTS "Users can insert their own challenge responses" ON public.couples_challenge_responses;
 CREATE POLICY "Users can insert their own challenge responses"
   ON public.couples_challenge_responses
   FOR INSERT
   WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Admins can manage all challenge responses" ON public.couples_challenge_responses;
 CREATE POLICY "Admins can manage all challenge responses"
   ON public.couples_challenge_responses
   FOR ALL
   USING (auth.email() = 'admin@newomen.me');
 
 -- RLS Policies for subscriptions
+DROP POLICY IF EXISTS "Users can view their own subscriptions" ON public.subscriptions;
 CREATE POLICY "Users can view their own subscriptions"
   ON public.subscriptions
   FOR SELECT
   USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Admins can manage all subscriptions" ON public.subscriptions;
 CREATE POLICY "Admins can manage all subscriptions"
   ON public.subscriptions
   FOR ALL
   USING (auth.email() = 'admin@newomen.me');
 
 -- RLS Policies for subscription_transactions
+DROP POLICY IF EXISTS "Users can view their own subscription transactions" ON public.subscription_transactions;
 CREATE POLICY "Users can view their own subscription transactions"
   ON public.subscription_transactions
   FOR SELECT
@@ -187,17 +440,20 @@ CREATE POLICY "Users can view their own subscription transactions"
     )
   );
 
+DROP POLICY IF EXISTS "Admins can manage all subscription transactions" ON public.subscription_transactions;
 CREATE POLICY "Admins can manage all subscription transactions"
   ON public.subscription_transactions
   FOR ALL
   USING (auth.email() = 'admin@newomen.me');
 
 -- RLS Policies for wellness_resources
+DROP POLICY IF EXISTS "Anyone can view free resources" ON public.wellness_resources;
 CREATE POLICY "Anyone can view free resources"
   ON public.wellness_resources
   FOR SELECT
   USING (is_premium = false AND status = 'active');
 
+DROP POLICY IF EXISTS "Authenticated users can view resources they have access to" ON public.wellness_resources;
 CREATE POLICY "Authenticated users can view resources they have access to"
   ON public.wellness_resources
   FOR SELECT
@@ -214,17 +470,20 @@ CREATE POLICY "Authenticated users can view resources they have access to"
     )
   );
 
+DROP POLICY IF EXISTS "Admins can manage all resources" ON public.wellness_resources;
 CREATE POLICY "Admins can manage all resources"
   ON public.wellness_resources
   FOR ALL
   USING (auth.email() = 'admin@newomen.me');
 
 -- RLS Policies for user_resource_progress
+DROP POLICY IF EXISTS "Users can manage their own resource progress" ON public.user_resource_progress;
 CREATE POLICY "Users can manage their own resource progress"
   ON public.user_resource_progress
   FOR ALL
   USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Admins can view all resource progress" ON public.user_resource_progress;
 CREATE POLICY "Admins can view all resource progress"
   ON public.user_resource_progress
   FOR SELECT
@@ -246,26 +505,31 @@ CREATE INDEX IF NOT EXISTS idx_wellness_resources_is_premium ON public.wellness_
 CREATE INDEX IF NOT EXISTS idx_user_resource_progress_user_id ON public.user_resource_progress(user_id);
 
 -- Add update timestamp triggers
+DROP TRIGGER IF EXISTS update_community_connections_updated_at ON public.community_connections;
 CREATE TRIGGER update_community_connections_updated_at
   BEFORE UPDATE ON public.community_connections
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_couples_challenges_updated_at ON public.couples_challenges;
 CREATE TRIGGER update_couples_challenges_updated_at
   BEFORE UPDATE ON public.couples_challenges
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_subscriptions_updated_at ON public.subscriptions;
 CREATE TRIGGER update_subscriptions_updated_at
   BEFORE UPDATE ON public.subscriptions
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_wellness_resources_updated_at ON public.wellness_resources;
 CREATE TRIGGER update_wellness_resources_updated_at
   BEFORE UPDATE ON public.wellness_resources
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_user_resource_progress_updated_at ON public.user_resource_progress;
 CREATE TRIGGER update_user_resource_progress_updated_at
   BEFORE UPDATE ON public.user_resource_progress
   FOR EACH ROW

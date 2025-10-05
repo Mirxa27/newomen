@@ -220,19 +220,22 @@ ALTER TABLE public.community_connections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.couples_challenges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 
--- Policies for user_profiles
+DROP POLICY IF EXISTS "Users can view own profile" ON public.user_profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON public.user_profiles;
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.user_profiles;
 CREATE POLICY "Users can view own profile" ON public.user_profiles FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can update own profile" ON public.user_profiles FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own profile" ON public.user_profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
 
--- Policies for user_memory_profiles
+DROP POLICY IF EXISTS "Users can view own memory profile" ON public.user_memory_profiles;
+DROP POLICY IF EXISTS "Users can update own memory profile" ON public.user_memory_profiles;
 CREATE POLICY "Users can view own memory profile" ON public.user_memory_profiles FOR SELECT USING (auth.uid() = (SELECT user_id FROM public.user_profiles WHERE id = user_memory_profiles.user_id));
 CREATE POLICY "Users can update own memory profile" ON public.user_memory_profiles FOR UPDATE USING (auth.uid() = (SELECT user_id FROM public.user_profiles WHERE id = user_memory_profiles.user_id));
 
--- Policies for sessions
+DROP POLICY IF EXISTS "Users can view own sessions" ON public.sessions;
 CREATE POLICY "Users can view own sessions" ON public.sessions FOR SELECT USING (auth.uid() = (SELECT user_id FROM public.user_profiles WHERE id = sessions.user_id));
 
--- Policies for messages
+DROP POLICY IF EXISTS "Users can view messages from own sessions" ON public.messages;
 CREATE POLICY "Users can view messages from own sessions" ON public.messages FOR SELECT USING (
   EXISTS (
     SELECT 1 FROM public.sessions 
@@ -241,9 +244,10 @@ CREATE POLICY "Users can view messages from own sessions" ON public.messages FOR
   )
 );
 
--- Public read for assessments
+DROP POLICY IF EXISTS "Anyone can view public assessments" ON public.assessments;
 CREATE POLICY "Anyone can view public assessments" ON public.assessments FOR SELECT USING (is_public = true);
 
 -- Public read for wellness resources
 ALTER TABLE public.wellness_resources ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Anyone can view wellness resources" ON public.wellness_resources;
 CREATE POLICY "Anyone can view wellness resources" ON public.wellness_resources FOR SELECT USING (true);

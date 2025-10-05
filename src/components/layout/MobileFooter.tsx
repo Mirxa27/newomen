@@ -1,26 +1,31 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, MessageSquare, FileText, Heart, User } from "lucide-react";
+import { Home, Sparkles, Users, User, MessageCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function MobileFooter() {
   const location = useLocation();
   const { user } = useAuth();
+
+  // Don't show on auth pages or landing
+  if (!user || location.pathname === "/" || location.pathname === "/auth") {
+    return null;
+  }
+
   const isActive = (path: string) => location.pathname === path;
 
-  if (!user) return null;
-
   const navItems = [
-    { to: "/dashboard", icon: Home, label: "Home" },
-    { to: "/chat", icon: MessageSquare, label: "Chat" },
-    { to: "/member-assessments", icon: FileText, label: "Assess" },
-    { to: "/couples-challenge", icon: Heart, label: "Couple" },
-    { to: "/dashboard", icon: User, label: "Profile" },
+    { to: "/dashboard", label: "Home", icon: Home },
+    { to: "/narrative-exploration", label: "Explore", icon: Sparkles },
+    { to: "/chat", label: "Chat", icon: MessageCircle },
+    { to: "/community", label: "Connect", icon: Users },
+    { to: "/profile", label: "Profile", icon: User },
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-4 left-4 right-4 z-50">
-      <div className="glass rounded-full px-4 py-3 shadow-lg border border-white/20">
-        <div className="flex items-center justify-around">
+    <nav className="md:hidden fixed bottom-4 left-4 right-4 z-40">
+      {/* Claymorphism Floating Capsule */}
+      <div className="clay-card rounded-full px-4 py-3 shadow-2xl backdrop-blur-xl bg-background/95 border border-white/20">
+        <div className="flex items-center justify-around gap-2">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.to);
@@ -29,25 +34,32 @@ export default function MobileFooter() {
               <Link
                 key={item.to}
                 to={item.to}
-                className={`flex flex-col items-center justify-center space-y-1 transition-all duration-300 ${
-                  active 
-                    ? "text-primary scale-110" 
-                    : "text-muted-foreground hover:text-primary/80"
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-2xl transition-all duration-300 ${
+                  active
+                    ? "clay-button bg-gradient-to-br from-primary/20 to-accent/20 text-primary scale-110"
+                    : "text-muted-foreground hover:text-foreground hover:scale-105"
                 }`}
               >
-                <div className={`p-2 rounded-full transition-all duration-300 ${
-                  active 
-                    ? "bg-primary/20 glow-primary" 
-                    : "hover:bg-white/5"
-                }`}>
-                  <Icon className={`h-5 w-5 ${active ? "fill-current" : ""}`} />
-                </div>
-                <span className="text-[10px] font-medium">{item.label}</span>
+                <Icon 
+                  className={`h-5 w-5 transition-all ${
+                    active ? "stroke-[2.5]" : "stroke-[2]"
+                  }`} 
+                />
+                <span 
+                  className={`text-[10px] font-medium transition-all ${
+                    active ? "opacity-100" : "opacity-0 max-h-0"
+                  }`}
+                >
+                  {item.label}
+                </span>
               </Link>
             );
           })}
         </div>
       </div>
+      
+      {/* Bottom Safe Area Spacer */}
+      <div className="h-4" />
     </nav>
   );
 }

@@ -1,0 +1,51 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Supabase local
+.supabase
+
+# Environment files
+.env.local
+.env*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Documentation
+*.md
+!README.md
+NAVIGATION_*.md
+SESSION_*.md
+DEVELOPMENT_*.md
+FEATURE_*.md
+IMPLEMENTATION_*.md
+FINAL_*.md
+QUICK_*.md
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage
+.nyc_output
+
+# Supabase
+supabase/functions/.env

@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import MainLayout from "./components/layout/MainLayout";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
@@ -34,80 +35,80 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/about" element={<AboutUs />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-          <Route path="/terms" element={<TermsOfService />} />
-          <Route path="/assessments" element={<PublicAssessments />} />
-          <Route path="/assessments/:assessmentId" element={<PublicAssessments />} />
+          <Route path="/" element={<MainLayout><Landing /></MainLayout>} />
+          <Route path="/auth" element={<MainLayout><Auth /></MainLayout>} />
+          <Route path="/about" element={<MainLayout><AboutUs /></MainLayout>} />
+          <Route path="/privacy" element={<MainLayout><PrivacyPolicy /></MainLayout>} />
+          <Route path="/terms" element={<MainLayout><TermsOfService /></MainLayout>} />
+          <Route path="/assessments" element={<MainLayout><PublicAssessments /></MainLayout>} />
+          <Route path="/assessments/:assessmentId" element={<MainLayout><PublicAssessments /></MainLayout>} />
           <Route path="/onboarding" element={
             <ProtectedRoute>
-              <Onboarding />
+              <MainLayout><Onboarding /></MainLayout>
             </ProtectedRoute>
           } />
           <Route path="/dashboard" element={
             <ProtectedRoute>
-              <Dashboard />
+              <MainLayout><Dashboard /></MainLayout>
             </ProtectedRoute>
           } />
           <Route path="/profile" element={
             <ProtectedRoute>
-              <Profile />
+              <MainLayout><Profile /></MainLayout>
             </ProtectedRoute>
           } />
           <Route path="/account-settings" element={
             <ProtectedRoute>
-              <AccountSettings />
+              <MainLayout><AccountSettings /></MainLayout>
             </ProtectedRoute>
           } />
           <Route path="/chat" element={
             <ProtectedRoute>
-              <Chat />
+              <MainLayout><Chat /></MainLayout>
             </ProtectedRoute>
           } />
           <Route path="/wellness-library" element={
             <ProtectedRoute>
-              <WellnessLibrary />
+              <MainLayout><WellnessLibrary /></MainLayout>
             </ProtectedRoute>
           } />
           <Route path="/community" element={
             <ProtectedRoute>
-              <Community />
+              <MainLayout><Community /></MainLayout>
             </ProtectedRoute>
           } />
           <Route path="/member-assessments" element={
             <ProtectedRoute>
-              <MemberAssessments />
+              <MainLayout><MemberAssessments /></MainLayout>
             </ProtectedRoute>
           } />
           <Route path="/member-assessments/:assessmentId" element={
             <ProtectedRoute>
-              <MemberAssessments />
+              <MainLayout><MemberAssessments /></MainLayout>
             </ProtectedRoute>
           } />
           <Route path="/couples-challenge/:challengeId?" element={
             <ProtectedRoute>
-              <CouplesChallenge />
+              <MainLayout><CouplesChallenge /></MainLayout>
             </ProtectedRoute>
           } />
           <Route path="/admin/*" element={
             <ProtectedRoute>
-              <Admin />
+              <MainLayout><Admin /></MainLayout>
             </ProtectedRoute>
           } />
           <Route path="/narrative-exploration" element={
             <ProtectedRoute>
-              <NarrativeIdentityExploration />
+              <MainLayout><NarrativeIdentityExploration /></MainLayout>
             </ProtectedRoute>
           } />
           <Route path="/feature-tests" element={
             <ProtectedRoute>
-              <FeatureTests />
+              <MainLayout><FeatureTests /></MainLayout>
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
+          <Route path="*" element={<MainLayout><NotFound /></MainLayout>} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>

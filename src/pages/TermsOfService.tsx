@@ -27,7 +27,7 @@ export default function TermsOfService() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p>
-              By accessing or using NewWomen, you agree to be bound by these Terms of Service
+              By accessing or using Newomen, you agree to be bound by these Terms of Service
               and all applicable laws and regulations. If you do not agree with any of these terms,
               you are prohibited from using or accessing this platform.
             </p>
@@ -40,7 +40,7 @@ export default function TermsOfService() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p>
-              Permission is granted to temporarily access NewWomen for personal, non-commercial use only.
+              Permission is granted to temporarily access Newomen for personal, non-commercial use only.
               This license shall automatically terminate if you violate any of these restrictions.
             </p>
             <p>Under this license you may not:</p>
@@ -118,7 +118,7 @@ export default function TermsOfService() {
             <CardTitle>Prohibited Uses</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p>You agree not to use NewWomen for:</p>
+            <p>You agree not to use Newomen for:</p>
             <ul className="list-disc list-inside space-y-2 ml-4">
               <li>Any unlawful purpose or to solicit unlawful activity</li>
               <li>Harassment, abuse, or harm of others</li>
@@ -138,7 +138,7 @@ export default function TermsOfService() {
           <CardContent className="space-y-4">
             <p>
               The platform and its original content, features, and functionality are owned by
-              NewWomen and are protected by international copyright, trademark, patent, trade
+              Newomen and are protected by international copyright, trademark, patent, trade
               secret, and other intellectual property laws.
             </p>
             <p>
@@ -171,7 +171,7 @@ export default function TermsOfService() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p>
-              NewWomen and its affiliates will not be liable for any indirect, incidental, special,
+              Newomen and its affiliates will not be liable for any indirect, incidental, special,
               consequential, or punitive damages resulting from your use or inability to use the
               platform.
             </p>

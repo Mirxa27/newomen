@@ -27,7 +27,7 @@ export default function PrivacyPolicy() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p>
-              At NewWomen, we take your privacy seriously. This Privacy Policy explains how we collect,
+              At Newomen, we take your privacy seriously. This Privacy Policy explains how we collect,
               use, disclose, and safeguard your information when you use our platform and AI companion, NewMe.
             </p>
             <p>

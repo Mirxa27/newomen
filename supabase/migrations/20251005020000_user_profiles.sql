@@ -35,42 +35,50 @@ ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_memory_profiles ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for user_profiles
+DROP POLICY IF EXISTS "Users can view their own profile" ON public.user_profiles;
 CREATE POLICY "Users can view their own profile"
   ON public.user_profiles
   FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.user_profiles;
 CREATE POLICY "Users can update their own profile"
   ON public.user_profiles
   FOR UPDATE
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own profile" ON public.user_profiles;
 CREATE POLICY "Users can insert their own profile"
   ON public.user_profiles
   FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Admins can manage all profiles" ON public.user_profiles;
 CREATE POLICY "Admins can manage all profiles"
   ON public.user_profiles
   FOR ALL
   USING (auth.email() = 'admin@newomen.me');
 
 -- RLS Policies for user_memory_profiles
+DROP POLICY IF EXISTS "Users can view their own memory profile" ON public.user_memory_profiles;
 CREATE POLICY "Users can view their own memory profile"
   ON public.user_memory_profiles
   FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own memory profile" ON public.user_memory_profiles;
 CREATE POLICY "Users can update their own memory profile"
   ON public.user_memory_profiles
   FOR UPDATE
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own memory profile" ON public.user_memory_profiles;
 CREATE POLICY "Users can insert their own memory profile"
   ON public.user_memory_profiles
   FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Admins can manage all memory profiles" ON public.user_memory_profiles;
 CREATE POLICY "Admins can manage all memory profiles"
   ON public.user_memory_profiles
   FOR ALL
@@ -82,11 +90,13 @@ CREATE INDEX IF NOT EXISTS idx_user_profiles_subscription_tier ON public.user_pr
 CREATE INDEX IF NOT EXISTS idx_user_memory_profiles_user_id ON public.user_memory_profiles(user_id);
 
 -- Add update timestamp triggers
+DROP TRIGGER IF EXISTS update_user_profiles_updated_at ON public.user_profiles;
 CREATE TRIGGER update_user_profiles_updated_at
   BEFORE UPDATE ON public.user_profiles
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_user_memory_profiles_updated_at ON public.user_memory_profiles;
 CREATE TRIGGER update_user_memory_profiles_updated_at
   BEFORE UPDATE ON public.user_memory_profiles
   FOR EACH ROW
@@ -107,7 +117,8 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Create trigger for automatic profile creation
-CREATE OR REPLACE TRIGGER on_auth_user_created
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_new_user();

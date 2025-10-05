@@ -1,13 +1,17 @@
-import { Outlet } from "react-router-dom";
+import { ReactNode } from "react";
 import Header from "./Header";
 import MobileFooter from "./MobileFooter";
 
-export default function MainLayout() {
+interface MainLayoutProps {
+  children: ReactNode;
+}
+
+export default function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-1 pb-16 md:pb-0">
-        <Outlet />
+      <main className="flex-1 pt-16 pb-24 md:pb-4">
+        {children}
       </main>
       <MobileFooter />
     </div>

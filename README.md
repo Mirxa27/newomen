@@ -1,183 +1,255 @@
-# Supabase CLI
+# 🌟 Newomen - AI-Powered Personal Growth Platform
 
-[![Coverage Status](https://coveralls.io/repos/github/supabase/cli/badge.svg?branch=main)](https://coveralls.io/github/supabase/cli?branch=main) [![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/supabase-cli/setup-cli/master?style=flat-square&label=Bitbucket%20Canary)](https://bitbucket.org/supabase-cli/setup-cli/pipelines) [![Gitlab Pipeline Status](https://img.shields.io/gitlab/pipeline-status/sweatybridge%2Fsetup-cli?label=Gitlab%20Canary)
-](https://gitlab.com/sweatybridge/setup-cli/-/pipelines)
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black)](https://newomen.me)
+[![Built with React](https://img.shields.io/badge/Built%20with-React-61DAFB)](https://reactjs.org/)
+[![Powered by Supabase](https://img.shields.io/badge/Powered%20by-Supabase-3ECF8E)](https://supabase.com/)
 
-[Supabase](https://supabase.io) is an open source Firebase alternative. We're building the features of Firebase using enterprise-grade open source tools.
+Transform your life with **Newomen**, an emotionally intelligent AI companion designed for personal growth, meaningful connections, and lasting transformation.
 
-This repository contains all the functionality for Supabase CLI.
+🌐 **Live Site**: [newomen.me](https://newomen.me)
 
-- [x] Running Supabase locally
-- [x] Managing database migrations
-- [x] Creating and deploying Supabase Functions
-- [x] Generating types directly from your database schema
-- [x] Making authenticated HTTP requests to [Management API](https://supabase.com/docs/reference/api/introduction)
+---
 
-## Getting started
+## ✨ Features
 
-### Install the CLI
+### 🎯 Core Features
+- **AI Voice Conversations**: Real-time voice chat with emotionally intelligent AI using OpenAI Realtime API
+- **Personality Assessments**: Deep personality insights with Big Five, MBTI-style, and narrative assessments
+- **Narrative Identity Exploration**: Unique AI-powered journey to discover your authentic self through storytelling
+- **Progress Tracking**: Visual dashboards showing your personal growth journey
+- **Gamification System**: Earn crystals, unlock achievements, and level up as you grow
 
-Available via [NPM](https://www.npmjs.com) as dev dependency. To install:
+### 🤝 Community Features
+- **Connection Hub**: Find and connect with like-minded individuals
+- **Couples Challenge**: Interactive assessment for couples with AI compatibility analysis
+- **Wellness Library**: Curated collection of meditation, affirmations, and breathing exercises
+
+### 👤 User Experience
+- **Glassmorphism UI**: Modern, elegant design with liquid glass effects
+- **Mobile-First**: Responsive design with floating claymorphism navigation
+- **Secure Authentication**: Powered by Supabase Auth with row-level security
+- **Profile Customization**: Avatar uploads, bio, interests, and progress tracking
+
+---
+
+## 🚀 Tech Stack
+
+### Frontend
+- **React 18** with TypeScript
+- **Vite** for lightning-fast builds
+- **TailwindCSS** for styling
+- **Shadcn/ui** component library
+- **React Router** for navigation
+- **Recharts** for data visualization
+
+### Backend
+- **Supabase** for database, authentication, and real-time features
+- **PostgreSQL** with Row Level Security (RLS)
+- **Supabase Edge Functions** for serverless API endpoints
+
+### AI Integration
+- **OpenAI Realtime API** for voice conversations
+- **OpenAI GPT-4** for content generation and analysis
+- **ElevenLabs** for voice synthesis (optional)
+
+---
+
+## 🛠️ Development
+
+### Prerequisites
+- Node.js 18+ and npm
+- Supabase account
+- OpenAI API key
+
+### Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/Mirxa27/new-mind-nexus.git
+cd new-mind-nexus
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your Supabase and OpenAI credentials
+
+# Run development server
+npm run dev
+```
+
+### Environment Variables
+
+Create a `.env.local` file with:
+
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_OPENAI_API_KEY=your_openai_api_key
+```
+
+### Database Setup
+
+```bash
+# Install Supabase CLI
 npm i supabase --save-dev
+
+# Link to your project
+npx supabase link --project-ref your_project_ref
+
+# Push migrations
+npx supabase db push
 ```
 
-To install the beta release channel:
+---
 
+## 📦 Deployment
+
+### Deploy to Vercel
+
+1. **Install Vercel CLI** (optional):
 ```bash
-npm i supabase@beta --save-dev
+npm i -g vercel
 ```
 
-When installing with yarn 4, you need to disable experimental fetch with the following nodejs config.
-
-```
-NODE_OPTIONS=--no-experimental-fetch yarn add supabase
-```
-
-> **Note**
-For Bun versions below v1.0.17, you must add `supabase` as a [trusted dependency](https://bun.sh/guides/install/trusted) before running `bun add -D supabase`.
-
-<details>
-  <summary><b>macOS</b></summary>
-
-  Available via [Homebrew](https://brew.sh). To install:
-
-  ```sh
-  brew install supabase/tap/supabase
-  ```
-
-  To install the beta release channel:
-  
-  ```sh
-  brew install supabase/tap/supabase-beta
-  brew link --overwrite supabase-beta
-  ```
-  
-  To upgrade:
-
-  ```sh
-  brew upgrade supabase
-  ```
-</details>
-
-<details>
-  <summary><b>Windows</b></summary>
-
-  Available via [Scoop](https://scoop.sh). To install:
-
-  ```powershell
-  scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
-  scoop install supabase
-  ```
-
-  To upgrade:
-
-  ```powershell
-  scoop update supabase
-  ```
-</details>
-
-<details>
-  <summary><b>Linux</b></summary>
-
-  Available via [Homebrew](https://brew.sh) and Linux packages.
-
-  #### via Homebrew
-
-  To install:
-
-  ```sh
-  brew install supabase/tap/supabase
-  ```
-
-  To upgrade:
-
-  ```sh
-  brew upgrade supabase
-  ```
-
-  #### via Linux packages
-
-  Linux packages are provided in [Releases](https://github.com/supabase/cli/releases). To install, download the `.apk`/`.deb`/`.rpm`/`.pkg.tar.zst` file depending on your package manager and run the respective commands.
-
-  ```sh
-  sudo apk add --allow-untrusted <...>.apk
-  ```
-
-  ```sh
-  sudo dpkg -i <...>.deb
-  ```
-
-  ```sh
-  sudo rpm -i <...>.rpm
-  ```
-
-  ```sh
-  sudo pacman -U <...>.pkg.tar.zst
-  ```
-</details>
-
-<details>
-  <summary><b>Other Platforms</b></summary>
-
-  You can also install the CLI via [go modules](https://go.dev/ref/mod#go-install) without the help of package managers.
-
-  ```sh
-  go install github.com/supabase/cli@latest
-  ```
-
-  Add a symlink to the binary in `$PATH` for easier access:
-
-  ```sh
-  ln -s "$(go env GOPATH)/bin/cli" /usr/bin/supabase
-  ```
-
-  This works on other non-standard Linux distros.
-</details>
-
-<details>
-  <summary><b>Community Maintained Packages</b></summary>
-
-  Available via [pkgx](https://pkgx.sh/). Package script [here](https://github.com/pkgxdev/pantry/blob/main/projects/supabase.com/cli/package.yml).
-  To install in your working directory:
-
-  ```bash
-  pkgx install supabase
-  ```
-
-  Available via [Nixpkgs](https://nixos.org/). Package script [here](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/supabase-cli/default.nix).
-</details>
-
-### Run the CLI
-
+2. **Deploy**:
 ```bash
-supabase bootstrap
+vercel --prod
 ```
 
-Or using npx:
+3. **Configure Domain**:
+   - Add `newomen.me` in Vercel dashboard
+   - Update DNS settings to point to Vercel
 
-```bash
-npx supabase bootstrap
+4. **Set Environment Variables**:
+   - Add all environment variables in Vercel dashboard
+   - Ensure `VITE_` prefix for client-side variables
+
+### Environment Variables in Vercel
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `VITE_OPENAI_API_KEY`
+
+---
+
+## 🗂️ Project Structure
+
+```
+new-mind-nexus/
+├── src/
+│   ├── components/       # Reusable UI components
+│   │   ├── layout/       # Header, Footer, MainLayout
+│   │   ├── chat/         # Chat interface components
+│   │   └── ui/           # Shadcn/ui components
+│   ├── pages/            # Route pages
+│   │   ├── Landing.tsx
+│   │   ├── Dashboard.tsx
+│   │   ├── Chat.tsx
+│   │   ├── Profile.tsx
+│   │   └── admin/        # Admin pages
+│   ├── hooks/            # Custom React hooks
+│   ├── utils/            # Utility functions
+│   ├── integrations/     # Supabase integration
+│   └── data/             # Static data and assessments
+├── supabase/
+│   ├── migrations/       # Database migrations
+│   └── functions/        # Edge functions
+├── public/               # Static assets
+└── dist/                 # Build output
 ```
 
-The bootstrap command will guide you through the process of setting up a Supabase project using one of the [starter](https://github.com/supabase-community/supabase-samples/blob/main/samples.json) templates.
+---
 
-## Docs
+## 🎨 Design System
 
-Command & config reference can be found [here](https://supabase.com/docs/reference/cli/about).
+### Color Palette
+- **Primary**: Liquid glass gradients (purple to pink)
+- **Secondary**: Warm earth tones for claymorphism
+- **Accent**: Crystal blue highlights
 
-## Breaking changes
+### Typography
+- **Headings**: System font stack with gradient effects
+- **Body**: Inter/SF Pro for optimal readability
 
-We follow semantic versioning for changes that directly impact CLI commands, flags, and configurations.
+### Effects
+- **Glassmorphism**: Translucent cards with backdrop blur
+- **Claymorphism**: Soft, tactile mobile UI elements
+- **Animations**: Smooth transitions and micro-interactions
 
-However, due to dependencies on other service images, we cannot guarantee that schema migrations, seed.sql, and generated types will always work for the same CLI major version. If you need such guarantees, we encourage you to pin a specific version of CLI in package.json.
+---
 
-## Developing
+## 📝 Database Schema
 
-To run from source:
+### Core Tables
+- `user_profiles` - User profile information
+- `user_memory_profiles` - AI conversation memory
+- `sessions` - Voice chat sessions
+- `messages` - Conversation messages
+- `assessments` - Personality assessments
+- `assessment_results` - User assessment responses
+- `achievements` - Gamification achievements
+- `crystal_transactions` - Reward system
 
-```sh
-# Go >= 1.22
-go run . help
-```
+### Admin Tables
+- `providers` - AI service providers
+- `models` - AI models configuration
+- `voices` - Voice synthesis options
+- `agents` - AI agent configurations
+
+---
+
+## 🔒 Security
+
+- **Row Level Security (RLS)**: All tables protected with PostgreSQL RLS policies
+- **Authentication**: Secure JWT-based auth via Supabase
+- **API Keys**: Environment variables for sensitive credentials
+- **Admin Access**: Email-based admin authorization (`admin@newomen.me`)
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is proprietary software. All rights reserved.
+
+---
+
+## 👥 Team
+
+**Founder & Creator**: Katrina  
+**Platform**: Newomen AI Personal Growth  
+**Contact**: admin@newomen.me
+
+---
+
+## 🌐 Links
+
+- **Website**: [newomen.me](https://newomen.me)
+- **Documentation**: Coming soon
+- **Support**: admin@newomen.me
+
+---
+
+## 🙏 Acknowledgments
+
+- **Supabase** for the amazing backend platform
+- **OpenAI** for cutting-edge AI capabilities
+- **Vercel** for seamless deployment
+- **Shadcn/ui** for beautiful component library
+- **TailwindCSS** for flexible styling
+
+---
+
+**Made with 💜 by the Newomen Team**

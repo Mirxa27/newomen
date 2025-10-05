@@ -98,47 +98,55 @@ ALTER TABLE public.sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.session_events ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for providers (admin only)
+DROP POLICY IF EXISTS "Admins can manage providers" ON public.providers;
 CREATE POLICY "Admins can manage providers"
   ON public.providers
   FOR ALL
   USING (auth.email() = 'admin@newomen.me');
 
 -- RLS Policies for models (admin only)
+DROP POLICY IF EXISTS "Admins can manage models" ON public.models;
 CREATE POLICY "Admins can manage models"
   ON public.models
   FOR ALL
   USING (auth.email() = 'admin@newomen.me');
 
 -- RLS Policies for voices (admin only)
+DROP POLICY IF EXISTS "Admins can manage voices" ON public.voices;
 CREATE POLICY "Admins can manage voices"
   ON public.voices
   FOR ALL
   USING (auth.email() = 'admin@newomen.me');
 
 -- RLS Policies for prompts (admin only)
+DROP POLICY IF EXISTS "Admins can manage prompts" ON public.prompts;
 CREATE POLICY "Admins can manage prompts"
   ON public.prompts
   FOR ALL
   USING (auth.email() = 'admin@newomen.me');
 
 -- RLS Policies for agents (admin only)
+DROP POLICY IF EXISTS "Admins can manage agents" ON public.agents;
 CREATE POLICY "Admins can manage agents"
   ON public.agents
   FOR ALL
   USING (auth.email() = 'admin@newomen.me');
 
 -- RLS Policies for sessions (users can view their own, admins can view all)
+DROP POLICY IF EXISTS "Users can view their own sessions" ON public.sessions;
 CREATE POLICY "Users can view their own sessions"
   ON public.sessions
   FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Admins can manage all sessions" ON public.sessions;
 CREATE POLICY "Admins can manage all sessions"
   ON public.sessions
   FOR ALL
   USING (auth.email() = 'admin@newomen.me');
 
 -- RLS Policies for session_events (users can view their own, admins can view all)
+DROP POLICY IF EXISTS "Users can view their own session events" ON public.session_events;
 CREATE POLICY "Users can view their own session events"
   ON public.session_events
   FOR SELECT
@@ -150,6 +158,7 @@ CREATE POLICY "Users can view their own session events"
     )
   );
 
+DROP POLICY IF EXISTS "Admins can manage all session events" ON public.session_events;
 CREATE POLICY "Admins can manage all session events"
   ON public.session_events
   FOR ALL
@@ -174,26 +183,31 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Add update timestamp triggers
+DROP TRIGGER IF EXISTS update_providers_updated_at ON public.providers;
 CREATE TRIGGER update_providers_updated_at
   BEFORE UPDATE ON public.providers
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_models_updated_at ON public.models;
 CREATE TRIGGER update_models_updated_at
   BEFORE UPDATE ON public.models
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_voices_updated_at ON public.voices;
 CREATE TRIGGER update_voices_updated_at
   BEFORE UPDATE ON public.voices
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_prompts_updated_at ON public.prompts;
 CREATE TRIGGER update_prompts_updated_at
   BEFORE UPDATE ON public.prompts
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_agents_updated_at ON public.agents;
 CREATE TRIGGER update_agents_updated_at
   BEFORE UPDATE ON public.agents
   FOR EACH ROW
