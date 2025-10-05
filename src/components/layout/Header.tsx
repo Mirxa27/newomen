@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import logoImage from "@/assets/newomen-logo.png";
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -36,10 +37,10 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full glass border-b border-white/10">
       <nav className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center space-x-2">
-          <img src="/src/assets/newomen-logo.png" alt="NewoMen" className="h-8" />
+          <img src={logoImage} alt="NewoMen" className="h-10" />
         </Link>
 
         {/* Desktop Navigation */}
@@ -110,7 +111,7 @@ export default function Header() {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t bg-background/95 backdrop-blur">
+        <div className="md:hidden border-t border-white/10 glass">
           <div className="container mx-auto px-4 py-4 space-y-3">
             {publicLinks.map((link) => (
               <Link

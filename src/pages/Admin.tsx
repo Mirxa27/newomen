@@ -8,13 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Sparkles, Settings, Users, BarChart, Activity, FileText, Zap } from "lucide-react";
+import { Sparkles, Settings, Users, BarChart, Activity, FileText, Zap, Database } from "lucide-react";
 import AIConfiguration from "./admin/AIConfiguration";
 import SessionsLive from "./admin/SessionsLive";
 import SessionsHistory from "./admin/SessionsHistory";
 import UserManagement from "./admin/UserManagement";
 import ContentManagement from "./admin/ContentManagement";
 import Analytics from "./admin/Analytics";
+import ProvidersManagement from "./admin/ProvidersManagement";
 
 export default function Admin() {
   const [aiTopic, setAiTopic] = useState("");
@@ -55,10 +56,14 @@ export default function Admin() {
         </div>
 
         <Tabs defaultValue="ai-builder" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
+          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-9 gap-1">
             <TabsTrigger value="ai-builder">
               <Sparkles className="w-4 h-4 mr-2" />
               AI Builder
+            </TabsTrigger>
+            <TabsTrigger value="providers">
+              <Database className="w-4 h-4 mr-2" />
+              Providers
             </TabsTrigger>
             <TabsTrigger value="ai-config">
               <Zap className="w-4 h-4 mr-2" />
@@ -162,6 +167,10 @@ export default function Admin() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="providers">
+            <ProvidersManagement />
           </TabsContent>
 
           <TabsContent value="ai-config">
