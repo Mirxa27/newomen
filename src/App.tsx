@@ -28,6 +28,7 @@ const App = () => (
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/assessments" element={<PublicAssessments />} />
+          <Route path="/assessments/:assessmentId" element={<PublicAssessments />} />
           <Route path="/onboarding" element={
             <ProtectedRoute>
               <Onboarding />
@@ -48,12 +49,17 @@ const App = () => (
               <MemberAssessments />
             </ProtectedRoute>
           } />
+          <Route path="/member-assessments/:assessmentId" element={
+            <ProtectedRoute>
+              <MemberAssessments />
+            </ProtectedRoute>
+          } />
           <Route path="/couples-challenge/:challengeId?" element={
             <ProtectedRoute>
               <CouplesChallenge />
             </ProtectedRoute>
           } />
-          <Route path="/admin" element={
+          <Route path="/admin/*" element={
             <ProtectedRoute>
               <Admin />
             </ProtectedRoute>
