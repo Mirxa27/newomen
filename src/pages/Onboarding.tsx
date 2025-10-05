@@ -77,7 +77,7 @@ export default function Onboarding() {
         });
 
       toast({
-        title: "Welcome to NewWomen!",
+        title: "Welcome to Newomen!",
         description: "Your journey begins now.",
       });
 

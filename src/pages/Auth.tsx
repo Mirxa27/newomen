@@ -27,7 +27,7 @@ const Auth = () => {
         });
         if (error) throw error;
         toast({
-          title: "Welcome to NewWomen!",
+          title: "Welcome to Newomen!",
           description: "Please check your email to verify your account.",
         });
       } else {
@@ -59,7 +59,7 @@ const Auth = () => {
         <div className="text-center space-y-4">
           <div className="inline-flex items-center gap-2 glass px-6 py-3 rounded-full animate-float">
             <Sparkles className="w-5 h-5 text-accent" />
-            <span className="text-sm font-medium">NewWomen</span>
+            <span className="text-sm font-medium">Newomen</span>
           </div>
           <h1 className="text-4xl font-bold">
             {isSignUp ? "Begin Your Journey" : "Welcome Back"}
