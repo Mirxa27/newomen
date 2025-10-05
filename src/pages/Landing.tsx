@@ -32,13 +32,15 @@ const Landing = () => {
                 Start Your Journey
               </Button>
             </Link>
-            <Button 
-              size="lg" 
-              variant="outline" 
-              className="glass-card text-lg px-12 py-6 border-2 hover:bg-white/10"
-            >
-              Learn More
-            </Button>
+            <Link to="/about">
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="glass-card text-lg px-12 py-6 border-2 hover:bg-white/10"
+              >
+                Learn More
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
@@ -131,6 +133,45 @@ const Landing = () => {
           </Link>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="border-t border-white/10 py-12 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-8">
+            <div>
+              <h3 className="font-bold text-lg mb-4 gradient-text">NewWomen</h3>
+              <p className="text-sm text-muted-foreground">
+                AI-powered personal growth platform for women
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Product</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link to="/assessments" className="hover:text-primary">Free Assessments</Link></li>
+                <li><Link to="/about" className="hover:text-primary">About Us</Link></li>
+                <li><Link to="/auth" className="hover:text-primary">Get Started</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Support</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><a href="mailto:support@newomen.me" className="hover:text-primary">Contact Support</a></li>
+                <li><a href="mailto:feedback@newomen.me" className="hover:text-primary">Send Feedback</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Legal</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link to="/privacy" className="hover:text-primary">Privacy Policy</Link></li>
+                <li><Link to="/terms" className="hover:text-primary">Terms of Service</Link></li>
+              </ul>
+            </div>
+          </div>
+          <div className="mt-8 pt-8 border-t border-white/10 text-center text-sm text-muted-foreground">
+            <p>&copy; {new Date().getFullYear()} NewWomen. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

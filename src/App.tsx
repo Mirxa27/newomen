@@ -15,6 +15,15 @@ import MemberAssessments from "./pages/MemberAssessments";
 import CouplesChallenge from "./pages/CouplesChallenge";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import Profile from "./pages/Profile";
+import WellnessLibrary from "./pages/WellnessLibrary";
+import Community from "./pages/Community";
+import AccountSettings from "./pages/AccountSettings";
+import AboutUs from "./pages/AboutUs";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import NarrativeIdentityExploration from "./pages/NarrativeIdentityExploration";
+import FeatureTests from "./pages/FeatureTests";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +36,9 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/about" element={<AboutUs />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
           <Route path="/assessments" element={<PublicAssessments />} />
           <Route path="/assessments/:assessmentId" element={<PublicAssessments />} />
           <Route path="/onboarding" element={
@@ -39,9 +51,29 @@ const App = () => (
               <Dashboard />
             </ProtectedRoute>
           } />
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          } />
+          <Route path="/account-settings" element={
+            <ProtectedRoute>
+              <AccountSettings />
+            </ProtectedRoute>
+          } />
           <Route path="/chat" element={
             <ProtectedRoute>
               <Chat />
+            </ProtectedRoute>
+          } />
+          <Route path="/wellness-library" element={
+            <ProtectedRoute>
+              <WellnessLibrary />
+            </ProtectedRoute>
+          } />
+          <Route path="/community" element={
+            <ProtectedRoute>
+              <Community />
             </ProtectedRoute>
           } />
           <Route path="/member-assessments" element={
@@ -62,6 +94,16 @@ const App = () => (
           <Route path="/admin/*" element={
             <ProtectedRoute>
               <Admin />
+            </ProtectedRoute>
+          } />
+          <Route path="/narrative-exploration" element={
+            <ProtectedRoute>
+              <NarrativeIdentityExploration />
+            </ProtectedRoute>
+          } />
+          <Route path="/feature-tests" element={
+            <ProtectedRoute>
+              <FeatureTests />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

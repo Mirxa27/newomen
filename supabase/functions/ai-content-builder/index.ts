@@ -12,8 +12,84 @@ serve(async (req) => {
   }
 
   try {
-    const { topic, type, isPublic } = await req.json();
+    const { topic, type, isPublic, context, analysisType } = await req.json();
 
+    // Handle Narrative Identity Analysis
+    if (topic === 'narrative-identity-analysis' && context) {
+      const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+      if (!OPENAI_API_KEY) {
+        throw new Error("OPENAI_API_KEY not configured");
+      }
+
+      const analysisPrompt = `Analyze this personal narrative exploration and provide a comprehensive psychological analysis.
+
+NARRATIVE DATA:
+${context}
+
+Generate a JSON response with this EXACT structure:
+{
+  "coreThemes": ["theme1", "theme2", "theme3", "theme4"],
+  "limitingBeliefs": ["belief1", "belief2", "belief3"],
+  "strengthPatterns": ["strength1", "strength2", "strength3", "strength4"],
+  "transformationOpportunities": ["opportunity1", "opportunity2", "opportunity3"],
+  "personalityArchetype": "one of: Explorer, Healer, Builder, Warrior, Sage, Caregiver, Visionary, Nurturer",
+  "narrativeCoherence": 85,
+  "transformationRoadmap": [
+    {
+      "title": "Step title",
+      "description": "Detailed description",
+      "actions": ["action1", "action2", "action3"]
+    }
+  ]
+}
+
+ANALYSIS GUIDELINES:
+1. Core Themes: Identify 3-5 recurring patterns across their life story
+2. Limiting Beliefs: Surface 2-4 self-limiting narratives they might not consciously recognize
+3. Strength Patterns: Highlight 3-5 demonstrated resilience patterns and capabilities
+4. Transformation Opportunities: Suggest 3-4 specific growth areas based on their aspirations
+5. Personality Archetype: Choose the archetype that best fits their narrative style and values
+6. Narrative Coherence: Rate 0-100 how well their story flows and makes sense
+7. Transformation Roadmap: Create 4-5 actionable steps with specific practices
+
+Be insightful, compassionate, and specific to their unique story.`;
+
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: [
+            { 
+              role: "system", 
+              content: "You are an expert narrative psychologist specializing in identity formation and personal transformation. Provide deep, actionable insights." 
+            },
+            { role: "user", content: analysisPrompt },
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.7,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        console.error("OpenAI API error:", error);
+        throw new Error("Failed to analyze narrative");
+      }
+
+      const data = await response.json();
+      const analysis = JSON.parse(data.choices[0].message.content);
+
+      return new Response(
+        JSON.stringify(analysis),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Original assessment generation code
     if (!topic) {
       return new Response(JSON.stringify({ error: "Topic is required" }), {
         status: 400,
