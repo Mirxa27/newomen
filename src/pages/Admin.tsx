@@ -2,14 +2,19 @@ import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Sparkles, Settings, Users, BarChart } from "lucide-react";
+import { Sparkles, Settings, Users, BarChart, Activity, FileText, Zap } from "lucide-react";
+import AIConfiguration from "./admin/AIConfiguration";
+import SessionsLive from "./admin/SessionsLive";
+import SessionsHistory from "./admin/SessionsHistory";
+import UserManagement from "./admin/UserManagement";
+import ContentManagement from "./admin/ContentManagement";
+import Analytics from "./admin/Analytics";
 
 export default function Admin() {
   const [aiTopic, setAiTopic] = useState("");
@@ -50,10 +55,22 @@ export default function Admin() {
         </div>
 
         <Tabs defaultValue="ai-builder" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
             <TabsTrigger value="ai-builder">
               <Sparkles className="w-4 h-4 mr-2" />
               AI Builder
+            </TabsTrigger>
+            <TabsTrigger value="ai-config">
+              <Zap className="w-4 h-4 mr-2" />
+              AI Config
+            </TabsTrigger>
+            <TabsTrigger value="sessions-live">
+              <Activity className="w-4 h-4 mr-2" />
+              Live
+            </TabsTrigger>
+            <TabsTrigger value="sessions-history">
+              <FileText className="w-4 h-4 mr-2" />
+              History
             </TabsTrigger>
             <TabsTrigger value="content">
               <Settings className="w-4 h-4 mr-2" />
@@ -147,40 +164,28 @@ export default function Admin() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="ai-config">
+            <AIConfiguration />
+          </TabsContent>
+
+          <TabsContent value="sessions-live">
+            <SessionsLive />
+          </TabsContent>
+
+          <TabsContent value="sessions-history">
+            <SessionsHistory />
+          </TabsContent>
+
           <TabsContent value="content">
-            <Card>
-              <CardHeader>
-                <CardTitle>Content Management</CardTitle>
-                <CardDescription>Manage assessments, resources, and more</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Content management tools coming soon...</p>
-              </CardContent>
-            </Card>
+            <ContentManagement />
           </TabsContent>
 
           <TabsContent value="users">
-            <Card>
-              <CardHeader>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>View and manage user accounts</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">User management tools coming soon...</p>
-              </CardContent>
-            </Card>
+            <UserManagement />
           </TabsContent>
 
           <TabsContent value="analytics">
-            <Card>
-              <CardHeader>
-                <CardTitle>Analytics</CardTitle>
-                <CardDescription>Track engagement and platform metrics</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Analytics dashboard coming soon...</p>
-              </CardContent>
-            </Card>
+            <Analytics />
           </TabsContent>
         </Tabs>
       </div>
