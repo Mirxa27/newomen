@@ -78,14 +78,26 @@ export default function Community() {
       // Check if user is admin
       setIsAdmin(user.email === 'admin@newomen.me');
 
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("user_profiles")
         .select("id")
         .eq("user_id", user.id)
         .single();
 
-      if (!profile) return;
+      if (profileError) {
+        console.error("Error loading user profile:", profileError);
+        toast.error("Failed to load user profile. Please try refreshing the page.");
+        return;
+      }
+
+      if (!profile) {
+        console.error("No user profile found for user:", user.id);
+        toast.error("User profile not found. Please complete your profile setup.");
+        return;
+      }
+      
       setCurrentUserId(profile.id);
+      console.log("Current user ID set to:", profile.id);
 
       // Load connections (with fallback if table doesn't exist yet)
       let connectionsData, pendingData;
@@ -339,6 +351,12 @@ export default function Community() {
         return;
       }
 
+      // Check if currentUserId is valid
+      if (!currentUserId || currentUserId.trim() === "") {
+        toast.error("User not properly authenticated. Please refresh the page.");
+        return;
+      }
+
       // Try to create the announcement
       const { data, error } = await supabase
         .from("community_announcements")
@@ -357,6 +375,8 @@ export default function Community() {
         console.error("Error creating announcement:", error);
         if (error.code === "42P01") {
           toast.error("Database tables not found. Please run the migration first.");
+        } else if (error.message.includes("invalid input syntax for type uuid")) {
+          toast.error("Invalid user ID. Please refresh the page and try again.");
         } else {
           toast.error("Failed to create announcement: " + error.message);
         }
