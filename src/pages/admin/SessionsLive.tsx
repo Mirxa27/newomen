@@ -24,6 +24,21 @@ type SessionRow = {
   is_muted: boolean | null;
 };
 
+type SessionResponse = {
+  id: string;
+  agent_id: string | null;
+  start_ts: string;
+  status: string;
+  is_muted: boolean | null;
+  user_profiles: {
+    nickname: string | null;
+    email: string;
+    avatar_url: string | null;
+    subscription_tier: string | null;
+  } | null;
+  agents: { name: string } | null;
+};
+
 type MessageRow = {
   id: string;
   sender: string;
@@ -50,12 +65,14 @@ export default function SessionsLive() {
       const { data, error } = await supabase
         .from("sessions")
         .select(
-          `*, user_profiles!inner(nickname, email, avatar_url, subscription_tier), agents(name)`
+          `id, agent_id, start_ts, status, is_muted, user_profiles!inner(nickname, email, avatar_url, subscription_tier), agents(name)`
         )
         .eq("status", "active")
         .order("start_ts", { ascending: false });
+      
       if (error) throw error;
-      const typedData = (data || []).map((item) => ({
+      
+      const typedData: SessionRow[] = (data as SessionResponse[] || []).map((item) => ({
         id: item.id,
         agent_id: item.agent_id,
         start_ts: item.start_ts,
@@ -64,9 +81,11 @@ export default function SessionsLive() {
         agents: item.agents,
         is_muted: item.is_muted ?? false,
       }));
+      
       setSessions(typedData);
     } catch (error) {
       console.error("Error loading sessions:", error);
+      toast.error("Failed to load sessions");
     } finally {
       setLoading(false);
     }
