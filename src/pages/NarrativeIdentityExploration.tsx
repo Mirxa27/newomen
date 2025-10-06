@@ -76,7 +76,7 @@ export default function NarrativeIdentityExploration() {
         .single();
 
       if (existingData?.narrative_identity_data) {
-        const parsedData = existingData.narrative_identity_data as any;
+        const parsedData = existingData.narrative_identity_data as { analysis?: string };
         if(parsedData.analysis) {
           setAnalysisResult(parsedData.analysis);
         }
@@ -147,7 +147,7 @@ export default function NarrativeIdentityExploration() {
         transformationOpportunities: Array.isArray(data?.transformationOpportunities) ? data.transformationOpportunities.map(String) : [],
         personalityArchetype: typeof data?.personalityArchetype === 'string' ? data.personalityArchetype : 'Explorer',
         narrativeCoherence: Math.min(100, Math.max(0, coherence)),
-        transformationRoadmap: Array.isArray(data?.transformationRoadmap) ? data.transformationRoadmap.map((step: any) => ({
+        transformationRoadmap: Array.isArray(data?.transformationRoadmap) ? data.transformationRoadmap.map((step: { title?: string; description?: string; actions?: string[] }) => ({
           title: step.title ?? '',
           description: step.description ?? '',
           actions: Array.isArray(step.actions) ? step.actions.map(String) : [],

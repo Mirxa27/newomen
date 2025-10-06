@@ -9,8 +9,8 @@ import { Badge } from "@/components/ui/badge";
 export default function ProviderManagement() {
   const { toast } = useToast();
   const [isDiscovering, setIsDiscovering] = useState(false);
-  const [discoveryResults, setDiscoveryResults] = useState<any>(null);
-  const [providers, setProviders] = useState<any[]>([]);
+  const [discoveryResults, setDiscoveryResults] = useState<{ providers: number; models: number; voices: number } | null>(null);
+  const [providers, setProviders] = useState<Array<{ id: string; name: string; type: string; status: string }>>([]);
   const [isLoadingProviders, setIsLoadingProviders] = useState(false);
 
   const handleDiscoverProviders = async () => {

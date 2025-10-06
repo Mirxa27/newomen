@@ -53,7 +53,7 @@ interface AIAssessmentConfig {
   temperature: number;
   max_tokens: number;
   system_prompt: string;
-  evaluation_criteria: any;
+  evaluation_criteria: Record<string, unknown>;
   fallback_message: string;
   is_active: boolean;
   created_at: string;
@@ -72,8 +72,8 @@ interface Assessment {
   is_public: boolean;
   is_active: boolean;
   ai_config_id?: string;
-  questions: any[];
-  scoring_rubric: any;
+  questions: Array<{ question: string; options: string[] }>;
+  scoring_rubric: Record<string, unknown>;
   passing_score: number;
   created_by: string;
   created_at: string;

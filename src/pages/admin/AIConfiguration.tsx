@@ -65,7 +65,15 @@ export default function AIConfigurationPage() {
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingConfig, setEditingConfig] = useState<AIConfiguration | null>(null);
-  const [testResults, setTestResults] = useState<any>(null);
+  const [testResults, setTestResults] = useState<{
+    testing: boolean;
+    configId: string;
+    success?: boolean;
+    response?: string;
+    usage?: unknown;
+    time?: number;
+    error?: string;
+  } | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [configToDelete, setConfigToDelete] = useState<string | null>(null);
 
