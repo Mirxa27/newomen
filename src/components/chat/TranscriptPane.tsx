@@ -13,10 +13,9 @@ interface TranscriptPaneProps {
   partialTranscript?: string;
 }
 
-const TranscriptPane: React.FC<TranscriptPaneProps> = ({
-  messages = [],
-  partialTranscript = ''
-}) => {
+const TranscriptPane: React.FC<TranscriptPaneProps> = (props) => {
+  const messages = props.messages ?? [];
+  const partialTranscript = props.partialTranscript ?? '';
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -24,23 +23,23 @@ const TranscriptPane: React.FC<TranscriptPaneProps> = ({
   }, [messages, partialTranscript]);
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
   if (messages.length === 0 && !partialTranscript) {
     return (
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 md:p-8">
+      <div className="flex-1 bg-background flex items-center justify-center p-4 sm:p-6 md:p-8">
         <div className="text-center space-y-4 max-w-md">
           <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
             <Bot className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
           </div>
           <div>
-            <h3 className="text-lg sm:text-xl font-semibold mb-2">Ready to begin?</h3>
+            <h3 className="text-lg sm:text-xl font-semibold mb-2">NewMe Chat is Ready</h3>
             <p className="text-sm sm:text-base text-muted-foreground">
-              Start speaking and NewMe will listen. Your conversation will appear here.
+              Simply speak and NewMe will respond. Your conversation will appear here.
             </p>
           </div>
         </div>
@@ -63,8 +62,8 @@ const TranscriptPane: React.FC<TranscriptPaneProps> = ({
           >
             {/* Avatar */}
             <div className={`flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center ${
-              isUser 
-                ? 'bg-blue-500 text-white' 
+              isUser
+                ? 'bg-blue-500 text-white'
                 : 'bg-gradient-to-br from-purple-500 to-pink-500 text-white'
             }`}>
               {isUser ? (
