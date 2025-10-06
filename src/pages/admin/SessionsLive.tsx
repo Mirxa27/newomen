@@ -39,7 +39,25 @@ export default function SessionsLive() {
   };
 
   const muteSession = async (sessionId: string) => {
-    toast.info("Session mute functionality coming soon");
+    try {
+      const session = sessions.find(s => s.id === sessionId);
+      if (!session) return;
+      
+      const newMutedState = !session.is_muted;
+      
+      const { error } = await supabase
+        .from("sessions")
+        .update({ is_muted: newMutedState })
+        .eq("id", sessionId);
+      
+      if (error) throw error;
+      
+      toast.success(newMutedState ? "Session muted" : "Session unmuted");
+      loadSessions();
+    } catch (error) {
+      console.error("Error muting session:", error);
+      toast.error("Failed to update session mute status");
+    }
   };
 
   const endSession = async (sessionId: string) => {

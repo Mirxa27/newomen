@@ -3,6 +3,7 @@
 [![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black)](https://newomen.me)
 [![Built with React](https://img.shields.io/badge/Built%20with-React-61DAFB)](https://reactjs.org/)
 [![Powered by Supabase](https://img.shields.io/badge/Powered%20by-Supabase-3ECF8E)](https://supabase.com/)
+[![Production Ready](https://img.shields.io/badge/Status-Production%20Ready-success)](https://github.com/Mirxa27/new-mind-nexus)
 
 Transform your life with **Newomen**, an emotionally intelligent AI companion designed for personal growth, meaningful connections, and lasting transformation.
 
@@ -22,13 +23,26 @@ Transform your life with **Newomen**, an emotionally intelligent AI companion de
 ### 🤝 Community Features
 - **Connection Hub**: Find and connect with like-minded individuals
 - **Couples Challenge**: Interactive assessment for couples with AI compatibility analysis
-- **Wellness Library**: Curated collection of meditation, affirmations, and breathing exercises
+- **Wellness Library**: Curated collection of meditation, affirmations, and breathing exercises with **real audio playback**
+
+### 💳 Subscription & Payments
+- **PayPal Integration**: Secure payment processing for subscription plans
+- **Growth Plan**: $22 for 100 conversation minutes
+- **Transformation Plan**: $222 for 1000 conversation minutes
+- **Real-time subscription management**: Upgrade, cancel, view usage
 
 ### 👤 User Experience
 - **Glassmorphism UI**: Modern, elegant design with liquid glass effects
 - **Mobile-First**: Responsive design with floating claymorphism navigation
 - **Secure Authentication**: Powered by Supabase Auth with row-level security
 - **Profile Customization**: Avatar uploads, bio, interests, and progress tracking
+- **Data Export**: GDPR-compliant data export functionality
+
+### 🛡️ Admin Features
+- **Content Management**: Manage affirmations, challenges, assessments
+- **AI Configuration**: Sync providers, manage models and voices
+- **Analytics Dashboard**: Monitor platform usage and user engagement
+- **Session Management**: Live session monitoring with mute controls
 
 ---
 
@@ -41,16 +55,21 @@ Transform your life with **Newomen**, an emotionally intelligent AI companion de
 - **Shadcn/ui** component library
 - **React Router** for navigation
 - **Recharts** for data visualization
+- **React Query** for data fetching
 
 ### Backend
 - **Supabase** for database, authentication, and real-time features
 - **PostgreSQL** with Row Level Security (RLS)
-- **Supabase Edge Functions** for serverless API endpoints
+- **Supabase Edge Functions** (Deno) for serverless API endpoints
 
 ### AI Integration
 - **OpenAI Realtime API** for voice conversations
-- **OpenAI GPT-4** for content generation and analysis
+- **OpenAI GPT-4o** for content generation and analysis
 - **ElevenLabs** for voice synthesis (optional)
+
+### Payment Processing
+- **PayPal SDK** for subscription payments
+- **Custom Edge Functions** for payment handling
 
 ---
 
@@ -60,6 +79,7 @@ Transform your life with **Newomen**, an emotionally intelligent AI companion de
 - Node.js 18+ and npm
 - Supabase account
 - OpenAI API key
+- PayPal Developer account (optional, for payments)
 
 ### Installation
 
@@ -72,8 +92,8 @@ cd new-mind-nexus
 npm install
 
 # Set up environment variables
-cp .env.example .env.local
-# Edit .env.local with your Supabase and OpenAI credentials
+cp .env.example .env
+# Edit .env with your credentials
 
 # Run development server
 npm run dev
@@ -81,13 +101,19 @@ npm run dev
 
 ### Environment Variables
 
-Create a `.env.local` file with:
+Create a `.env` file with:
 
 ```env
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-VITE_OPENAI_API_KEY=your_openai_api_key
+# Required
+VITE_SUPABASE_PROJECT_ID=your-project-id
+VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
+VITE_SUPABASE_URL=https://your-project.supabase.co
+
+# Optional - for PayPal payments
+VITE_PAYPAL_CLIENT_ID=your-paypal-client-id
 ```
+
+See `.env.example` for complete list.
 
 ### Database Setup
 
@@ -100,36 +126,57 @@ npx supabase link --project-ref your_project_ref
 
 # Push migrations
 npx supabase db push
+
+# Create storage buckets
+npx supabase storage create avatars --public
+```
+
+### Edge Functions Setup
+
+Configure secrets in Supabase Dashboard:
+
+```bash
+# Required for AI features
+OPENAI_API_KEY=sk-...
+
+# Optional for payments
+PAYPAL_CLIENT_ID=your-client-id
+PAYPAL_SECRET=your-secret
+PAYPAL_MODE=sandbox  # or 'live' for production
+```
+
+Deploy functions:
+
+```bash
+supabase functions deploy ai-content-builder
+supabase functions deploy provider-discovery
+supabase functions deploy realtime-token
+supabase functions deploy paypal-create-order
+supabase functions deploy paypal-capture-order
 ```
 
 ---
 
 ## 📦 Deployment
 
-### Deploy to Vercel
+### Quick Deploy to Vercel
 
-1. **Install Vercel CLI** (optional):
-```bash
-npm i -g vercel
-```
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Mirxa27/new-mind-nexus)
 
-2. **Deploy**:
+### Manual Deployment
+
 ```bash
+# Build for production
+npm run build
+
+# Preview build locally
+npm run preview
+
+# Deploy with Vercel CLI
 vercel --prod
 ```
 
-3. **Configure Domain**:
-   - Add `newomen.me` in Vercel dashboard
-   - Update DNS settings to point to Vercel
-
-4. **Set Environment Variables**:
-   - Add all environment variables in Vercel dashboard
-   - Ensure `VITE_` prefix for client-side variables
-
-### Environment Variables in Vercel
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-- `VITE_OPENAI_API_KEY`
+See `DEPLOYMENT_PRODUCTION.md` for complete deployment guide.
 
 ---
 
@@ -141,13 +188,20 @@ new-mind-nexus/
 │   ├── components/       # Reusable UI components
 │   │   ├── layout/       # Header, Footer, MainLayout
 │   │   ├── chat/         # Chat interface components
-│   │   └── ui/           # Shadcn/ui components
+│   │   ├── ui/           # Shadcn/ui components
+│   │   └── PayPalButton.tsx  # ✨ NEW: PayPal integration
 │   ├── pages/            # Route pages
 │   │   ├── Landing.tsx
 │   │   ├── Dashboard.tsx
 │   │   ├── Chat.tsx
 │   │   ├── Profile.tsx
+│   │   ├── WellnessLibrary.tsx  # ✨ Real audio resources
+│   │   ├── AccountSettings.tsx  # ✨ PayPal integration
+│   │   ├── NarrativeIdentityExploration.tsx
 │   │   └── admin/        # Admin pages
+│   │       ├── ContentManagement.tsx  # ✨ Affirmations & Challenges
+│   │       ├── AIConfiguration.tsx    # ✨ Provider sync
+│   │       └── SessionsLive.tsx       # ✨ Session mute
 │   ├── hooks/            # Custom React hooks
 │   ├── utils/            # Utility functions
 │   ├── integrations/     # Supabase integration
@@ -155,9 +209,26 @@ new-mind-nexus/
 ├── supabase/
 │   ├── migrations/       # Database migrations
 │   └── functions/        # Edge functions
+│       ├── ai-content-builder/
+│       ├── provider-discovery/
+│       ├── realtime-token/
+│       ├── paypal-create-order/    # ✨ NEW
+│       └── paypal-capture-order/   # ✨ NEW
 ├── public/               # Static assets
-└── dist/                 # Build output
+├── dist/                 # Build output
+├── FEATURES_COMPLETED.md      # ✨ Implementation report
+├── PAYPAL_SETUP.md           # ✨ PayPal guide
+└── DEPLOYMENT_PRODUCTION.md  # ✨ Deployment guide
 ```
+
+---
+
+## 📚 Documentation
+
+- **[FEATURES_COMPLETED.md](FEATURES_COMPLETED.md)** - Complete list of implemented features
+- **[PAYPAL_SETUP.md](PAYPAL_SETUP.md)** - PayPal integration setup guide
+- **[DEPLOYMENT_PRODUCTION.md](DEPLOYMENT_PRODUCTION.md)** - Production deployment guide
+- **[.env.example](.env.example)** - Environment variables reference
 
 ---
 

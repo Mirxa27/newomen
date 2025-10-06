@@ -28,10 +28,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import logoImage from "@/assets/newomen-logo.png";
 
+interface UserProfile {
+  id: string;
+  user_id: string;
+  nickname?: string;
+  avatar_url?: string;
+  subscription_tier?: string;
+}
+
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -47,20 +55,20 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
+    const loadProfile = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+      setProfile(data);
+    };
+
     if (user) {
       loadProfile();
     }
   }, [user]);
-
-  const loadProfile = async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from("user_profiles")
-      .select("*")
-      .eq("user_id", user.id)
-      .single();
-    setProfile(data);
-  };
 
   const isActive = (path: string) => location.pathname === path;
 

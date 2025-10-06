@@ -15,6 +15,16 @@ interface Message {
   timestamp: Date;
 }
 
+interface ChatEvent {
+  type: string;
+  delta?: string;
+  transcript?: string;
+  item?: {
+    id: string;
+    status: string;
+  };
+}
+
 const Chat = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -37,7 +47,7 @@ const Chat = () => {
     };
   }, []);
 
-  const handleMessage = (event: any) => {
+  const handleMessage = (event: ChatEvent) => {
     console.log('Event type:', event.type);
 
     if (event.type === 'response.audio_transcript.delta') {

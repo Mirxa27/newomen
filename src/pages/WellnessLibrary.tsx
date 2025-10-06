@@ -49,7 +49,7 @@ export default function WellnessLibrary() {
 
       if (error) throw error;
 
-      // If no resources exist, add sample resources
+      // If no resources exist, add sample resources with real audio files
       if (!data || data.length === 0) {
         const sampleResources = [
           {
@@ -57,56 +57,56 @@ export default function WellnessLibrary() {
             category: "meditation",
             duration: 600,
             description: "Start your day with peaceful mindfulness",
-            audio_url: "https://example.com/audio/morning-meditation.mp3"
+            audio_url: "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3"
           },
           {
             title: "Deep Breathing Exercise",
             category: "breathing",
             duration: 300,
             description: "5-minute breathing practice for calm and focus",
-            audio_url: "https://example.com/audio/deep-breathing.mp3"
+            audio_url: "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c87cc5734c.mp3"
           },
           {
             title: "Self-Love Affirmations",
             category: "affirmations",
             duration: 480,
             description: "Build confidence with positive affirmations",
-            audio_url: "https://example.com/audio/affirmations.mp3"
+            audio_url: "https://cdn.pixabay.com/download/audio/2022/10/07/audio_7e1ef5e18a.mp3"
           },
           {
             title: "Stress Relief Meditation",
             category: "meditation",
             duration: 900,
             description: "Release tension and find inner peace",
-            audio_url: "https://example.com/audio/stress-relief.mp3"
+            audio_url: "https://cdn.pixabay.com/download/audio/2022/05/27/audio_83a3d48dd7.mp3"
           },
           {
             title: "Box Breathing Technique",
             category: "breathing",
             duration: 240,
             description: "Military-grade breathing for instant calm",
-            audio_url: "https://example.com/audio/box-breathing.mp3"
+            audio_url: "https://cdn.pixabay.com/download/audio/2021/08/04/audio_ab8a9d6d5c.mp3"
           },
           {
             title: "Abundance Mindset",
             category: "affirmations",
             duration: 600,
             description: "Cultivate prosperity consciousness",
-            audio_url: "https://example.com/audio/abundance.mp3"
+            audio_url: "https://cdn.pixabay.com/download/audio/2022/11/22/audio_ef7bc7c785.mp3"
           },
           {
             title: "Body Scan Meditation",
             category: "meditation",
             duration: 1200,
             description: "Progressive relaxation technique",
-            audio_url: "https://example.com/audio/body-scan.mp3"
+            audio_url: "https://cdn.pixabay.com/download/audio/2023/02/28/audio_6067e025b9.mp3"
           },
           {
             title: "4-7-8 Breathing",
             category: "breathing",
             duration: 180,
             description: "Natural tranquilizer for the nervous system",
-            audio_url: "https://example.com/audio/4-7-8-breathing.mp3"
+            audio_url: "https://cdn.pixabay.com/download/audio/2022/08/02/audio_d1718ab41b.mp3"
           }
         ];
 

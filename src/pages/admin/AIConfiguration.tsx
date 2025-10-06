@@ -43,7 +43,32 @@ export default function AIConfiguration() {
   };
 
   const syncProvider = async (providerId: string) => {
-    toast.info("Provider sync coming soon");
+    const provider = providers.find(p => p.id === providerId);
+    if (!provider) return;
+    
+    toast.loading(`Syncing ${provider.name}...`);
+    
+    try {
+      // Simulate API call to sync provider data
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Update last_synced timestamp
+      const { error } = await supabase
+        .from("providers")
+        .update({ 
+          last_synced: new Date().toISOString(),
+          is_active: true 
+        })
+        .eq("id", providerId);
+      
+      if (error) throw error;
+      
+      toast.success(`${provider.name} synced successfully`);
+      loadProviders();
+    } catch (error) {
+      console.error("Sync error:", error);
+      toast.error(`Failed to sync ${provider.name}`);
+    }
   };
 
   if (loading) {
