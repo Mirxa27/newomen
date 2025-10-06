@@ -10,6 +10,7 @@ export class AudioRecorder {
 
   async start() {
     try {
+      console.log('AudioRecorder: Requesting microphone permissions...');
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           sampleRate: 24000,
@@ -19,10 +20,12 @@ export class AudioRecorder {
           autoGainControl: true
         }
       });
+      console.log('AudioRecorder: Microphone permissions granted');
 
       this.audioContext = new AudioContext({
         sampleRate: 24000,
       });
+      console.log('AudioRecorder: AudioContext created');
 
       this.source = this.audioContext.createMediaStreamSource(this.stream);
       this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
@@ -34,8 +37,9 @@ export class AudioRecorder {
 
       this.source.connect(this.processor);
       this.processor.connect(this.audioContext.destination);
+      console.log('AudioRecorder: Audio processing pipeline connected');
     } catch (error) {
-      console.error('Error accessing microphone:', error);
+      console.error('AudioRecorder: Error accessing microphone:', error);
       throw error;
     }
   }
@@ -76,25 +80,31 @@ export class RealtimeChat {
       console.log('Requesting ephemeral token...');
       const { data, error } = await supabase.functions.invoke("realtime-token");
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error getting ephemeral token:', error);
+        throw error;
+      }
       if (!data?.client_secret?.value) {
+        console.error('No client_secret in response:', data);
         throw new Error("Failed to get ephemeral token");
       }
 
       const EPHEMERAL_KEY = data.client_secret.value;
-      console.log('Ephemeral token received');
+      console.log('Ephemeral token received, expires at:', data.expires_at);
 
       // Create peer connection
       this.pc = new RTCPeerConnection();
 
       // Set up remote audio
       this.pc.ontrack = e => {
-        console.log('Remote track received');
+        console.log('Remote track received:', e.track.kind);
         this.audioEl.srcObject = e.streams[0];
       };
 
       // Add local audio track
+      console.log('Requesting microphone access...');
       const ms = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log('Microphone access granted');
       this.pc.addTrack(ms.getTracks()[0]);
 
       // Set up data channel
@@ -128,8 +138,11 @@ export class RealtimeChat {
         },
       });
 
+      console.log('OpenAI API response status:', sdpResponse.status);
       if (!sdpResponse.ok) {
-        throw new Error(`Failed to connect: ${sdpResponse.status}`);
+        const errorText = await sdpResponse.text();
+        console.error('OpenAI API error response:', errorText);
+        throw new Error(`Failed to connect: ${sdpResponse.status} - ${errorText}`);
       }
 
       const answer = {
@@ -138,9 +151,10 @@ export class RealtimeChat {
       };
 
       await this.pc.setRemoteDescription(answer);
-      console.log("WebRTC connection established");
+      console.log("WebRTC connection established successfully");
 
       // Start recording
+      console.log('Starting audio recording...');
       this.recorder = new AudioRecorder((audioData) => {
         if (this.dc?.readyState === 'open') {
           this.dc.send(JSON.stringify({
@@ -150,6 +164,7 @@ export class RealtimeChat {
         }
       });
       await this.recorder.start();
+      console.log('Audio recording started successfully');
 
     } catch (error) {
       console.error("Error initializing chat:", error);
