@@ -217,49 +217,62 @@ const Chat = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row gap-6 p-6">
-      <div className="flex-1 flex flex-col gap-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold">Conversation with NewMe</h2>
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate('/dashboard')}
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Dashboard
-          </Button>
-        </div>
-
-        <TranscriptPane 
-          messages={messages} 
-          partialTranscript={partialTranscript}
-        />
-
-        <div className="lg:hidden">
-          <SessionHUD 
-            duration={duration}
-            isConnected={isConnected}
-            isSpeaking={isSpeaking}
-          />
-        </div>
-
-        <Waveform isActive={isConnected && isSpeaking} />
-
-        <Composer
-          onSendText={handleSendText}
-          onEndSession={endConversation}
-          isConnected={isConnected}
-          isMuted={isMuted}
-          onToggleMute={toggleMute}
-        />
+    <div className="min-h-screen flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur-sm sticky top-0 z-30">
+        <h2 className="text-xl md:text-2xl font-bold">Conversation with NewMe</h2>
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span className="hidden sm:inline">Dashboard</span>
+        </Button>
       </div>
 
-      <div className="hidden lg:block lg:w-80">
-        <SessionHUD 
-          duration={duration}
-          isConnected={isConnected}
-          isSpeaking={isSpeaking}
-        />
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+        {/* Chat Area */}
+        <div className="flex-1 flex flex-col min-h-0">
+          <TranscriptPane
+            messages={messages}
+            partialTranscript={partialTranscript}
+          />
+
+          {/* Mobile Session Info */}
+          <div className="lg:hidden p-4 border-t">
+            <SessionHUD
+              duration={duration}
+              isConnected={isConnected}
+              isSpeaking={isSpeaking}
+            />
+          </div>
+
+          <Waveform isActive={isConnected && isSpeaking} />
+
+          {/* Composer */}
+          <div className="p-4 border-t">
+            <Composer
+              onSendText={handleSendText}
+              onEndSession={endConversation}
+              isConnected={isConnected}
+              isMuted={isMuted}
+              onToggleMute={toggleMute}
+            />
+          </div>
+        </div>
+
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block lg:w-80 border-l">
+          <div className="p-4 h-full">
+            <SessionHUD
+              duration={duration}
+              isConnected={isConnected}
+              isSpeaking={isSpeaking}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
