@@ -1,7 +1,6 @@
 import { ReactNode } from "react";
 import Header from "./Header";
 import MobileFooter from "./MobileFooter";
-import "@/styles/responsive.css";
 
 interface MainLayoutProps {
   children: ReactNode;

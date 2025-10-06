@@ -2,7 +2,6 @@ import { Link, useLocation } from "react-router-dom";
 import { Home, Sparkles, Users, User, MessageCircle, Shield, Brain } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
-import "@/styles/responsive.css";
 
 export default function MobileFooter() {
   const location = useLocation();

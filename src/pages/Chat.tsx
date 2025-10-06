@@ -8,7 +8,6 @@ import { TranscriptPane } from "@/components/chat/TranscriptPane";
 import { SessionHUD } from "@/components/chat/SessionHUD";
 import { Composer } from "@/components/chat/Composer";
 import { Waveform } from "@/components/chat/Waveform";
-import "@/styles/responsive.css";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -218,31 +217,35 @@ const Chat = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="chat-responsive">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur-sm sticky top-0 z-30">
-        <h2 className="text-xl md:text-2xl font-bold">Conversation with NewMe</h2>
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="hidden sm:inline">Dashboard</span>
-        </Button>
+      <div className="chat-header-responsive">
+        <div className="flex items-center justify-between">
+          <h2 className="heading-responsive">Conversation with NewMe</h2>
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/dashboard')}
+            className="btn-responsive flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden sm:inline">Dashboard</span>
+          </Button>
+        </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col lg:flex-row min-h-0">
         {/* Chat Area */}
         <div className="flex-1 flex flex-col min-h-0">
-          <TranscriptPane
-            messages={messages}
-            partialTranscript={partialTranscript}
-          />
+          <div className="chat-content-responsive">
+            <TranscriptPane
+              messages={messages}
+              partialTranscript={partialTranscript}
+            />
+          </div>
 
           {/* Mobile Session Info */}
-          <div className="lg:hidden p-4 border-t">
+          <div className="tablet-up:hidden space-responsive-sm border-t">
             <SessionHUD
               duration={duration}
               isConnected={isConnected}
@@ -253,7 +256,7 @@ const Chat = () => {
           <Waveform isActive={isConnected && isSpeaking} />
 
           {/* Composer */}
-          <div className="p-4 border-t">
+          <div className="chat-footer-responsive">
             <Composer
               onSendText={handleSendText}
               onEndSession={endConversation}
@@ -265,8 +268,8 @@ const Chat = () => {
         </div>
 
         {/* Desktop Sidebar */}
-        <div className="hidden lg:block lg:w-80 border-l">
-          <div className="p-4 h-full">
+        <div className="desktop-up:block desktop-up:w-80 border-l">
+          <div className="space-responsive-md h-full">
             <SessionHUD
               duration={duration}
               isConnected={isConnected}
