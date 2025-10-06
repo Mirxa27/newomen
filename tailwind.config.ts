@@ -14,6 +14,13 @@ export default {
       },
     },
     extend: {
+      screens: {
+        'xs': '320px',
+        'mobile': {'max': '640px'},
+        'tablet': {'min': '641px', 'max': '1024px'},
+        'desktop': {'min': '1025px'},
+        '3xl': '1920px',
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

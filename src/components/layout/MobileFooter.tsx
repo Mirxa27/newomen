@@ -29,7 +29,7 @@ export default function MobileFooter() {
 
   return (
     <nav className="nav-responsive">
-      <div className="flex items-center justify-around gap-1">
+      <div className="flex items-center justify-around gap-1 h-full">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.to);
@@ -38,9 +38,9 @@ export default function MobileFooter() {
             <Link
               key={item.to}
               to={item.to}
-              className={`flex flex-col items-center gap-1 px-1 py-2 rounded-xl transition-all duration-300 min-w-0 flex-1 max-w-[60px] touch-target-comfort ${
+              className={`flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-xl transition-all duration-300 min-w-0 flex-1 max-w-[80px] touch-target-comfort touch-optimized ${
                 active
-                  ? "clay-button bg-gradient-to-br from-primary/20 to-accent/20 text-primary scale-105"
+                  ? "clay-button bg-gradient-to-br from-primary/20 to-accent/20 text-primary scale-102"
                   : "text-muted-foreground hover:text-foreground hover:scale-102"
               }`}
             >

@@ -92,12 +92,38 @@ export default function Community() {
 
       if (!profile) {
         console.error("No user profile found for user:", user.id);
-        toast.error("User profile not found. Please complete your profile setup.");
-        return;
+        // Try to create a basic user profile if it doesn't exist
+        try {
+          const { data: newProfile, error: createError } = await supabase
+            .from("user_profiles")
+            .insert({
+              user_id: user.id,
+              nickname: user.email?.split('@')[0] || 'User',
+              email: user.email || '',
+              subscription_tier: 'discovery'
+            })
+            .select("id")
+            .single();
+
+          if (createError) {
+            console.error("Error creating user profile:", createError);
+            toast.error("Failed to create user profile. Please complete your profile setup.");
+            return;
+          }
+
+          if (newProfile) {
+            setCurrentUserId(newProfile.id);
+            console.log("Created new user profile with ID:", newProfile.id);
+          }
+        } catch (createError) {
+          console.error("Error creating user profile:", createError);
+          toast.error("Failed to create user profile. Please complete your profile setup.");
+          return;
+        }
+      } else {
+        setCurrentUserId(profile.id);
+        console.log("Current user ID set to:", profile.id);
       }
-      
-      setCurrentUserId(profile.id);
-      console.log("Current user ID set to:", profile.id);
 
       // Load connections (with fallback if table doesn't exist yet)
       let connectionsData, pendingData;
@@ -339,6 +365,8 @@ export default function Community() {
 
   // Announcement functionality
   const createAnnouncement = async () => {
+    console.log("Creating announcement with currentUserId:", currentUserId);
+    
     if (!newAnnouncement.title.trim() || !newAnnouncement.content.trim()) {
       toast.error("Please fill in all required fields");
       return;
@@ -353,7 +381,16 @@ export default function Community() {
 
       // Check if currentUserId is valid
       if (!currentUserId || currentUserId.trim() === "") {
+        console.error("Invalid currentUserId:", currentUserId);
         toast.error("User not properly authenticated. Please refresh the page.");
+        return;
+      }
+
+      // Additional UUID format validation
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(currentUserId)) {
+        console.error("Invalid UUID format for currentUserId:", currentUserId);
+        toast.error("Invalid user ID format. Please refresh the page.");
         return;
       }
 
