@@ -9,8 +9,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Search, User, Trophy, Calendar } from "lucide-react";
 import { toast } from "sonner";
 
+interface UserWithEmail extends Tables<"user_profiles"> {
+  email?: string;
+}
+
 export default function UserManagement() {
-  const [users, setUsers] = useState<Tables<"user_profiles">[]>([]);
+  const [users, setUsers] = useState<UserWithEmail[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -20,13 +24,23 @@ export default function UserManagement() {
 
   const loadUsers = async () => {
     try {
+      // For now, just load user profiles without emails to avoid permission issues
+      // In a production environment, you would create a database view or function
+      // that joins user_profiles with auth.users for admin access
       const { data, error } = await supabase
         .from("user_profiles")
         .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setUsers((data as Tables<"user_profiles">[]) || []);
+
+      // Map to include empty email field for now
+      const usersWithEmails = data?.map(profile => ({
+        ...profile,
+        email: `user-${profile.user_id.slice(0, 8)}` // Show partial user ID instead of email for privacy
+      })) || [];
+
+      setUsers(usersWithEmails);
     } catch (error) {
       console.error("Error loading users:", error);
       toast.error("Failed to load users");
@@ -36,8 +50,8 @@ export default function UserManagement() {
   };
 
   const filteredUsers = users.filter((user) =>
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.nickname?.toLowerCase().includes(searchTerm.toLowerCase())
+    (user.nickname && user.nickname.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (user.user_id && user.user_id.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   if (loading) {
@@ -71,7 +85,7 @@ export default function UserManagement() {
               {users.filter(u => {
                 const lastWeek = new Date();
                 lastWeek.setDate(lastWeek.getDate() - 7);
-                return u.last_streak_date && new Date(u.last_streak_date) > lastWeek;
+                return u.last_login_date && new Date(u.last_login_date) > lastWeek;
               }).length}
             </div>
           </CardContent>
@@ -128,7 +142,7 @@ export default function UserManagement() {
                   <TableCell className="font-medium">
                     {user.nickname || "Anonymous"}
                   </TableCell>
-                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.email || 'N/A'}</TableCell>
                   <TableCell>
                     <Badge variant={user.subscription_tier === "discovery" ? "secondary" : "default"}>
                       {user.subscription_tier}
