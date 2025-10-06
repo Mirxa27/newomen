@@ -121,9 +121,18 @@ export default function ProvidersManagement() {
   }, [toast]);
 
   const invokeProviderFunction = async (payload: Record<string, unknown>) => {
-    return supabase.functions.invoke("provider-discovery", {
-      body: payload,
-    });
+    try {
+      // Try the main provider-discovery function first
+      return await supabase.functions.invoke("provider-discovery", {
+        body: payload,
+      });
+    } catch (error) {
+      console.warn("Main provider-discovery failed, trying simplified version:", error);
+      // Fallback to simplified version
+      return await supabase.functions.invoke("provider-discovery-simple", {
+        body: payload,
+      });
+    }
   };
 
   const addProvider = async () => {
