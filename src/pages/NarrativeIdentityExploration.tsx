@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { trackNarrativeExplorationCompletion } from '@/lib/gamification-events';
 
+// (Keep all interface and constant definitions as they are)
 interface Question {
   id: number;
   category: string;
@@ -21,76 +22,16 @@ interface Question {
 }
 
 const questions: Question[] = [
-  {
-    id: 1,
-    category: "Origin Story",
-    question: "What is your earliest memory that shaped who you are today?",
-    prompt: "Think about a moment from childhood that still influences you. What happened, and why does it matter?",
-    icon: BookOpen
-  },
-  {
-    id: 2,
-    category: "Turning Points",
-    question: "Describe a moment when your life direction changed significantly.",
-    prompt: "This could be a decision you made, an event that happened, or a realization you had. What shifted?",
-    icon: Target
-  },
-  {
-    id: 3,
-    category: "Core Values",
-    question: "What principle or belief do you hold that you would never compromise?",
-    prompt: "Think about what matters most to you. Why is this value so important?",
-    icon: Heart
-  },
-  {
-    id: 4,
-    category: "Overcoming Adversity",
-    question: "Tell me about a time you overcame something that seemed impossible.",
-    prompt: "What was the challenge? How did you get through it? What did you learn?",
-    icon: Sparkles
-  },
-  {
-    id: 5,
-    category: "Relationships",
-    question: "Who has had the most significant impact on your life story, and how?",
-    prompt: "This could be someone you know personally, or even someone you've never met. How did they influence you?",
-    icon: Heart
-  },
-  {
-    id: 6,
-    category: "Identity Formation",
-    question: "When did you first realize who you truly are (or want to be)?",
-    prompt: "Describe the moment of self-discovery or the journey toward understanding yourself.",
-    icon: Sparkles
-  },
-  {
-    id: 7,
-    category: "Limiting Beliefs",
-    question: "What story do you tell yourself that might be holding you back?",
-    prompt: "We all have narratives that limit us. What's one you've noticed in your own thinking?",
-    icon: BookOpen
-  },
-  {
-    id: 8,
-    category: "Aspirational Self",
-    question: "If you could write the next chapter of your life, what would it look like?",
-    prompt: "Dream big. What would be happening? Who would you be? How would you feel?",
-    icon: Target
-  },
-  {
-    id: 9,
-    category: "Resilience Patterns",
-    question: "Looking back, how have you consistently handled difficult situations?",
-    prompt: "What patterns do you notice in the way you cope, adapt, or overcome challenges?",
-    icon: Sparkles
-  },
-  {
-    id: 10,
-    category: "Legacy & Meaning",
-    question: "What do you want your life story to mean? What impact do you want to leave?",
-    prompt: "Think about how you want to be remembered and what matters most to you in the long run.",
-    icon: Heart
-  }
+  { id: 1, category: "Origin Story", question: "What is your earliest memory that shaped who you are today?", prompt: "Think about a moment from childhood that still influences you. What happened, and why does it matter?", icon: BookOpen },
+  { id: 2, category: "Turning Points", question: "Describe a moment when your life direction changed significantly.", prompt: "This could be a decision you made, an event that happened, or a realization you had. What shifted?", icon: Target },
+  { id: 3, category: "Core Values", question: "What principle or belief do you hold that you would never compromise?", prompt: "Think about what matters most to you. Why is this value so important?", icon: Heart },
+  { id: 4, category: "Overcoming Adversity", question: "Tell me about a time you overcame something that seemed impossible.", prompt: "What was the challenge? How did you get through it? What did you learn?", icon: Sparkles },
+  { id: 5, category: "Relationships", question: "Who has had the most significant impact on your life story, and how?", prompt: "This could be someone you know personally, or even someone you've never met. How did they influence you?", icon: Heart },
+  { id: 6, category: "Identity Formation", question: "When did you first realize who you truly are (or want to be)?", prompt: "Describe the moment of self-discovery or the journey toward understanding yourself.", icon: Sparkles },
+  { id: 7, category: "Limiting Beliefs", question: "What story do you tell yourself that might be holding you back?", prompt: "We all have narratives that limit us. What's one you've noticed in your own thinking?", icon: BookOpen },
+  { id: 8, category: "Aspirational Self", question: "If you could write the next chapter of your life, what would it look like?", prompt: "Dream big. What would be happening? Who would you be? How would you feel?", icon: Target },
+  { id: 9, category: "Resilience Patterns", question: "Looking back, how have you consistently handled difficult situations?", prompt: "What patterns do you notice in the way you cope, adapt, or overcome challenges?", icon: Sparkles },
+  { id: 10, category: "Legacy & Meaning", question: "What do you want your life story to mean? What impact do you want to leave?", prompt: "Think about how you want to be remembered and what matters most to you in the long run.", icon: Heart }
 ];
 
 interface TransformationStep {
@@ -120,15 +61,6 @@ export default function NarrativeIdentityExploration() {
   const [hasExistingExploration, setHasExistingExploration] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    void checkExistingExploration();
-  }, [checkExistingExploration]);
-
-  useEffect(() => {
-    // Load saved answer for current question
-    setCurrentAnswer(answers[currentQuestionIndex + 1] || '');
-  }, [currentQuestionIndex, answers]);
-
   const checkExistingExploration = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -144,6 +76,10 @@ export default function NarrativeIdentityExploration() {
         .single();
 
       if (existingData?.narrative_identity_data) {
+        const parsedData = existingData.narrative_identity_data as any;
+        if(parsedData.analysis) {
+          setAnalysisResult(parsedData.analysis);
+        }
         setHasExistingExploration(true);
       }
     } catch (error) {
@@ -152,6 +88,14 @@ export default function NarrativeIdentityExploration() {
       setIsLoading(false);
     }
   }, [navigate]);
+
+  useEffect(() => {
+    void checkExistingExploration();
+  }, [checkExistingExploration]);
+
+  useEffect(() => {
+    setCurrentAnswer(answers[currentQuestionIndex + 1] || '');
+  }, [currentQuestionIndex, answers]);
 
   const handleNext = () => {
     if (currentAnswer.trim().length < 50) {
@@ -163,20 +107,13 @@ export default function NarrativeIdentityExploration() {
       return;
     }
 
-    // Save current answer
-    setAnswers(prev => ({
-      ...prev,
-      [currentQuestionIndex + 1]: currentAnswer
-    }));
+    const newAnswers = { ...answers, [currentQuestionIndex + 1]: currentAnswer };
+    setAnswers(newAnswers);
 
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
-      // All questions answered, proceed to analysis
-      analyzeNarrative({
-        ...answers,
-        [currentQuestionIndex + 1]: currentAnswer
-      });
+      analyzeNarrative(newAnswers);
     }
   };
 
@@ -192,84 +129,41 @@ export default function NarrativeIdentityExploration() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Prepare narrative data for AI analysis
       const narrativeText = questions.map((q, idx) => 
         `${q.category}: ${q.question}\nAnswer: ${allAnswers[idx + 1]}`
       ).join('\n\n');
 
-      // Call AI analysis function
       const { data, error } = await supabase.functions.invoke('ai-content-builder', {
-        body: {
-          topic: 'narrative-identity-analysis',
-          context: narrativeText,
-          analysisType: 'comprehensive'
-        }
+        body: { topic: 'narrative-identity-analysis', context: narrativeText, analysisType: 'comprehensive' }
       });
 
       if (error) throw error;
 
-      // Parse AI response
       const coherence = typeof data?.narrativeCoherence === 'number' ? data.narrativeCoherence : 0;
-
       const analysis: NarrativeAnalysis = {
-        coreThemes: Array.isArray(data?.coreThemes) ? data.coreThemes.map((item: unknown) => String(item)) : [],
-        limitingBeliefs: Array.isArray(data?.limitingBeliefs) ? data.limitingBeliefs.map((item: unknown) => String(item)) : [],
-        strengthPatterns: Array.isArray(data?.strengthPatterns) ? data.strengthPatterns.map((item: unknown) => String(item)) : [],
-        transformationOpportunities: Array.isArray(data?.transformationOpportunities)
-          ? data.transformationOpportunities.map((item: unknown) => String(item))
-          : [],
-        personalityArchetype:
-          typeof data?.personalityArchetype === 'string' ? data.personalityArchetype : 'Explorer',
+        coreThemes: Array.isArray(data?.coreThemes) ? data.coreThemes.map(String) : [],
+        limitingBeliefs: Array.isArray(data?.limitingBeliefs) ? data.limitingBeliefs.map(String) : [],
+        strengthPatterns: Array.isArray(data?.strengthPatterns) ? data.strengthPatterns.map(String) : [],
+        transformationOpportunities: Array.isArray(data?.transformationOpportunities) ? data.transformationOpportunities.map(String) : [],
+        personalityArchetype: typeof data?.personalityArchetype === 'string' ? data.personalityArchetype : 'Explorer',
         narrativeCoherence: Math.min(100, Math.max(0, coherence)),
-        transformationRoadmap: Array.isArray(data?.transformationRoadmap)
-          ? data.transformationRoadmap
-              .map((step: unknown) => {
-                if (
-                  step &&
-                  typeof step === 'object' &&
-                  'title' in step &&
-                  'description' in step
-                ) {
-                  const stepRecord = step as Record<string, unknown>;
-                  const rawActions = stepRecord.actions;
-                  const actions = Array.isArray(rawActions)
-                    ? rawActions.map((action) => String(action))
-                    : undefined;
-
-                  return {
-                    title: String(stepRecord.title ?? ''),
-                    description: String(stepRecord.description ?? ''),
-                    actions,
-                  };
-                }
-                return null;
-              })
-              .filter((step): step is TransformationStep => Boolean(step))
-          : [],
+        transformationRoadmap: Array.isArray(data?.transformationRoadmap) ? data.transformationRoadmap.map((step: any) => ({
+          title: step.title ?? '',
+          description: step.description ?? '',
+          actions: Array.isArray(step.actions) ? step.actions.map(String) : [],
+        })) : [],
       };
 
-      // Save to database
-      const { error: saveError } = await supabase
-        .from('user_memory_profiles')
-        .upsert({
-          user_id: user.id,
-          narrative_identity_data: {
-            answers: allAnswers,
-            analysis: analysis,
-            completed_at: new Date().toISOString()
-          }
-        });
-
-      if (saveError) throw saveError;
+      await supabase.from('user_memory_profiles').upsert({
+        user_id: user.id,
+        narrative_identity_data: { answers: allAnswers, analysis: analysis, completed_at: new Date().toISOString() }
+      });
 
       setAnalysisResult(analysis);
-
-      // Track narrative exploration completion for gamification
       void trackNarrativeExplorationCompletion(user.id, `narrative_${user.id}`);
-
       toast({
         title: "Analysis Complete!",
-        description: "Your narrative identity has been analyzed. Discover your transformation roadmap below.",
+        description: "Your narrative identity has been analyzed.",
       });
 
     } catch (error) {
@@ -298,18 +192,12 @@ export default function NarrativeIdentityExploration() {
         <div className="max-w-4xl mx-auto space-y-8">
           <div className="text-center space-y-4">
             <h1 className="text-4xl font-bold gradient-text">Your Narrative Identity</h1>
-            <p className="text-muted-foreground">
-              Based on your answers, we've identified key patterns and opportunities for growth
-            </p>
+            <p className="text-muted-foreground">Based on your answers, we've identified key patterns for growth.</p>
           </div>
 
-          {/* Personality Archetype */}
           <Card className="glass-card border-primary/20">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
-                Your Archetype: {analysisResult.personalityArchetype}
-              </CardTitle>
+              <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" />Your Archetype: {analysisResult.personalityArchetype}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
@@ -320,103 +208,34 @@ export default function NarrativeIdentityExploration() {
             </CardContent>
           </Card>
 
-          {/* Core Themes */}
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="h-5 w-5" />
-                Core Themes in Your Story
-              </CardTitle>
-              <CardDescription>
-                These recurring patterns shape your identity
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {analysisResult.coreThemes.map((theme: string, idx: number) => (
-                  <Badge key={idx} variant="secondary" className="clay-button">
-                    {theme}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <div className="grid md:grid-cols-2 gap-6">
+            <Card className="glass-card">
+              <CardHeader><CardTitle className="flex items-center gap-2"><BookOpen className="h-5 w-5" />Core Themes</CardTitle></CardHeader>
+              <CardContent><div className="flex flex-wrap gap-2">{analysisResult.coreThemes.map((theme, idx) => <Badge key={idx} variant="secondary" className="clay-button">{theme}</Badge>)}</div></CardContent>
+            </Card>
+            <Card className="glass-card border-green-500/20">
+              <CardHeader><CardTitle className="flex items-center gap-2"><Heart className="h-5 w-5 text-green-500" />Strength Patterns</CardTitle></CardHeader>
+              <CardContent><ul className="space-y-2">{analysisResult.strengthPatterns.map((strength, idx) => <li key={idx} className="flex items-start gap-2"><span className="text-green-500 mt-1">✓</span><span>{strength}</span></li>)}</ul></CardContent>
+            </Card>
+          </div>
 
-          {/* Strength Patterns */}
-          <Card className="glass-card border-green-500/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Heart className="h-5 w-5 text-green-500" />
-                Your Strength Patterns
-              </CardTitle>
-              <CardDescription>
-                Capabilities you've demonstrated across your life story
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3">
-                {analysisResult.strengthPatterns.map((strength: string, idx: number) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <span className="text-green-500 mt-1">✓</span>
-                    <span>{strength}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-
-          {/* Limiting Beliefs */}
           <Card className="glass-card border-yellow-500/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-yellow-500" />
-                Limiting Beliefs to Challenge
-              </CardTitle>
-              <CardDescription>
-                Stories you tell yourself that may be holding you back
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3">
-                {analysisResult.limitingBeliefs.map((belief: string, idx: number) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <span className="text-yellow-500 mt-1">⚠</span>
-                    <span>{belief}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
+            <CardHeader><CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-yellow-500" />Limiting Beliefs to Challenge</CardTitle></CardHeader>
+            <CardContent><ul className="space-y-2">{analysisResult.limitingBeliefs.map((belief, idx) => <li key={idx} className="flex items-start gap-2"><span className="text-yellow-500 mt-1">⚠</span><span>{belief}</span></li>)}</ul></CardContent>
           </Card>
 
-          {/* Transformation Roadmap */}
           <Card className="glass-card border-primary/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-primary" />
-                Your Transformation Roadmap
-              </CardTitle>
-              <CardDescription>
-                Personalized steps based on your narrative identity
-              </CardDescription>
-            </CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary" />Your Transformation Roadmap</CardTitle></CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {analysisResult.transformationRoadmap.map((step, idx) => (
                   <div key={idx} className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold">
-                        {idx + 1}
-                      </div>
+                      <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold">{idx + 1}</div>
                       <h4 className="font-semibold">{step.title}</h4>
                     </div>
                     <p className="text-sm text-muted-foreground ml-10">{step.description}</p>
-                    <div className="ml-10 flex flex-wrap gap-2">
-                      {step.actions?.map((action, actionIdx) => (
-                        <Badge key={actionIdx} variant="outline" className="text-xs">
-                          {action}
-                        </Badge>
-                      ))}
-                    </div>
+                    <div className="ml-10 flex flex-wrap gap-2">{step.actions?.map((action, actionIdx) => <Badge key={actionIdx} variant="outline" className="text-xs">{action}</Badge>)}</div>
                   </div>
                 ))}
               </div>
@@ -424,19 +243,8 @@ export default function NarrativeIdentityExploration() {
           </Card>
 
           <div className="flex gap-4">
-            <Button 
-              onClick={() => navigate('/dashboard')} 
-              variant="outline" 
-              className="flex-1 glass-card"
-            >
-              Return to Dashboard
-            </Button>
-            <Button 
-              onClick={() => navigate('/chat')} 
-              className="flex-1 clay-button bg-gradient-to-r from-primary to-accent"
-            >
-              Start Your Journey <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+            <Button onClick={() => navigate('/dashboard')} variant="outline" className="flex-1 glass-card">Return to Dashboard</Button>
+            <Button onClick={() => navigate('/chat')} className="flex-1 clay-button bg-gradient-to-r from-primary to-accent">Discuss with AI <ArrowRight className="ml-2 h-4 w-4" /></Button>
           </div>
         </div>
       </div>
@@ -450,12 +258,12 @@ export default function NarrativeIdentityExploration() {
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-3xl mx-auto space-y-8">
-        {/* Header */}
         <div className="text-center space-y-4">
           <h1 className="text-4xl font-bold gradient-text">Narrative Identity Exploration</h1>
-          <p className="text-muted-foreground">
-            Discover the stories that shape who you are
-          </p>
+          <p className="text-muted-foreground">Discover the stories that shape who you are.</p>
+          {hasExistingExploration && (
+            <Button variant="link" onClick={() => setAnalysisResult(analysisResult)}>View Previous Analysis</Button>
+          )}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Question {currentQuestionIndex + 1} of {questions.length}</span>
@@ -465,84 +273,47 @@ export default function NarrativeIdentityExploration() {
           </div>
         </div>
 
-        {/* Question Card */}
         <Card className="glass-card border-primary/20">
           <CardHeader>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
-                <Icon className="h-5 w-5 text-primary" />
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center"><Icon className="h-5 w-5 text-primary" /></div>
+                <Badge variant="secondary" className="glass">{currentQuestion.category}</Badge>
               </div>
-              <Badge variant="secondary">{currentQuestion.category}</Badge>
+              <Button variant="ghost" onClick={() => navigate("/dashboard")}><ArrowLeft className="w-4 h-4 mr-2" /> Dashboard</Button>
             </div>
             <CardTitle className="text-2xl">{currentQuestion.question}</CardTitle>
-            <CardDescription className="text-base pt-2">
-              {currentQuestion.prompt}
-            </CardDescription>
+            <CardDescription className="text-base pt-2">{currentQuestion.prompt}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <Textarea
               value={currentAnswer}
               onChange={(e) => setCurrentAnswer(e.target.value)}
               placeholder="Share your story here... Take your time and be as detailed as you'd like."
-              className="min-h-[200px] glass-card resize-none"
+              className="min-h-[200px] glass resize-none"
             />
             <div className="flex items-center justify-between text-sm">
               <span className={currentAnswer.length < 50 ? "text-yellow-500" : "text-green-500"}>
-                {currentAnswer.length} characters
-                {currentAnswer.length < 50 && ` (minimum 50)`}
+                {currentAnswer.length} characters {currentAnswer.length < 50 && ` (minimum 50)`}
               </span>
             </div>
-
             <Separator />
-
-            {/* Navigation */}
             <div className="flex gap-4">
-              <Button
-                onClick={handlePrevious}
-                disabled={currentQuestionIndex === 0}
-                variant="outline"
-                className="glass-card"
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Previous
+              <Button onClick={handlePrevious} disabled={currentQuestionIndex === 0} variant="outline" className="glass">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Previous
               </Button>
-              <Button
-                onClick={handleNext}
-                disabled={currentAnswer.trim().length < 50 || isAnalyzing}
-                className="flex-1 clay-button bg-gradient-to-r from-primary to-accent"
-              >
-                {isAnalyzing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Analyzing...
-                  </>
-                ) : currentQuestionIndex === questions.length - 1 ? (
-                  <>
-                    Complete & Analyze
-                    <Sparkles className="ml-2 h-4 w-4" />
-                  </>
-                ) : (
-                  <>
-                    Next Question
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
+              <Button onClick={handleNext} disabled={currentAnswer.trim().length < 50 || isAnalyzing} className="flex-1 clay-button">
+                {isAnalyzing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analyzing...</>
+                  : currentQuestionIndex === questions.length - 1 ? <><Sparkles className="mr-2 h-4 w-4" /> Complete & Analyze</>
+                  : <><ArrowRight className="mr-2 h-4 w-4" /> Next Question</>}
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Progress Indicator */}
         <div className="flex justify-center gap-2">
           {questions.map((_, idx) => (
-            <div
-              key={idx}
-              className={`h-2 rounded-full transition-all ${
-                idx <= currentQuestionIndex
-                  ? 'w-8 bg-primary'
-                  : 'w-2 bg-muted'
-              }`}
-            />
+            <div key={idx} className={`h-2 rounded-full transition-all ${idx <= currentQuestionIndex ? 'w-8 bg-primary' : 'w-2 bg-muted'}`} />
           ))}
         </div>
       </div>
