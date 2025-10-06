@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Sparkles, Users, User, MessageCircle, Shield } from "lucide-react";
+import { Home, Sparkles, Users, User, MessageCircle, Shield, Brain } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 
@@ -16,6 +16,7 @@ export default function MobileFooter() {
 
   const navItems = [
     { to: "/dashboard", label: "Home", icon: Home },
+    { to: "/ai-assessments", label: "AI Tests", icon: Brain },
     { to: "/narrative-exploration", label: "Explore", icon: Sparkles },
     { to: "/chat", label: "Chat", icon: MessageCircle },
     { to: "/community", label: "Connect", icon: Users },
