@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
-import { Tables } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/types";
 import { Search, Eye, MessageSquare, User, Clock, DollarSign, Download } from "lucide-react";
 import { toast } from "sonner";
 
@@ -34,7 +34,7 @@ export default function SessionsHistory() {
     try {
       const { data, error } = await supabase
         .from("sessions")
-        .select(`
+        .select<SessionHistoryRow>(`
           *,
           user_profiles!inner(nickname, email, avatar_url, subscription_tier),
           agents(name)
@@ -44,7 +44,7 @@ export default function SessionsHistory() {
         .limit(100);
 
       if (error) throw error;
-      setSessions((data as SessionHistoryRow[]) || []);
+      setSessions(data ?? []);
     } catch (error) {
       console.error("Error loading sessions:", error);
       toast.error("Failed to load session history");
@@ -57,19 +57,19 @@ export default function SessionsHistory() {
     try {
       const { data, error } = await supabase
         .from("messages")
-        .select("*")
+        .select<MessageHistoryRow>("id, sender, text_content, audio_url, ts")
         .eq("session_id", sessionId)
         .order("ts", { ascending: true });
 
       if (error) throw error;
-      setConversationMessages((data as MessageHistoryRow[]) || []);
+      setConversationMessages(data ?? []);
     } catch (error) {
       console.error("Error loading conversation:", error);
       toast.error("Failed to load conversation");
     }
   };
 
-  const viewConversation = async (session: any) => {
+  const viewConversation = async (session: SessionHistoryRow) => {
     setSelectedSession(session);
     setViewingConversation(true);
     await loadConversation(session.id);

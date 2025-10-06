@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -38,7 +38,7 @@ export default function WellnessLibrary() {
 
   useEffect(() => {
     filterResources();
-  }, [searchTerm, selectedCategory, resources]);
+  }, [filterResources]);
 
   const loadResources = async () => {
     try {
@@ -127,22 +127,23 @@ export default function WellnessLibrary() {
     }
   };
 
-  const filterResources = () => {
+  const filterResources = useCallback(() => {
     let filtered = resources;
 
     if (selectedCategory !== "all") {
-      filtered = filtered.filter(r => r.category === selectedCategory);
+      filtered = filtered.filter((resource) => resource.category === selectedCategory);
     }
 
     if (searchTerm) {
-      filtered = filtered.filter(r =>
-        r.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.description.toLowerCase().includes(searchTerm.toLowerCase())
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter((resource) =>
+        resource.title.toLowerCase().includes(term) ||
+        resource.description.toLowerCase().includes(term)
       );
     }
 
     setFilteredResources(filtered);
-  };
+  }, [resources, searchTerm, selectedCategory]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

@@ -9,23 +9,86 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, Bot, MessageSquare, Settings, Save, X } from "lucide-react";
+
+interface PromptExample {
+  input: string;
+  output: string;
+}
+
+interface PromptContent {
+  system: string;
+  instructions: string;
+  personality: string;
+  examples: PromptExample[];
+}
 
 interface Prompt {
   id: string;
   name: string;
-  content: any;
-  status: string;
-  created_at: string;
+  content: PromptContent;
+  status: string | null;
+  created_at: string | null;
 }
 
 interface Agent {
   id: string;
   name: string;
-  prompt_id: string;
-  status: string;
+  prompt_id: string | null;
+  status: string | null;
 }
+
+const normalizePromptContent = (content: Tables<"prompts">["content"]): PromptContent => {
+  if (!content || typeof content !== 'object') {
+    return { system: '', instructions: '', personality: '', examples: [] };
+  }
+
+  const record = content as Record<string, unknown>;
+
+  const examples = Array.isArray(record.examples)
+    ? record.examples
+        .map((example) => {
+          if (
+            example &&
+            typeof example === 'object' &&
+            'input' in example &&
+            'output' in example
+          ) {
+            const exampleRecord = example as Record<string, unknown>;
+            return {
+              input: String(exampleRecord.input ?? ''),
+              output: String(exampleRecord.output ?? ''),
+            };
+          }
+          return null;
+        })
+        .filter((example): example is PromptExample => Boolean(example))
+    : [];
+
+  return {
+    system: typeof record.system === 'string' ? record.system : '',
+    instructions: typeof record.instructions === 'string' ? record.instructions : '',
+    personality: typeof record.personality === 'string' ? record.personality : '',
+    examples,
+  };
+};
+
+const normalizePrompt = (row: Tables<"prompts">): Prompt => ({
+  id: row.id,
+  name: row.name,
+  content: normalizePromptContent(row.content),
+  status: row.status ?? null,
+  created_at: row.created_at ?? null,
+});
+
+const normalizeAgent = (row: Tables<"agents">): Agent => ({
+  id: row.id,
+  name: row.name,
+  prompt_id: row.prompt_id ?? null,
+  status: row.status ?? null,
+});
 
 export default function AIPrompting() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
@@ -57,8 +120,8 @@ export default function AIPrompting() {
       if (promptsData.error) throw promptsData.error;
       if (agentsData.error) throw agentsData.error;
 
-      setPrompts(promptsData.data || []);
-      setAgents(agentsData.data || []);
+      setPrompts((promptsData.data ?? []).map((row) => normalizePrompt(row)));
+      setAgents((agentsData.data ?? []).map((row) => normalizeAgent(row)));
     } catch (error) {
       console.error("Error loading data:", error);
       toast.error("Failed to load prompts and agents");
@@ -147,7 +210,7 @@ export default function AIPrompting() {
     }));
   };
 
-  const updateExample = (index: number, field: string, value: string) => {
+  const updateExample = (index: number, field: keyof PromptExample, value: string) => {
     setNewPrompt(prev => ({
       ...prev,
       content: {

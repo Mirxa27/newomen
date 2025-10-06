@@ -339,11 +339,29 @@ export default function Community() {
         return;
       }
 
-      // Use service role or bypass RLS for admin operations
-      // For now, we'll show a message that the feature requires database setup
-      console.log("Announcement creation requires database migration to be applied first");
-      toast.info("Announcement system requires database setup. Please run the migration first.");
-      return;
+      // Try to create the announcement
+      const { data, error } = await supabase
+        .from("community_announcements")
+        .insert([{
+          title: newAnnouncement.title,
+          content: newAnnouncement.content,
+          announcement_type: newAnnouncement.announcement_type,
+          priority: newAnnouncement.priority,
+          target_audience: newAnnouncement.target_audience,
+          created_by: currentUserId
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error creating announcement:", error);
+        if (error.code === "42P01") {
+          toast.error("Database tables not found. Please run the migration first.");
+        } else {
+          toast.error("Failed to create announcement: " + error.message);
+        }
+        return;
+      }
 
       toast.success("Announcement created successfully!");
       setNewAnnouncement({

@@ -4,8 +4,43 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import { Users, MessageSquare, TrendingUp, DollarSign, Activity, Trophy, Clock, User, Calendar, BarChart3, PieChart, LineChart } from "lucide-react";
 import { LineChart as RechartsLineChart, Line, AreaChart, Area, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+
+type UserProfileRow = Tables<"user_profiles">;
+type SessionRow = Tables<"sessions">;
+
+type RecentUser = {
+  id: string;
+  nickname: string | null;
+  email: string;
+  subscriptionTier: string | null;
+  createdAt: string | null;
+  lastActiveAt: string | null;
+};
+
+type SessionWithRelations = SessionRow & {
+  user_profiles: Pick<UserProfileRow, "nickname" | "email"> | null;
+  agents: Pick<Tables<"agents">, "name"> | null;
+};
+
+type RecentSession = {
+  id: string;
+  durationSeconds: number | null;
+  status: string | null;
+  startTimestamp: string | null;
+  userNickname: string | null;
+  userEmail: string | null;
+  agentName: string | null;
+};
+
+interface ChartDatum {
+  date: string;
+  users: number;
+  sessions: number;
+  minutes: number;
+}
 
 export default function Analytics() {
   const [metrics, setMetrics] = useState({
@@ -16,9 +51,9 @@ export default function Analytics() {
     totalCost: 0,
     totalCrystals: 0,
   });
-  const [recentUsers, setRecentUsers] = useState<any[]>([]);
-  const [recentSessions, setRecentSessions] = useState<any[]>([]);
-  const [chartData, setChartData] = useState<any[]>([]);
+  const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
+  const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
+  const [chartData, setChartData] = useState<ChartDatum[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,10 +63,10 @@ export default function Analytics() {
   const loadMetrics = async () => {
     try {
       const [usersData, sessionsData, recentUsersData, recentSessionsData] = await Promise.all([
-        supabase.from("user_profiles").select("crystal_balance, created_at"),
-        supabase.from("sessions").select("duration_seconds, cost_usd, start_ts, status"),
+        supabase.from("user_profiles").select("id, crystal_balance, created_at"),
+        supabase.from("sessions").select("user_id, duration_seconds, cost_usd, start_ts, status"),
         supabase.from("user_profiles")
-          .select("nickname, email, subscription_tier, created_at")
+          .select("id, nickname, email, subscription_tier, created_at")
           .order("created_at", { ascending: false })
           .limit(10),
         supabase.from("sessions")
@@ -44,20 +79,28 @@ export default function Analytics() {
           .limit(10)
       ]);
 
-      const totalUsers = usersData.data?.length || 0;
-      const totalSessions = sessionsData.data?.length || 0;
-      const totalMinutes = Math.floor(
-        (sessionsData.data?.reduce((sum, s) => sum + (s.duration_seconds || 0), 0) || 0) / 60
-      );
-      const totalCost = sessionsData.data?.reduce((sum, s) => sum + (s.cost_usd || 0), 0) || 0;
-      const totalCrystals = usersData.data?.reduce((sum, u) => sum + (u.crystal_balance || 0), 0) || 0;
+      const userRows = (usersData.data ?? []) as Array<Pick<UserProfileRow, "id" | "crystal_balance" | "created_at">>;
+      const sessionRows = (sessionsData.data ?? []) as Array<Pick<SessionRow, "user_id" | "duration_seconds" | "cost_usd" | "start_ts" | "status">>;
+      const recentUserRows = (recentUsersData.data ?? []) as Array<Pick<UserProfileRow, "id" | "nickname" | "email" | "subscription_tier" | "created_at">>;
+      const recentSessionRows = (recentSessionsData.data ?? []) as SessionWithRelations[];
 
-      // Calculate active users (users who have had sessions in last 7 days)
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      const activeUsers = sessionsData.data?.filter(s =>
-        new Date(s.start_ts) > sevenDaysAgo
-      ).length || 0;
+      const totalUsers = userRows.length;
+      const totalSessions = sessionRows.length;
+      const totalMinutes = Math.floor(
+        sessionRows.reduce((sum, session) => sum + (session.duration_seconds ?? 0), 0) / 60
+      );
+      const totalCost = sessionRows.reduce((sum, session) => sum + (session.cost_usd ?? 0), 0);
+      const totalCrystals = userRows.reduce((sum, user) => sum + (user.crystal_balance ?? 0), 0);
+
+      const activityWindowStart = new Date();
+      activityWindowStart.setDate(activityWindowStart.getDate() - 7);
+
+      const activeUsers = new Set(
+        sessionRows
+          .filter((session) => session.start_ts && new Date(session.start_ts) > activityWindowStart)
+          .map((session) => session.user_id)
+          .filter((value): value is string => Boolean(value))
+      ).size;
 
       setMetrics({
         totalUsers,
@@ -68,22 +111,79 @@ export default function Analytics() {
         totalCrystals,
       });
 
-      setRecentUsers(recentUsersData.data || []);
-      setRecentSessions(recentSessionsData.data || []);
+      const lastActivityByUser = sessionRows.reduce<Map<string, string>>((map, session) => {
+        if (!session.user_id || !session.start_ts) {
+          return map;
+        }
+        const previous = map.get(session.user_id);
+        if (!previous || new Date(session.start_ts) > new Date(previous)) {
+          map.set(session.user_id, session.start_ts);
+        }
+        return map;
+      }, new Map<string, string>());
 
-      // Generate sample chart data for demonstration
-      const last7Days = Array.from({ length: 7 }, (_, i) => {
-        const date = new Date();
-        date.setDate(date.getDate() - (6 - i));
+      const recentUserEntries: RecentUser[] = recentUserRows.map((row) => ({
+        id: row.id,
+        nickname: row.nickname,
+        email: row.email,
+        subscriptionTier: row.subscription_tier,
+        createdAt: row.created_at,
+        lastActiveAt: row.id ? lastActivityByUser.get(row.id) ?? null : null,
+      }));
+
+      const recentSessionEntries: RecentSession[] = recentSessionRows.map((row) => ({
+        id: row.id,
+        durationSeconds: row.duration_seconds ?? null,
+        status: row.status ?? null,
+        startTimestamp: row.start_ts ?? null,
+        userNickname: row.user_profiles?.nickname ?? null,
+        userEmail: row.user_profiles?.email ?? null,
+        agentName: row.agents?.name ?? null,
+      }));
+
+      setRecentUsers(recentUserEntries);
+      setRecentSessions(recentSessionEntries);
+
+      const chartStart = new Date();
+      chartStart.setHours(0, 0, 0, 0);
+      chartStart.setDate(chartStart.getDate() - 6);
+
+      const dailyMetrics: ChartDatum[] = Array.from({ length: 7 }, (_, index) => {
+        const dayStart = new Date(chartStart);
+        dayStart.setDate(chartStart.getDate() + index);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(dayStart);
+        dayEnd.setDate(dayEnd.getDate() + 1);
+
+        const daySessions = sessionRows.filter((session) => {
+          if (!session.start_ts) {
+            return false;
+          }
+          const start = new Date(session.start_ts);
+          return start >= dayStart && start < dayEnd;
+        });
+
+        const dayMinutes = Math.floor(
+          daySessions.reduce((sum, session) => sum + (session.duration_seconds ?? 0), 0) / 60
+        );
+
+        const dayUsers = userRows.filter((user) => {
+          if (!user.created_at) {
+            return false;
+          }
+          const created = new Date(user.created_at);
+          return created >= dayStart && created < dayEnd;
+        }).length;
+
         return {
-          date: date.toISOString().split('T')[0],
-          users: Math.floor(Math.random() * 20) + 5,
-          sessions: Math.floor(Math.random() * 15) + 3,
-          minutes: Math.floor(Math.random() * 120) + 30,
+          date: dayStart.toISOString().split('T')[0],
+          users: dayUsers,
+          sessions: daySessions.length,
+          minutes: dayMinutes,
         };
       });
 
-      setChartData(last7Days);
+      setChartData(dailyMetrics);
     } catch (error) {
       console.error("Error loading metrics:", error);
     } finally {
@@ -206,22 +306,19 @@ export default function Analytics() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">
-                        {user.subscription_tier || "discovery"}
+                        {user.subscriptionTier || "discovery"}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1 text-sm">
                         <Calendar className="w-3 h-3" />
-                        {new Date(user.created_at).toLocaleDateString()}
+                        {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1 text-sm">
                         <Clock className="w-3 h-3" />
-                        {user.last_login_date 
-                          ? new Date(user.last_login_date).toLocaleDateString()
-                          : "Never"
-                        }
+                        {user.lastActiveAt ? new Date(user.lastActiveAt).toLocaleDateString() : 'Never'}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -258,25 +355,25 @@ export default function Analytics() {
                   <TableRow key={session.id}>
                     <TableCell className="font-medium">
                       <div>
-                        <div>{session.user_profiles?.nickname || "Anonymous"}</div>
+                        <div>{session.userNickname || "Anonymous"}</div>
                         <div className="text-xs text-muted-foreground">
-                          {session.user_profiles?.email}
+                          {session.userEmail}
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{session.agents?.name || "Default"}</TableCell>
+                    <TableCell>{session.agentName || "Default"}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
-                        {session.duration_seconds 
-                          ? `${Math.floor(session.duration_seconds / 60)}m ${session.duration_seconds % 60}s`
+                        {session.durationSeconds
+                          ? `${Math.floor((session.durationSeconds ?? 0) / 60)}m ${(session.durationSeconds ?? 0) % 60}s`
                           : "N/A"
                         }
                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant={session.status === "completed" ? "default" : "secondary"}>
-                        {session.status}
+                        {session.status || 'unknown'}
                       </Badge>
                     </TableCell>
                   </TableRow>
