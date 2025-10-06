@@ -27,7 +27,6 @@ interface SessionRow {
   status: string;
   user_profiles: UserProfile | null;
   agents: Agent | null;
-  is_muted: boolean;
 }
 
 interface SessionResponse {
@@ -35,7 +34,6 @@ interface SessionResponse {
   agent_id: string | null;
   start_ts: string;
   status: string;
-  is_muted: boolean | null;
   user_profiles: UserProfile | null;
   agents: Agent | null;
 }
@@ -66,7 +64,7 @@ export default function SessionsLive() {
       const { data, error } = await supabase
         .from("sessions")
         .select(
-          `id, agent_id, start_ts, status, is_muted, user_profiles!inner(nickname, email, avatar_url, subscription_tier), agents(name)`
+          `id, agent_id, start_ts, status, user_profiles!inner(nickname, email, avatar_url, subscription_tier), agents(name)`
         )
         .eq("status", "active")
         .order("start_ts", { ascending: false });
@@ -80,7 +78,6 @@ export default function SessionsLive() {
         status: item.status,
         user_profiles: item.user_profiles,
         agents: item.agents,
-        is_muted: item.is_muted ?? false,
       }));
       
       setSessions(typedData);
@@ -115,20 +112,8 @@ export default function SessionsLive() {
   };
 
   const toggleMuteSession = async (session: SessionRow) => {
-    const nextMuted = !session.is_muted;
-    try {
-      const { error } = await supabase
-        .from("sessions")
-        .update({ is_muted: nextMuted })
-        .eq("id", session.id);
-
-      if (error) throw error;
-      toast.success(nextMuted ? "Session muted" : "Session unmuted");
-      loadSessions();
-    } catch (error) {
-      console.error("Error toggling mute:", error);
-      toast.error("Failed to update mute state");
-    }
+    // Note: Mute functionality requires database schema update
+    toast.info("Mute functionality not yet implemented");
   };
 
   const endSession = async (sessionId: string) => {
@@ -243,8 +228,8 @@ export default function SessionsLive() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={session.is_muted ? "secondary" : "default"}>
-                          {session.is_muted ? "Muted" : "Live"}
+                        <Badge variant="default">
+                          Live
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -267,7 +252,7 @@ export default function SessionsLive() {
                             size="sm"
                             onClick={() => toggleMuteSession(session)}
                           >
-                            {session.is_muted ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+                            <MicOff className="w-4 h-4" />
                           </Button>
                           <Button
                             variant="ghost"

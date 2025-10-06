@@ -36,10 +36,6 @@ export default function WellnessLibrary() {
     loadResources();
   }, []);
 
-  useEffect(() => {
-    filterResources();
-  }, [filterResources]);
-
   const loadResources = async () => {
     try {
       const { data, error } = await supabase
@@ -144,6 +140,10 @@ export default function WellnessLibrary() {
 
     setFilteredResources(filtered);
   }, [resources, searchTerm, selectedCategory]);
+
+  useEffect(() => {
+    filterResources();
+  }, [filterResources]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
