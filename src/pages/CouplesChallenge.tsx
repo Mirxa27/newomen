@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,11 +8,48 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Heart, Copy, Check } from "lucide-react";
+import type { Tables } from "@/integrations/supabase/types";
+
+type CouplesChallengeRow = Tables<"couples_challenges">;
+type CouplesQuestion = {
+  text: string;
+  options: string[];
+};
+
+type CouplesChallengeState = Omit<CouplesChallengeRow, "question_set"> & {
+  question_set: CouplesQuestion[];
+};
+
+const normalizeQuestionSet = (
+  value: CouplesChallengeRow["question_set"],
+): CouplesQuestion[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => {
+      if (
+        entry &&
+        typeof entry === "object" &&
+        "text" in entry &&
+        "options" in entry &&
+        Array.isArray((entry as Record<string, unknown>).options)
+      ) {
+        return {
+          text: String((entry as Record<string, unknown>).text ?? ""),
+          options: (entry as Record<string, unknown>).options.map((option) => String(option ?? "")),
+        };
+      }
+      return null;
+    })
+    .filter((question): question is CouplesQuestion => Boolean(question));
+};
 
 export default function CouplesChallenge() {
   const { challengeId } = useParams();
   const navigate = useNavigate();
-  const [challenge, setChallenge] = useState<any>(null);
+  const [challenge, setChallenge] = useState<CouplesChallengeState | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
@@ -20,63 +57,116 @@ export default function CouplesChallenge() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (challengeId) {
-      loadChallenge();
-    } else {
+    if (!challengeId) {
       setLoading(false);
+      return;
     }
+
+    const fetchChallenge = async () => {
+      try {
+        setLoading(true);
+
+        const { data, error } = await supabase
+          .from("couples_challenges")
+          .select("*")
+          .eq("id", challengeId)
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        if (!data) {
+          throw new Error("Challenge not found");
+        }
+
+        setChallenge({
+          ...data,
+          question_set: normalizeQuestionSet(data.question_set),
+        });
+      } catch (error) {
+        console.error("Error loading challenge:", error);
+        toast.error("Failed to load challenge");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void fetchChallenge();
   }, [challengeId]);
-
-  const loadChallenge = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("couples_challenges")
-        .select("*")
-        .eq("id", challengeId)
-        .single();
-
-      if (error) throw error;
-      setChallenge(data);
-    } catch (error) {
-      console.error("Error loading challenge:", error);
-      toast.error("Failed to load challenge");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const createChallenge = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      const { data: profile } = await supabase
+      if (userError) {
+        throw userError;
+      }
+
+      if (!user) {
+        toast.error("Please sign in to create a challenge");
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
         .from("user_profiles")
         .select("id")
         .eq("user_id", user.id)
         .single();
 
-      const questions = [
-        { text: "What's your ideal way to spend a weekend together?", options: ["Adventure outdoors", "Cozy at home", "Exploring the city", "Relaxing at a spa"] },
-        { text: "How do you prefer to communicate during conflicts?", options: ["Talk it out immediately", "Take time to think first", "Write it down", "Use humor to diffuse"] },
-        { text: "What's most important in a relationship?", options: ["Trust", "Communication", "Fun", "Support"] }
+      if (profileError) {
+        throw profileError;
+      }
+
+      if (!profile) {
+        toast.error("Profile not found. Complete onboarding first.");
+        return;
+      }
+
+      const questions: CouplesQuestion[] = [
+        {
+          text: "What's your ideal way to spend a weekend together?",
+          options: ["Adventure outdoors", "Cozy at home", "Exploring the city", "Relaxing at a spa"],
+        },
+        {
+          text: "How do you prefer to communicate during conflicts?",
+          options: ["Talk it out immediately", "Take time to think first", "Write it down", "Use humor to diffuse"],
+        },
+        {
+          text: "What's most important in a relationship?",
+          options: ["Trust", "Communication", "Fun", "Support"],
+        },
       ];
 
       const { data, error } = await supabase
         .from("couples_challenges")
         .insert({
-          initiator_id: profile?.id,
+          initiator_id: profile.id,
           question_set: questions,
-          status: "pending"
+          status: "pending",
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
-      const link = `${window.location.origin}/couples-challenge/${data.id}`;
+      if (!data) {
+        throw new Error("Challenge creation failed");
+      }
+
+      const normalizedChallenge: CouplesChallengeState = {
+        ...data,
+        question_set: normalizeQuestionSet(data.question_set),
+      };
+
+      const link = `${window.location.origin}/couples-challenge/${normalizedChallenge.id}`;
       setInviteLink(link);
-      setChallenge(data);
+      setChallenge(normalizedChallenge);
       toast.success("Challenge created! Share the link with your partner.");
     } catch (error) {
       console.error("Error creating challenge:", error);
@@ -85,6 +175,10 @@ export default function CouplesChallenge() {
   };
 
   const copyInviteLink = () => {
+    if (!inviteLink) {
+      return;
+    }
+
     navigator.clipboard.writeText(inviteLink);
     setCopied(true);
     toast.success("Link copied to clipboard!");
@@ -92,50 +186,87 @@ export default function CouplesChallenge() {
   };
 
   const handleAnswerChange = (value: string) => {
-    setAnswers({ ...answers, [currentQuestion]: value });
+    setAnswers((prev) => ({ ...prev, [currentQuestion]: value }));
   };
 
   const handleNext = () => {
+    if (!challenge) {
+      return;
+    }
+
     if (!answers[currentQuestion]) {
       toast.error("Please select an answer");
       return;
     }
 
-    if (challenge && currentQuestion < challenge.question_set.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
+    if (currentQuestion < challenge.question_set.length - 1) {
+      setCurrentQuestion((prev) => prev + 1);
     } else {
-      submitAnswers();
+      void submitAnswers();
     }
   };
 
   const submitAnswers = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+    if (!challengeId || !challenge) {
+      toast.error("Challenge is not ready for submission");
+      return;
+    }
 
-      const { data: profile } = await supabase
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) {
+        throw userError;
+      }
+
+      if (!user) {
+        toast.error("You must be signed in to submit answers");
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
         .from("user_profiles")
         .select("id")
         .eq("user_id", user.id)
         .single();
 
-      const isInitiator = challenge.initiator_id === profile?.id;
+      if (profileError) {
+        throw profileError;
+      }
+
+      if (!profile) {
+        toast.error("Profile not found. Complete onboarding first.");
+        return;
+      }
+
+      const isInitiator = challenge.initiator_id === profile.id;
       const updateField = isInitiator ? "initiator_responses" : "partner_responses";
 
-      await supabase
+      const { error: updateError } = await supabase
         .from("couples_challenges")
         .update({ [updateField]: answers })
         .eq("id", challengeId);
 
+      if (updateError) {
+        throw updateError;
+      }
+
       if (!isInitiator) {
-        await supabase
+        const { error: partnerError } = await supabase
           .from("couples_challenges")
-          .update({ partner_id: profile?.id, status: "completed" })
+          .update({ partner_id: profile.id, status: "completed" })
           .eq("id", challengeId);
+
+        if (partnerError) {
+          throw partnerError;
+        }
       }
 
       toast.success("Responses submitted!");
-      navigate("/couples-challenge-results/" + challengeId);
+      navigate(`/couples-challenge-results/${challengeId}`);
     } catch (error) {
       console.error("Error submitting answers:", error);
       toast.error("Failed to submit answers");
@@ -197,38 +328,53 @@ export default function CouplesChallenge() {
     );
   }
 
-  if (challenge && challenge.question_set) {
+  if (challenge && challenge.question_set.length > 0) {
     const question = challenge.question_set[currentQuestion];
-    
+
     return (
       <div className="min-h-screen bg-background py-12 px-4">
-        <div className="max-w-2xl mx-auto">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between mb-4">
-                <Heart className="w-6 h-6 text-primary" />
-                <span className="text-sm text-muted-foreground">
-                  Question {currentQuestion + 1} of {challenge.question_set.length}
-                </span>
+        <div className="max-w-3xl mx-auto">
+          <Card className="shadow-lg">
+            <CardHeader className="space-y-2">
+              <div className="flex items-center gap-3">
+                <Heart className="w-8 h-8 text-primary" />
+                <div>
+                  <CardTitle className="text-2xl">Couple's Challenge</CardTitle>
+                  <CardDescription>Question {currentQuestion + 1} of {challenge.question_set.length}</CardDescription>
+                </div>
               </div>
-              <CardTitle>Couple's Challenge</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold mb-4">{question.text}</h3>
-                <RadioGroup value={answers[currentQuestion] || ""} onValueChange={handleAnswerChange}>
-                  {question.options.map((option: string, idx: number) => (
-                    <div key={idx} className="flex items-center space-x-2 p-3 rounded-lg hover:bg-muted transition-colors">
-                      <RadioGroupItem value={option} id={`option-${idx}`} />
-                      <Label htmlFor={`option-${idx}`} className="flex-1 cursor-pointer">{option}</Label>
-                    </div>
-                  ))}
-                </RadioGroup>
+              <div className="bg-muted p-6 rounded-lg">
+                <p className="text-lg font-medium">{question.text}</p>
               </div>
 
-              <Button onClick={handleNext} className="w-full">
-                {currentQuestion === challenge.question_set.length - 1 ? "Submit Answers" : "Next Question"}
-              </Button>
+              <RadioGroup value={answers[currentQuestion] ?? ""} onValueChange={handleAnswerChange}>
+                {question.options.map((option, index) => (
+                  <Label
+                    key={option}
+                    htmlFor={`option-${index}`}
+                    className={`flex items-center justify-between p-4 rounded-lg border transition-colors cursor-pointer gap-4 ${
+                      answers[currentQuestion] === option ? "border-primary bg-primary/10" : "hover:border-primary/30"
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <RadioGroupItem value={option} id={`option-${index}`} />
+                      <span>{option}</span>
+                    </div>
+                    {answers[currentQuestion] === option && <Check className="w-5 h-5 text-primary" />}
+                  </Label>
+                ))}
+              </RadioGroup>
+
+              <div className="flex justify-between">
+                <Button variant="outline" onClick={() => setCurrentQuestion((prev) => Math.max(0, prev - 1))}>
+                  Previous
+                </Button>
+                <Button onClick={handleNext}>
+                  {currentQuestion === challenge.question_set.length - 1 ? "Submit" : "Next"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -236,5 +382,13 @@ export default function CouplesChallenge() {
     );
   }
 
-  return null;
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center space-y-4">
+        <Heart className="w-12 h-12 text-primary mx-auto" />
+        <p className="text-muted-foreground">No challenge found. Check your invitation link and try again.</p>
+        <Button variant="outline" onClick={() => navigate("/couples-challenge")}>Create a new challenge</Button>
+      </div>
+    </div>
+  );
 }

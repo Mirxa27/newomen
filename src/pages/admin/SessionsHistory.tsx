@@ -4,14 +4,27 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Eye } from "lucide-react";
+import { Tables } from "@/integrations/supabase/types";
+import { Search, Eye, MessageSquare, User, Clock, DollarSign, Download } from "lucide-react";
 import { toast } from "sonner";
 
+type SessionHistoryRow = Tables<"sessions"> & {
+  user_profiles: Pick<Tables<"user_profiles">, "nickname" | "email" | "avatar_url" | "subscription_tier"> | null;
+  agents: { name: string } | null;
+};
+
+type MessageHistoryRow = Pick<Tables<"messages">, "id" | "sender" | "text_content" | "audio_url" | "ts">;
+
 export default function SessionsHistory() {
-  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<SessionHistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedSession, setSelectedSession] = useState<SessionHistoryRow | null>(null);
+  const [conversationMessages, setConversationMessages] = useState<MessageHistoryRow[]>([]);
+  const [viewingConversation, setViewingConversation] = useState(false);
 
   useEffect(() => {
     loadSessions();
@@ -23,7 +36,7 @@ export default function SessionsHistory() {
         .from("sessions")
         .select(`
           *,
-          user_profiles!inner(nickname, email),
+          user_profiles!inner(nickname, email, avatar_url, subscription_tier),
           agents(name)
         `)
         .neq("status", "active")
@@ -31,13 +44,53 @@ export default function SessionsHistory() {
         .limit(100);
 
       if (error) throw error;
-      setSessions(data || []);
+      setSessions((data as SessionHistoryRow[]) || []);
     } catch (error) {
       console.error("Error loading sessions:", error);
       toast.error("Failed to load session history");
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadConversation = async (sessionId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("session_id", sessionId)
+        .order("ts", { ascending: true });
+
+      if (error) throw error;
+      setConversationMessages((data as MessageHistoryRow[]) || []);
+    } catch (error) {
+      console.error("Error loading conversation:", error);
+      toast.error("Failed to load conversation");
+    }
+  };
+
+  const viewConversation = async (session: any) => {
+    setSelectedSession(session);
+    setViewingConversation(true);
+    await loadConversation(session.id);
+  };
+
+  const downloadTranscript = () => {
+    if (!selectedSession || conversationMessages.length === 0) return;
+    
+    const transcript = conversationMessages.map(msg => 
+      `[${new Date(msg.ts).toLocaleString()}] ${msg.sender === 'user' ? 'User' : 'AI'}: ${msg.text_content || '[Audio message]'}`
+    ).join('\n\n');
+    
+    const blob = new Blob([transcript], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `conversation-${selectedSession.id}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const formatDuration = (durationSeconds: number | null) => {
@@ -92,8 +145,9 @@ export default function SessionsHistory() {
               No sessions found
             </div>
           ) : (
-            <Table>
-              <TableHeader>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                 <TableRow>
                   <TableHead>User</TableHead>
                   <TableHead>Agent</TableHead>
@@ -109,22 +163,56 @@ export default function SessionsHistory() {
                 {filteredSessions.map((session) => (
                   <TableRow key={session.id}>
                     <TableCell className="font-medium">
-                      {session.user_profiles?.nickname || session.user_profiles?.email}
+                      <div className="flex items-center gap-2">
+                        {session.user_profiles?.avatar_url ? (
+                          <img 
+                            src={session.user_profiles.avatar_url} 
+                            alt="Avatar" 
+                            className="w-6 h-6 rounded-full"
+                          />
+                        ) : (
+                          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+                            <User className="w-3 h-3" />
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-medium">
+                            {session.user_profiles?.nickname || "Anonymous"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {session.user_profiles?.email}
+                          </div>
+                        </div>
+                      </div>
                     </TableCell>
                     <TableCell>{session.agents?.name || "Default"}</TableCell>
-                    <TableCell>{formatDuration(session.duration_seconds)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {formatDuration(session.duration_seconds)}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       {new Date(session.start_ts).toLocaleDateString()}
                     </TableCell>
                     <TableCell>{session.tokens_used || 0}</TableCell>
-                    <TableCell>{formatCost(session.cost_usd)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <DollarSign className="w-3 h-3" />
+                        {formatCost(session.cost_usd)}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <Badge variant={session.status === "completed" ? "default" : "secondary"}>
                         {session.status}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => viewConversation(session)}
+                      >
                         <Eye className="w-4 h-4" />
                       </Button>
                     </TableCell>
@@ -132,9 +220,102 @@ export default function SessionsHistory() {
                 ))}
               </TableBody>
             </Table>
+          </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Conversation Viewer Dialog */}
+      <Dialog open={viewingConversation} onOpenChange={setViewingConversation}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5" />
+              Conversation Transcript
+            </DialogTitle>
+            <DialogDescription>
+              Complete conversation with {selectedSession?.user_profiles?.nickname || "User"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  {selectedSession?.user_profiles?.avatar_url ? (
+                    <img 
+                      src={selectedSession.user_profiles.avatar_url} 
+                      alt="Avatar" 
+                      className="w-8 h-8 rounded-full"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <User className="w-4 h-4" />
+                    </div>
+                  )}
+                  <div>
+                    <div className="font-medium">{selectedSession?.user_profiles?.nickname || "Anonymous"}</div>
+                    <div className="text-sm text-muted-foreground">{selectedSession?.user_profiles?.email}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    {selectedSession ? formatDuration(selectedSession.duration_seconds) : "N/A"}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <DollarSign className="w-4 h-4" />
+                    {selectedSession ? formatCost(selectedSession.cost_usd) : "$0.00"}
+                  </div>
+                  <Badge variant="outline">
+                    {selectedSession?.user_profiles?.subscription_tier || "discovery"}
+                  </Badge>
+                </div>
+              </div>
+              <Button onClick={downloadTranscript} variant="outline" size="sm">
+                <Download className="w-4 h-4 mr-2" />
+                Download
+              </Button>
+            </div>
+            
+            <ScrollArea className="h-[400px] border rounded-lg p-4">
+              {conversationMessages.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No messages found in this conversation.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {conversationMessages.map((message, index) => (
+                    <div key={index} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[80%] p-3 rounded-lg ${
+                        message.sender === 'user' 
+                          ? 'bg-primary text-primary-foreground' 
+                          : 'bg-muted'
+                      }`}>
+                        <div className="text-sm font-medium mb-1">
+                          {message.sender === 'user' ? 'User' : 'AI Assistant'}
+                        </div>
+                        <div className="text-sm">
+                          {message.text_content || "Audio message"}
+                        </div>
+                        {message.audio_url && (
+                          <div className="mt-2">
+                            <audio controls className="w-full">
+                              <source src={message.audio_url} type="audio/mpeg" />
+                            </audio>
+                          </div>
+                        )}
+                        <div className="text-xs opacity-70 mt-1">
+                          {new Date(message.ts).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

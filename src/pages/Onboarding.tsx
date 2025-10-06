@@ -51,6 +51,15 @@ export default function Onboarding() {
 
   const completeOnboarding = async () => {
     try {
+      if (!user) {
+        toast({
+          title: "Sign-in required",
+          description: "Please sign in again to complete onboarding.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Save user profile
       const { error } = await supabase
         .from("user_memory_profiles")
@@ -82,10 +91,11 @@ export default function Onboarding() {
       });
 
       navigate("/dashboard");
-    } catch (error: any) {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Something went wrong completing onboarding.';
       toast({
         title: "Error",
-        description: error.message,
+        description: message,
         variant: "destructive",
       });
     }

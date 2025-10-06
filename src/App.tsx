@@ -1,30 +1,35 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminRoute } from "./components/AdminRoute";
 import MainLayout from "./components/layout/MainLayout";
-import Landing from "./pages/Landing";
-import Auth from "./pages/Auth";
-import Onboarding from "./pages/Onboarding";
-import Dashboard from "./pages/Dashboard";
-import Chat from "./pages/Chat";
-import PublicAssessments from "./pages/PublicAssessments";
-import MemberAssessments from "./pages/MemberAssessments";
-import CouplesChallenge from "./pages/CouplesChallenge";
-import Admin from "./pages/Admin";
-import NotFound from "./pages/NotFound";
-import Profile from "./pages/Profile";
-import WellnessLibrary from "./pages/WellnessLibrary";
-import Community from "./pages/Community";
-import AccountSettings from "./pages/AccountSettings";
-import AboutUs from "./pages/AboutUs";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
-import NarrativeIdentityExploration from "./pages/NarrativeIdentityExploration";
-import FeatureTests from "./pages/FeatureTests";
+const Landing = lazy(() => import("./pages/Landing"));
+const Auth = lazy(() => import("./pages/Auth"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Chat = lazy(() => import("./pages/Chat"));
+const PublicAssessments = lazy(() => import("./pages/PublicAssessments"));
+const MemberAssessments = lazy(() => import("./pages/MemberAssessments"));
+const CouplesChallenge = lazy(() => import("./pages/CouplesChallenge"));
+const Admin = lazy(() => import("./pages/Admin"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Profile = lazy(() => import("./pages/Profile"));
+const WellnessLibrary = lazy(() => import("./pages/WellnessLibrary"));
+const Community = lazy(() => import("./pages/Community"));
+const AccountSettings = lazy(() => import("./pages/AccountSettings"));
+const AboutUs = lazy(() => import("./pages/AboutUs"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const NarrativeIdentityExploration = lazy(() => import("./pages/NarrativeIdentityExploration"));
+const FeatureTests = lazy(() => import("./pages/FeatureTests"));
+const AIAssessments = lazy(() => import("./pages/AIAssessments"));
+const Assessments = lazy(() => import("./pages/Assessments"));
+const Assessment = lazy(() => import("./pages/Assessment"));
+const AssessmentTest = lazy(() => import("./pages/AssessmentTest"));
 
 const queryClient = new QueryClient();
 
@@ -34,7 +39,15 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
+        <Suspense fallback={
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="glass-card p-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+              <p>Loading...</p>
+            </div>
+          </div>
+        }>
+          <Routes>
           <Route path="/" element={<MainLayout><Landing /></MainLayout>} />
           <Route path="/auth" element={<MainLayout><Auth /></MainLayout>} />
           <Route path="/about" element={<MainLayout><AboutUs /></MainLayout>} />
@@ -94,12 +107,34 @@ const App = () => (
           } />
           <Route path="/admin/*" element={
             <ProtectedRoute>
-              <MainLayout><Admin /></MainLayout>
+              <AdminRoute>
+                <MainLayout><Admin /></MainLayout>
+              </AdminRoute>
             </ProtectedRoute>
           } />
           <Route path="/narrative-exploration" element={
             <ProtectedRoute>
               <MainLayout><NarrativeIdentityExploration /></MainLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/ai-assessments" element={
+            <ProtectedRoute>
+              <MainLayout><AIAssessments /></MainLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/assessments-new" element={
+            <ProtectedRoute>
+              <MainLayout><Assessments /></MainLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/assessment/:id" element={
+            <ProtectedRoute>
+              <MainLayout><Assessment /></MainLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/assessment-test" element={
+            <ProtectedRoute>
+              <MainLayout><AssessmentTest /></MainLayout>
             </ProtectedRoute>
           } />
           <Route path="/feature-tests" element={
@@ -108,8 +143,9 @@ const App = () => (
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<MainLayout><NotFound /></MainLayout>} />
-        </Routes>
+            <Route path="*" element={<MainLayout><NotFound /></MainLayout>} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

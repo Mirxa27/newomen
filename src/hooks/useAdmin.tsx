@@ -1,21 +1,51 @@
 import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
-// Temporary admin check - will be replaced after migration approval
 export const useAdmin = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      // Check if user email is admin email
-      setIsAdmin(user.email === "admin@newomen.me");
-    } else {
-      setIsAdmin(false);
+    let isActive = true;
+
+    const loadRole = async () => {
+      if (!user) {
+        if (isActive) {
+          setIsAdmin(false);
+          setLoading(false);
+        }
+        return;
+      }
+
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("role")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!isActive) return;
+
+      if (error) {
+        console.error("Failed to load admin role", error);
+        setIsAdmin(false);
+      } else {
+        setIsAdmin((data?.role ?? "user") === "admin");
+      }
+
+      setLoading(false);
+    };
+
+    if (!authLoading) {
+      loadRole();
     }
-    setLoading(false);
-  }, [user]);
+
+    return () => {
+      isActive = false;
+    };
+  }, [user, authLoading]);
 
   return { isAdmin, loading };
 };

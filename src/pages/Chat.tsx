@@ -23,6 +23,9 @@ interface ChatEvent {
     id: string;
     status: string;
   };
+  error?: {
+    message: string;
+  };
 }
 
 const Chat = () => {
@@ -87,10 +90,20 @@ const Chat = () => {
   const startConversation = async () => {
     try {
       setIsConnecting(true);
+
+      // Check if browser supports required APIs
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Your browser doesn't support audio recording. Please use a modern browser like Chrome, Firefox, or Safari.");
+      }
+
+      if (!window.WebSocket) {
+        throw new Error("Your browser doesn't support WebSocket connections required for real-time chat.");
+      }
+
       chatRef.current = new RealtimeChat(handleMessage);
       await chatRef.current.init();
       setIsConnected(true);
-      
+
       durationInterval.current = setInterval(() => {
         setDuration(prev => prev + 1);
       }, 1000);
@@ -101,9 +114,23 @@ const Chat = () => {
       });
     } catch (error) {
       console.error('Error starting conversation:', error);
+
+      let errorMessage = 'Failed to start conversation';
+      if (error instanceof Error) {
+        if (error.message.includes('Permission denied')) {
+          errorMessage = 'Microphone access denied. Please allow microphone access and try again.';
+        } else if (error.message.includes('network')) {
+          errorMessage = 'Network error. Please check your internet connection.';
+        } else if (error.message.includes('browser')) {
+          errorMessage = error.message;
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
       toast({
         title: "Connection Failed",
-        description: error instanceof Error ? error.message : 'Failed to start conversation',
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

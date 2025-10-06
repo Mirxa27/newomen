@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Sparkles, Settings, Users, BarChart, Activity, FileText, Zap, Database } from "lucide-react";
+import { Sparkles, Settings, Users, BarChart, Activity, FileText, Zap, Database, Bot } from "lucide-react";
 import AIConfiguration from "./admin/AIConfiguration";
 import SessionsLive from "./admin/SessionsLive";
 import SessionsHistory from "./admin/SessionsHistory";
@@ -16,6 +16,9 @@ import UserManagement from "./admin/UserManagement";
 import ContentManagement from "./admin/ContentManagement";
 import Analytics from "./admin/Analytics";
 import ProvidersManagement from "./admin/ProvidersManagement";
+import AIProviderManagement from "./admin/AIProviderManagement";
+import AIAssessmentManagement from "./admin/AIAssessmentManagement";
+import AIPrompting from "./admin/AIPrompting";
 
 export default function Admin() {
   const [aiTopic, setAiTopic] = useState("");
@@ -56,36 +59,48 @@ export default function Admin() {
         </div>
 
         <Tabs defaultValue="ai-builder" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-9 gap-1">
-            <TabsTrigger value="ai-builder">
+          <TabsList className="flex w-full flex-nowrap gap-2 overflow-x-auto rounded-xl bg-muted/20 p-1">
+            <TabsTrigger value="ai-builder" className="min-w-[120px]">
               <Sparkles className="w-4 h-4 mr-2" />
               AI Builder
             </TabsTrigger>
-            <TabsTrigger value="providers">
+            <TabsTrigger value="providers" className="min-w-[120px]">
               <Database className="w-4 h-4 mr-2" />
               Providers
             </TabsTrigger>
-            <TabsTrigger value="ai-config">
+            <TabsTrigger value="ai-providers" className="min-w-[120px]">
+              <Bot className="w-4 h-4 mr-2" />
+              AI Providers
+            </TabsTrigger>
+            <TabsTrigger value="ai-assessments" className="min-w-[120px]">
+              <Brain className="w-4 h-4 mr-2" />
+              AI Assessments
+            </TabsTrigger>
+            <TabsTrigger value="ai-config" className="min-w-[120px]">
               <Zap className="w-4 h-4 mr-2" />
               AI Config
             </TabsTrigger>
-            <TabsTrigger value="sessions-live">
+            <TabsTrigger value="ai-prompting" className="min-w-[120px]">
+              <Bot className="w-4 h-4 mr-2" />
+              Prompts
+            </TabsTrigger>
+            <TabsTrigger value="sessions-live" className="min-w-[120px]">
               <Activity className="w-4 h-4 mr-2" />
               Live
             </TabsTrigger>
-            <TabsTrigger value="sessions-history">
+            <TabsTrigger value="sessions-history" className="min-w-[120px]">
               <FileText className="w-4 h-4 mr-2" />
               History
             </TabsTrigger>
-            <TabsTrigger value="content">
+            <TabsTrigger value="content" className="min-w-[120px]">
               <Settings className="w-4 h-4 mr-2" />
               Content
             </TabsTrigger>
-            <TabsTrigger value="users">
+            <TabsTrigger value="users" className="min-w-[120px]">
               <Users className="w-4 h-4 mr-2" />
               Users
             </TabsTrigger>
-            <TabsTrigger value="analytics">
+            <TabsTrigger value="analytics" className="min-w-[120px]">
               <BarChart className="w-4 h-4 mr-2" />
               Analytics
             </TabsTrigger>
@@ -173,8 +188,20 @@ export default function Admin() {
             <ProvidersManagement />
           </TabsContent>
 
+          <TabsContent value="ai-providers">
+            <AIProviderManagement />
+          </TabsContent>
+
+          <TabsContent value="ai-assessments">
+            <AIAssessmentManagement />
+          </TabsContent>
+
           <TabsContent value="ai-config">
             <AIConfiguration />
+          </TabsContent>
+
+          <TabsContent value="ai-prompting">
+            <AIPrompting />
           </TabsContent>
 
           <TabsContent value="sessions-live">

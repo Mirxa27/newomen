@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, BookOpen, Shield, Users, Mail } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, BookOpen, Shield, Users, Mail, Heart, Globe, Star } from "lucide-react";
 
 export default function AboutUs() {
   const navigate = useNavigate();
@@ -22,6 +23,80 @@ export default function AboutUs() {
             Empowering women on their journey of self-discovery and personal transformation
             through AI-powered guidance
           </p>
+        </div>
+
+        {/* Founder Section */}
+        <div className="bg-gradient-to-br from-purple-900 via-purple-800 to-pink-800 rounded-3xl p-8 md:p-12 text-white">
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            {/* Founder Image */}
+            <div className="relative">
+              <div className="relative rounded-2xl overflow-hidden">
+                <img 
+                  src="/founder_katerina.png" 
+                  alt="Katrina Zhuk, Founder of Newomen"
+                  className="w-full h-auto object-cover"
+                />
+                <div className="absolute top-4 left-4 w-3 h-3 bg-yellow-400 rounded-full"></div>
+                <div className="absolute bottom-4 right-4 w-3 h-3 bg-pink-400 rounded-full"></div>
+              </div>
+            </div>
+
+            {/* Founder Content */}
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-4xl md:text-5xl font-bold">
+                  <span className="text-purple-200">Meet </span>
+                  <span className="text-pink-300">Katrina Zhuk</span>
+                  <Star className="inline-block w-6 h-6 ml-2 text-yellow-400" />
+                </h2>
+                <Badge className="bg-purple-600 text-white border-0">
+                  <Star className="w-3 h-3 mr-1" />
+                  Founder
+                </Badge>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Badge variant="outline" className="border-purple-300 text-white">
+                  <Heart className="w-3 h-3 mr-1" />
+                  Founder & Visionary
+                </Badge>
+                <Badge variant="outline" className="border-green-300 text-white">
+                  <Globe className="w-3 h-3 mr-1" />
+                  Global Impact
+                </Badge>
+              </div>
+
+              <p className="text-lg leading-relaxed">
+                At just <strong>25 years old</strong>, Katrina embarked on a transformative journey from <strong>Belarus to Saudi Arabia</strong>, where she was deeply inspired by the culture, warmth, and resilience she encountered, leading her to create a global community for women's empowerment.
+              </p>
+
+              <div className="space-y-4">
+                <div className="bg-purple-800/50 rounded-xl p-6 relative">
+                  <div className="absolute top-4 left-4 text-4xl text-purple-300 font-serif">"</div>
+                  <p className="text-white italic text-lg leading-relaxed pl-8">
+                    Traveling to Saudi Arabia opened my heart and mind in ways I never imagined. Inspired by the strength and spirit of the women I met, I created Newomen as a community where women worldwide can connect, learn, and grow together through technology.
+                  </p>
+                  <div className="absolute bottom-4 right-4 text-4xl text-purple-300 font-serif">"</div>
+                </div>
+
+                <div className="bg-purple-800/50 rounded-xl p-6">
+                  <p className="text-white italic text-lg leading-relaxed">
+                    "This is just the beginning of our shared community journey toward collective empowerment and self-discovery."
+                  </p>
+                </div>
+              </div>
+
+              <Button 
+                size="lg" 
+                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 w-full md:w-auto"
+                onClick={() => navigate("/auth")}
+              >
+                <Heart className="w-4 h-4 mr-2" />
+                Start Your Journey Today
+                <Star className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+          </div>
         </div>
 
         <Card>
@@ -115,19 +190,14 @@ export default function AboutUs() {
           </CardHeader>
           <CardContent className="space-y-4 text-lg">
             <p>
-              Newomen was founded by Katrina, a passionate advocate for women's personal
-              development and mental wellness. Having experienced her own transformative
-              journey, she recognized the need for accessible, personalized guidance that
-              respects cultural nuances and individual experiences.
+              Newomen was founded by <strong>Katrina Zhuk</strong>, a passionate advocate for women's personal
+              development and mental wellness. At just 25 years old, her transformative journey from Belarus to Saudi Arabia opened her eyes to the incredible strength and resilience of women across cultures.
             </p>
             <p>
-              What started as a vision to help women in the Middle East has grown into a
-              platform serving women worldwide. Our team combines expertise in AI, psychology,
-              and user experience to create a truly transformative platform.
+              Inspired by the women she met in Saudi Arabia, Katrina recognized the need for accessible, personalized guidance that respects cultural nuances and individual experiences. What started as a vision to help women in the Middle East has grown into a global platform serving women worldwide.
             </p>
             <p>
-              Today, Newomen helps thousands of women discover their authentic selves, build
-              confidence, and create the lives they truly desire.
+              Our team combines expertise in AI, psychology, and user experience to create a truly transformative platform. Today, Newomen helps thousands of women discover their authentic selves, build confidence, and create the lives they truly desire.
             </p>
           </CardContent>
         </Card>

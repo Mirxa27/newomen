@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,21 +7,28 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { RefreshCw, Plus, Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { RefreshCw, Plus, Loader2, Search, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-type Provider = {
+interface Provider {
   id: string;
   name: string;
   type: string;
-  api_base: string;
+  api_base: string | null;
   region: string | null;
   status: string;
   last_synced_at: string | null;
-};
+}
 
-type Model = {
+interface Model {
   id: string;
   provider_id: string;
   model_id: string;
@@ -31,9 +38,9 @@ type Model = {
   latency_hint_ms: number | null;
   is_realtime: boolean;
   enabled: boolean;
-};
+}
 
-type Voice = {
+interface Voice {
   id: string;
   provider_id: string;
   voice_id: string;
@@ -42,7 +49,30 @@ type Voice = {
   gender: string | null;
   latency_hint_ms: number | null;
   enabled: boolean;
+}
+
+type ProviderFormState = {
+  name: string;
+  type: string;
+  api_key: string;
+  api_base: string;
+  region: string;
 };
+
+
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return "Unexpected error";
+};
+
+const PROVIDER_TYPES = [
+  { value: "openai", label: "OpenAI" },
+  { value: "anthropic", label: "Anthropic" },
+  { value: "gemini", label: "Google Gemini" },
+  { value: "azure", label: "Azure OpenAI" },
+  { value: "elevenlabs", label: "ElevenLabs" },
+];
 
 export default function ProvidersManagement() {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -51,10 +81,10 @@ export default function ProvidersManagement() {
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
-  // Form states
-  const [newProvider, setNewProvider] = useState({
+  const [newProvider, setNewProvider] = useState<ProviderFormState>({
     name: "",
     type: "openai",
     api_key: "",
@@ -62,95 +92,78 @@ export default function ProvidersManagement() {
     region: "",
   });
 
-  useEffect(() => {
-    loadProviders();
-  }, []);
-
-  const loadProviders = async () => {
+  const loadProviders = useCallback(async () => {
     setLoading(true);
     try {
-      const { data: providersData, error: providersError } = await supabase
-        .from("providers")
-        .select("*")
-        .order("name");
+      const [providersData, modelsData, voicesData] = await Promise.all([
+        supabase.from("providers").select("*").order("name"),
+        supabase.from("models").select("*").order("display_name"),
+        supabase.from("voices").select("*").order("name"),
+      ]);
 
-      if (providersError) throw providersError;
-      setProviders(providersData || []);
+      if (providersData.error) throw providersData.error;
+      if (modelsData.error) throw modelsData.error;
+      if (voicesData.error) throw voicesData.error;
 
-      // Load models and voices
-      const { data: modelsData } = await supabase
-        .from("models")
-        .select("*")
-        .order("display_name");
-      
-      const { data: voicesData } = await supabase
-        .from("voices")
-        .select("*")
-        .order("name");
-
-      setModels(modelsData || []);
-      setVoices(voicesData || []);
-    } catch (error: any) {
+      setProviders(providersData.data || []);
+      setModels(modelsData.data || []);
+      setVoices(voicesData.data || []);
+    } catch (error: unknown) {
+      console.error("Error loading providers:", error);
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Unable to load providers",
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
+  }, [toast]);
+
+  const invokeProviderFunction = async (payload: Record<string, unknown>) => {
+    return supabase.functions.invoke("provider-discovery", {
+      body: payload,
+    });
   };
 
   const addProvider = async () => {
-    if (!newProvider.name || !newProvider.api_key) {
+    if (!newProvider.name.trim() || !newProvider.api_key.trim()) {
       toast({
-        title: "Error",
-        description: "Name and API key are required",
+        title: "Missing details",
+        description: "Provider name and API key are required",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      // Insert provider
-      const { data: providerData, error: providerError } = await supabase
-        .from("providers")
-        .insert({
-          name: newProvider.name,
+      const response = await invokeProviderFunction({
+        action: "create",
+        provider: {
+          name: newProvider.name.trim(),
           type: newProvider.type,
-          api_base: newProvider.api_base || getDefaultApiBase(newProvider.type),
-          region: newProvider.region || null,
-          status: "active",
-        })
-        .select()
-        .single();
-
-      if (providerError) throw providerError;
-
-      // Call edge function to discover and sync models/voices
-      const { data, error } = await supabase.functions.invoke("discover-provider", {
-        body: {
-          provider_id: providerData.id,
-          provider_type: newProvider.type,
-          api_key: newProvider.api_key,
-          api_base: newProvider.api_base || getDefaultApiBase(newProvider.type),
+          apiKey: newProvider.api_key.trim(),
+          apiBase: newProvider.api_base.trim() || getDefaultApiBase(newProvider.type),
+          region: newProvider.region.trim() || null,
         },
       });
 
-      if (error) throw error;
+      if (response.error) throw response.error;
 
+      const summary = response.data as { providerId: string; modelsCount: number; voicesCount: number };
       toast({
-        title: "Success",
-        description: `Provider added and ${data.models_count} models, ${data.voices_count} voices discovered`,
+        title: "Provider connected",
+        description: `Discovered ${summary.modelsCount} models and ${summary.voicesCount} voices`,
       });
 
       setDialogOpen(false);
       setNewProvider({ name: "", type: "openai", api_key: "", api_base: "", region: "" });
       loadProviders();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      console.error("Error adding provider:", error);
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Failed to connect provider",
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     }
@@ -159,22 +172,26 @@ export default function ProvidersManagement() {
   const syncProvider = async (providerId: string, providerType: string) => {
     setSyncing(providerId);
     try {
-      const { data, error } = await supabase.functions.invoke("sync-provider", {
-        body: { provider_id: providerId, provider_type: providerType },
+      const response = await invokeProviderFunction({
+        action: "sync",
+        providerId,
+        providerType,
       });
 
-      if (error) throw error;
+      if (response.error) throw response.error;
+      const summary = response.data as { modelsCount: number; voicesCount: number };
 
       toast({
-        title: "Sync Complete",
-        description: `Synced ${data.models_count} models, ${data.voices_count} voices`,
+        title: "Provider synced",
+        description: `Found ${summary.modelsCount} models and ${summary.voicesCount} voices`,
       });
 
       loadProviders();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      console.error("Error syncing provider:", error);
       toast({
-        title: "Sync Failed",
-        description: error.message,
+        title: "Sync failed",
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     } finally {
@@ -189,286 +206,306 @@ export default function ProvidersManagement() {
       gemini: "https://generativelanguage.googleapis.com/v1beta",
       azure: "",
       elevenlabs: "https://api.elevenlabs.io/v1",
-      polly: "",
     };
     return defaults[type] || "";
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  const filteredProviders = useMemo(() => {
+    if (!searchTerm.trim()) return providers;
+    const term = searchTerm.toLowerCase();
+    return providers.filter((provider) => provider.name.toLowerCase().includes(term));
+  }, [providers, searchTerm]);
+
+  const providerStats = useMemo(() => {
+    const modelMap = models.reduce<Record<string, number>>((acc, model) => {
+      acc[model.provider_id] = (acc[model.provider_id] || 0) + 1;
+      return acc;
+    }, {});
+    const voiceMap = voices.reduce<Record<string, number>>((acc, voice) => {
+      acc[voice.provider_id] = (acc[voice.provider_id] || 0) + 1;
+      return acc;
+    }, {});
+    return { modelMap, voiceMap };
+  }, [models, voices]);
 
   return (
     <div className="space-y-6">
-      {/* Providers Section */}
       <Card className="glass-card border-white/10">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <CardTitle className="text-2xl gradient-text">AI Providers</CardTitle>
-              <CardDescription>Manage AI service providers and credentials</CardDescription>
+              <CardDescription>
+                Connect and monitor the third-party AI services powering Newomen
+              </CardDescription>
             </div>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="clay-button">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Provider
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="glass-card border-white/10">
-                <DialogHeader>
-                  <DialogTitle>Add AI Provider</DialogTitle>
-                  <DialogDescription>
-                    Configure a new AI provider. Models and voices will be auto-discovered.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Provider Name</Label>
-                    <Input
-                      id="name"
-                      placeholder="My OpenAI Provider"
-                      value={newProvider.name}
-                      onChange={(e) => setNewProvider({ ...newProvider, name: e.target.value })}
-                      className="glass"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="type">Provider Type</Label>
-                    <Select
-                      value={newProvider.type}
-                      onValueChange={(value) => setNewProvider({ ...newProvider, type: value })}
-                    >
-                      <SelectTrigger className="glass">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="openai">OpenAI</SelectItem>
-                        <SelectItem value="anthropic">Anthropic</SelectItem>
-                        <SelectItem value="gemini">Google Gemini</SelectItem>
-                        <SelectItem value="azure">Azure OpenAI</SelectItem>
-                        <SelectItem value="elevenlabs">ElevenLabs</SelectItem>
-                        <SelectItem value="polly">Amazon Polly</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="api_key">API Key</Label>
-                    <Input
-                      id="api_key"
-                      type="password"
-                      placeholder="sk-..."
-                      value={newProvider.api_key}
-                      onChange={(e) => setNewProvider({ ...newProvider, api_key: e.target.value })}
-                      className="glass"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="api_base">API Base URL (Optional)</Label>
-                    <Input
-                      id="api_base"
-                      placeholder="https://api.openai.com/v1"
-                      value={newProvider.api_base}
-                      onChange={(e) => setNewProvider({ ...newProvider, api_base: e.target.value })}
-                      className="glass"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="region">Region (Optional)</Label>
-                    <Input
-                      id="region"
-                      placeholder="us-east-1"
-                      value={newProvider.region}
-                      onChange={(e) => setNewProvider({ ...newProvider, region: e.target.value })}
-                      className="glass"
-                    />
-                  </div>
-                  <Button onClick={addProvider} className="w-full clay-button">
-                    Add & Discover Models
+            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search providers..."
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="clay-button">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Provider
                   </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+                <DialogContent className="glass-card border-white/10 max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Connect a new provider</DialogTitle>
+                    <DialogDescription>
+                      API credentials are encrypted at rest using your Supabase database key.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="provider-name">Provider Name</Label>
+                      <Input
+                        id="provider-name"
+                        placeholder="e.g. Primary OpenAI workspace"
+                        value={newProvider.name}
+                        onChange={(event) => setNewProvider((prev) => ({ ...prev, name: event.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="provider-type">Provider Type</Label>
+                      <Select
+                        value={newProvider.type}
+                        onValueChange={(value) => setNewProvider((prev) => ({ ...prev, type: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select provider" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PROVIDER_TYPES.map((provider) => (
+                            <SelectItem key={provider.value} value={provider.value}>
+                              {provider.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="provider-key">API Key</Label>
+                      <Input
+                        id="provider-key"
+                        type="password"
+                        placeholder="sk-..."
+                        value={newProvider.api_key}
+                        onChange={(event) => setNewProvider((prev) => ({ ...prev, api_key: event.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="provider-base">API Base URL (optional)</Label>
+                      <Input
+                        id="provider-base"
+                        placeholder={getDefaultApiBase(newProvider.type) || "https://"}
+                        value={newProvider.api_base}
+                        onChange={(event) => setNewProvider((prev) => ({ ...prev, api_base: event.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="provider-region">Region (optional)</Label>
+                      <Input
+                        id="provider-region"
+                        placeholder="us-east-1"
+                        value={newProvider.region}
+                        onChange={(event) => setNewProvider((prev) => ({ ...prev, region: event.target.value }))}
+                      />
+                    </div>
+                    <div className="rounded-lg border border-dashed border-white/20 bg-muted/40 p-3 text-xs text-muted-foreground flex items-start gap-2">
+                      <ShieldCheck className="h-4 w-4 text-primary mt-0.5" />
+                      <span>
+                        Keys are encrypted with the database secret (<code>app.settings.provider_encryption_key</code>). Make
+                        sure this value is configured before connecting providers.
+                      </span>
+                    </div>
+                    <Button onClick={addProvider} className="w-full" disabled={loading}>
+                      Connect & Discover
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Models</TableHead>
-                <TableHead>Voices</TableHead>
-                <TableHead>Last Synced</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {providers.map((provider) => {
-                const providerModels = models.filter((m) => m.provider_id === provider.id);
-                const providerVoices = voices.filter((v) => v.provider_id === provider.id);
-                
-                return (
-                  <TableRow key={provider.id}>
-                    <TableCell className="font-medium">{provider.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{provider.type}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={provider.status === "active" ? "default" : "secondary"}>
-                        {provider.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{providerModels.length}</TableCell>
-                    <TableCell>{providerVoices.length}</TableCell>
-                    <TableCell>
-                      {provider.last_synced_at
-                        ? new Date(provider.last_synced_at).toLocaleDateString()
-                        : "Never"}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => syncProvider(provider.id, provider.type)}
-                        disabled={syncing === provider.id}
-                      >
-                        {syncing === provider.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <RefreshCw className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </TableCell>
+          {loading ? (
+            <div className="flex h-48 items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Models</TableHead>
+                    <TableHead>Voices</TableHead>
+                    <TableHead>Last Synced</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                );
-              })}
-              {providers.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    No providers configured. Add your first provider to get started.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredProviders.map((provider) => {
+                    const modelCount = providerStats.modelMap[provider.id] || 0;
+                    const voiceCount = providerStats.voiceMap[provider.id] || 0;
+                    return (
+                      <TableRow key={provider.id}>
+                        <TableCell className="font-medium">{provider.name}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{provider.type}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={provider.status === "active" ? "default" : "secondary"}>
+                            {provider.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{modelCount}</TableCell>
+                        <TableCell>{voiceCount}</TableCell>
+                        <TableCell>
+                          {provider.last_synced_at
+                            ? new Date(provider.last_synced_at).toLocaleString()
+                            : "Never"}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => syncProvider(provider.id, provider.type)}
+                            disabled={syncing === provider.id}
+                          >
+                            {syncing === provider.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {filteredProviders.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                        No providers yet. Connect one to get started.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Models Section */}
       <Card className="glass-card border-white/10">
         <CardHeader>
           <CardTitle className="gradient-text">Discovered Models</CardTitle>
-          <CardDescription>Models auto-discovered from configured providers</CardDescription>
+          <CardDescription>Models available from connected providers</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Model</TableHead>
-                <TableHead>Provider</TableHead>
-                <TableHead>Modality</TableHead>
-                <TableHead>Context</TableHead>
-                <TableHead>Realtime</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {models.slice(0, 10).map((model) => {
-                const provider = providers.find((p) => p.id === model.provider_id);
-                
-                return (
-                  <TableRow key={model.id}>
-                    <TableCell className="font-medium">{model.display_name}</TableCell>
-                    <TableCell>{provider?.name}</TableCell>
-                    <TableCell>{model.modality || "text"}</TableCell>
-                    <TableCell>{model.context_limit?.toLocaleString() || "N/A"}</TableCell>
-                    <TableCell>
-                      {model.is_realtime ? (
-                        <Badge variant="default">Yes</Badge>
-                      ) : (
-                        <Badge variant="secondary">No</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={model.enabled ? "default" : "secondary"}>
-                        {model.enabled ? "Enabled" : "Disabled"}
-                      </Badge>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Model</TableHead>
+                  <TableHead>Provider</TableHead>
+                  <TableHead>Modality</TableHead>
+                  <TableHead>Context</TableHead>
+                  <TableHead>Realtime</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {models.slice(0, 15).map((model) => {
+                  const provider = providers.find((p) => p.id === model.provider_id);
+                  return (
+                    <TableRow key={model.id}>
+                      <TableCell className="font-medium">{model.display_name}</TableCell>
+                      <TableCell>{provider?.name ?? "-"}</TableCell>
+                      <TableCell>{model.modality || "text"}</TableCell>
+                      <TableCell>{model.context_limit?.toLocaleString() || "N/A"}</TableCell>
+                      <TableCell>
+                        {model.is_realtime ? (
+                          <Badge variant="default">Yes</Badge>
+                        ) : (
+                          <Badge variant="secondary">No</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={model.enabled ? "default" : "secondary"}>
+                          {model.enabled ? "Enabled" : "Disabled"}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {models.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                      Models will appear here after connecting a provider.
                     </TableCell>
                   </TableRow>
-                );
-              })}
-              {models.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
-                    No models discovered yet. Add a provider to auto-discover models.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-          {models.length > 10 && (
-            <p className="text-sm text-muted-foreground mt-4 text-center">
-              Showing 10 of {models.length} models
-            </p>
-          )}
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Voices Section */}
       <Card className="glass-card border-white/10">
         <CardHeader>
           <CardTitle className="gradient-text">Discovered Voices</CardTitle>
-          <CardDescription>Voices auto-discovered from configured providers</CardDescription>
+          <CardDescription>Voices fetched from connected TTS providers</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Voice</TableHead>
-                <TableHead>Provider</TableHead>
-                <TableHead>Locale</TableHead>
-                <TableHead>Gender</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {voices.slice(0, 10).map((voice) => {
-                const provider = providers.find((p) => p.id === voice.provider_id);
-                
-                return (
-                  <TableRow key={voice.id}>
-                    <TableCell className="font-medium">{voice.name}</TableCell>
-                    <TableCell>{provider?.name}</TableCell>
-                    <TableCell>{voice.locale || "N/A"}</TableCell>
-                    <TableCell>{voice.gender || "N/A"}</TableCell>
-                    <TableCell>
-                      <Badge variant={voice.enabled ? "default" : "secondary"}>
-                        {voice.enabled ? "Enabled" : "Disabled"}
-                      </Badge>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Voice</TableHead>
+                  <TableHead>Provider</TableHead>
+                  <TableHead>Locale</TableHead>
+                  <TableHead>Gender</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {voices.slice(0, 15).map((voice) => {
+                  const provider = providers.find((p) => p.id === voice.provider_id);
+                  return (
+                    <TableRow key={voice.id}>
+                      <TableCell className="font-medium">{voice.name}</TableCell>
+                      <TableCell>{provider?.name ?? "-"}</TableCell>
+                      <TableCell>{voice.locale || "N/A"}</TableCell>
+                      <TableCell>{voice.gender || "N/A"}</TableCell>
+                      <TableCell>
+                        <Badge variant={voice.enabled ? "default" : "secondary"}>
+                          {voice.enabled ? "Enabled" : "Disabled"}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {voices.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                      Connect a TTS provider to sync voices.
                     </TableCell>
                   </TableRow>
-                );
-              })}
-              {voices.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    No voices discovered yet. Add a provider to auto-discover voices.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-          {voices.length > 10 && (
-            <p className="text-sm text-muted-foreground mt-4 text-center">
-              Showing 10 of {voices.length} voices
-            </p>
-          )}
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

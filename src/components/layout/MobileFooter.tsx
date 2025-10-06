@@ -1,12 +1,13 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Sparkles, Users, User, MessageCircle } from "lucide-react";
+import { Home, Sparkles, Users, User, MessageCircle, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdmin } from "@/hooks/useAdmin";
 
 export default function MobileFooter() {
   const location = useLocation();
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
 
-  // Don't show on auth pages or landing
   if (!user || location.pathname === "/" || location.pathname === "/auth") {
     return null;
   }
@@ -21,15 +22,18 @@ export default function MobileFooter() {
     { to: "/profile", label: "Profile", icon: User },
   ];
 
+  if (isAdmin) {
+    navItems.splice(4, 0, { to: "/admin", label: "Admin", icon: Shield });
+  }
+
   return (
     <nav className="md:hidden fixed bottom-4 left-4 right-4 z-40">
-      {/* Claymorphism Floating Capsule */}
       <div className="clay-card rounded-full px-4 py-3 shadow-2xl backdrop-blur-xl bg-background/95 border border-white/20">
         <div className="flex items-center justify-around gap-2">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.to);
-            
+
             return (
               <Link
                 key={item.to}
@@ -40,12 +44,12 @@ export default function MobileFooter() {
                     : "text-muted-foreground hover:text-foreground hover:scale-105"
                 }`}
               >
-                <Icon 
+                <Icon
                   className={`h-5 w-5 transition-all ${
                     active ? "stroke-[2.5]" : "stroke-[2]"
-                  }`} 
+                  }`}
                 />
-                <span 
+                <span
                   className={`text-[10px] font-medium transition-all ${
                     active ? "opacity-100" : "opacity-0 max-h-0"
                   }`}
@@ -57,8 +61,6 @@ export default function MobileFooter() {
           })}
         </div>
       </div>
-      
-      {/* Bottom Safe Area Spacer */}
       <div className="h-4" />
     </nav>
   );

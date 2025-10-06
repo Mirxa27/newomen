@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -12,41 +12,64 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ArrowLeft, Upload, User, Trophy, Target, Edit } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import type { Tables } from "@/integrations/supabase/types";
+
+type UserProfileRow = Tables<"user_profiles">;
+
+type UserAchievement = Tables<"user_achievements"> & {
+  achievements: Pick<Tables<"achievements">, "title" | "description" | "badge_url" | "crystal_reward"> | null;
+};
+
 
 export default function Profile() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<any>(null);
-  const [achievements, setAchievements] = useState<any[]>([]);
+  const [profile, setProfile] = useState<UserProfileRow | null>(null);
+  const [achievements, setAchievements] = useState<UserAchievement[]>([]);
   const [editMode, setEditMode] = useState(false);
   const [nickname, setNickname] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
-    loadProfile();
-  }, []);
+    void loadProfile();
+  }, [loadProfile]);
 
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError) {
+        throw authError;
+      }
+
       if (!user) {
         navigate("/auth");
         return;
       }
 
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from("user_profiles")
         .select("*")
         .eq("user_id", user.id)
         .single();
 
-      setProfile(profileData);
-      setNickname(profileData?.nickname || "");
-      setAvatarUrl(profileData?.avatar_url || "");
+      if (profileError) {
+        throw profileError;
+      }
 
-      // Load achievements
-      const { data: achievementsData } = await supabase
+      if (!profileData) {
+        throw new Error("Profile not found");
+      }
+
+      setProfile(profileData);
+      setNickname(profileData.nickname || "");
+      setAvatarUrl(profileData.avatar_url || "");
+
+      const { data: achievementsData, error: achievementsError } = await supabase
         .from("user_achievements")
         .select(`
           *,
@@ -57,16 +80,21 @@ export default function Profile() {
             crystal_reward
           )
         `)
-        .eq("user_id", profileData?.id);
+        .eq("user_id", profileData.id);
 
-      setAchievements(achievementsData || []);
+      if (achievementsError) {
+        throw achievementsError;
+      }
+
+      setAchievements(achievementsData ?? []);
     } catch (error) {
       console.error("Error loading profile:", error);
       toast.error("Failed to load profile");
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
+
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -74,7 +102,12 @@ export default function Profile() {
       const file = event.target.files?.[0];
       if (!file) return;
 
-      const fileExt = file.name.split('.').pop();
+      if (!profile) {
+        toast.error("Profile not loaded yet. Please try again in a moment.");
+        return;
+      }
+
+      const fileExt = file.name.split('.').pop() ?? 'jpg';
       const fileName = `${profile.id}-${Math.random()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
@@ -99,6 +132,11 @@ export default function Profile() {
   };
 
   const saveProfile = async () => {
+    if (!profile) {
+      toast.error("Profile not loaded yet");
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from("user_profiles")

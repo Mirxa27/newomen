@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Tables } from "@/integrations/supabase/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +10,7 @@ import { Search, User, Trophy, Calendar } from "lucide-react";
 import { toast } from "sonner";
 
 export default function UserManagement() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<Tables<"user_profiles">[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -25,7 +26,7 @@ export default function UserManagement() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setUsers(data || []);
+      setUsers((data as Tables<"user_profiles">[]) || []);
     } catch (error) {
       console.error("Error loading users:", error);
       toast.error("Failed to load users");
@@ -107,8 +108,9 @@ export default function UserManagement() {
             </div>
           </div>
 
-          <Table>
-            <TableHeader>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
               <TableRow>
                 <TableHead>User</TableHead>
                 <TableHead>Email</TableHead>
@@ -143,6 +145,7 @@ export default function UserManagement() {
               ))}
             </TableBody>
           </Table>
+        </div>
         </CardContent>
       </Card>
     </div>

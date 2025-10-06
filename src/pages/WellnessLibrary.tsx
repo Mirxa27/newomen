@@ -150,26 +150,57 @@ export default function WellnessLibrary() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handlePlay = (resource: Resource) => {
+  const handlePlay = async (resource: Resource) => {
     if (currentlyPlaying === resource.id && isPlaying) {
       audioRef.current?.pause();
       setIsPlaying(false);
     } else {
       if (currentlyPlaying !== resource.id) {
-        // Note: In production, you would load the actual audio URL
-        toast.info("Audio playback demo - connect to actual audio files in production");
-        setCurrentlyPlaying(resource.id);
-        setDuration(resource.duration);
-        setCurrentTime(0);
+        if (audioRef.current) {
+          audioRef.current.src = resource.audio_url;
+          audioRef.current.load();
+          setCurrentlyPlaying(resource.id);
+          setDuration(resource.duration);
+          setCurrentTime(0);
+
+          try {
+            await audioRef.current.play();
+            setIsPlaying(true);
+          } catch (error) {
+            console.error("Error playing audio:", error);
+            toast.error("Failed to play audio file");
+          }
+        }
+      } else {
+        try {
+          await audioRef.current?.play();
+          setIsPlaying(true);
+        } catch (error) {
+          console.error("Error resuming audio:", error);
+          toast.error("Failed to resume audio");
+        }
       }
-      setIsPlaying(true);
-      // audioRef.current?.play(); // Uncomment when real audio URLs are available
     }
   };
 
-  const handleDownload = (resource: Resource) => {
-    toast.success(`Downloading "${resource.title}"...`);
-    // In production, implement actual download functionality
+  const handleDownload = async (resource: Resource) => {
+    try {
+      // Create a temporary anchor element for download
+      const link = document.createElement('a');
+      link.href = resource.audio_url;
+      link.download = `${resource.title}.mp3`;
+      link.target = '_blank';
+
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success(`Downloading "${resource.title}"...`);
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      toast.error("Failed to download file");
+    }
   };
 
   const categories = [

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ArrowRight, ArrowLeft, Sparkles, BookOpen, Target, Heart } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
@@ -15,7 +16,7 @@ interface Question {
   category: string;
   question: string;
   prompt: string;
-  icon: any;
+  icon: LucideIcon;
 }
 
 const questions: Question[] = [
@@ -91,6 +92,22 @@ const questions: Question[] = [
   }
 ];
 
+interface TransformationStep {
+  title: string;
+  description: string;
+  actions?: string[];
+}
+
+interface NarrativeAnalysis {
+  coreThemes: string[];
+  limitingBeliefs: string[];
+  strengthPatterns: string[];
+  transformationOpportunities: string[];
+  personalityArchetype: string;
+  narrativeCoherence: number;
+  transformationRoadmap: TransformationStep[];
+}
+
 export default function NarrativeIdentityExploration() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -98,20 +115,20 @@ export default function NarrativeIdentityExploration() {
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [currentAnswer, setCurrentAnswer] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [analysisResult, setAnalysisResult] = useState<NarrativeAnalysis | null>(null);
   const [hasExistingExploration, setHasExistingExploration] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    checkExistingExploration();
-  }, []);
+    void checkExistingExploration();
+  }, [checkExistingExploration]);
 
   useEffect(() => {
     // Load saved answer for current question
     setCurrentAnswer(answers[currentQuestionIndex + 1] || '');
   }, [currentQuestionIndex, answers]);
 
-  const checkExistingExploration = async () => {
+  const checkExistingExploration = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -119,7 +136,6 @@ export default function NarrativeIdentityExploration() {
         return;
       }
 
-      // Check if user has completed narrative exploration
       const { data: existingData } = await supabase
         .from('user_memory_profiles')
         .select('narrative_identity_data')
@@ -128,14 +144,13 @@ export default function NarrativeIdentityExploration() {
 
       if (existingData?.narrative_identity_data) {
         setHasExistingExploration(true);
-        // Option to view previous results or retake
       }
     } catch (error) {
       console.error('Error checking existing exploration:', error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [navigate]);
 
   const handleNext = () => {
     if (currentAnswer.trim().length < 50) {
@@ -193,14 +208,43 @@ export default function NarrativeIdentityExploration() {
       if (error) throw error;
 
       // Parse AI response
-      const analysis = {
-        coreThemes: data.coreThemes || [],
-        limitingBeliefs: data.limitingBeliefs || [],
-        strengthPatterns: data.strengthPatterns || [],
-        transformationOpportunities: data.transformationOpportunities || [],
-        personalityArchetype: data.personalityArchetype || 'Explorer',
-        narrativeCoherence: data.narrativeCoherence || 0,
-        transformationRoadmap: data.transformationRoadmap || []
+      const coherence = typeof data?.narrativeCoherence === 'number' ? data.narrativeCoherence : 0;
+
+      const analysis: NarrativeAnalysis = {
+        coreThemes: Array.isArray(data?.coreThemes) ? data.coreThemes.map((item: unknown) => String(item)) : [],
+        limitingBeliefs: Array.isArray(data?.limitingBeliefs) ? data.limitingBeliefs.map((item: unknown) => String(item)) : [],
+        strengthPatterns: Array.isArray(data?.strengthPatterns) ? data.strengthPatterns.map((item: unknown) => String(item)) : [],
+        transformationOpportunities: Array.isArray(data?.transformationOpportunities)
+          ? data.transformationOpportunities.map((item: unknown) => String(item))
+          : [],
+        personalityArchetype:
+          typeof data?.personalityArchetype === 'string' ? data.personalityArchetype : 'Explorer',
+        narrativeCoherence: Math.min(100, Math.max(0, coherence)),
+        transformationRoadmap: Array.isArray(data?.transformationRoadmap)
+          ? data.transformationRoadmap
+              .map((step: unknown) => {
+                if (
+                  step &&
+                  typeof step === 'object' &&
+                  'title' in step &&
+                  'description' in step
+                ) {
+                  const stepRecord = step as Record<string, unknown>;
+                  const rawActions = stepRecord.actions;
+                  const actions = Array.isArray(rawActions)
+                    ? rawActions.map((action) => String(action))
+                    : undefined;
+
+                  return {
+                    title: String(stepRecord.title ?? ''),
+                    description: String(stepRecord.description ?? ''),
+                    actions,
+                  };
+                }
+                return null;
+              })
+              .filter((step): step is TransformationStep => Boolean(step))
+          : [],
       };
 
       // Save to database
@@ -353,7 +397,7 @@ export default function NarrativeIdentityExploration() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {analysisResult.transformationRoadmap.map((step: any, idx: number) => (
+                {analysisResult.transformationRoadmap.map((step, idx) => (
                   <div key={idx} className="space-y-2">
                     <div className="flex items-center gap-2">
                       <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold">
@@ -363,7 +407,7 @@ export default function NarrativeIdentityExploration() {
                     </div>
                     <p className="text-sm text-muted-foreground ml-10">{step.description}</p>
                     <div className="ml-10 flex flex-wrap gap-2">
-                      {step.actions?.map((action: string, actionIdx: number) => (
+                      {step.actions?.map((action, actionIdx) => (
                         <Badge key={actionIdx} variant="outline" className="text-xs">
                           {action}
                         </Badge>
