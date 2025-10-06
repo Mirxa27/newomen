@@ -143,7 +143,7 @@ export default function Header() {
       <nav className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center group">
           <div className="h-12 w-auto transition-transform group-hover:scale-105">
-            <img src="/Newomen logo.svg" alt="Newomen" className="h-12 w-auto" />
+            <img src="/Newomen%20logo.svg" alt="Newomen" className="h-12 w-auto" />
           </div>
         </Link>
 

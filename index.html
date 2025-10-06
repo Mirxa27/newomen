@@ -21,6 +21,16 @@
     <meta name="twitter:image" content="https://newomen.me/icon.png" />
     
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <!-- Disable service workers to prevent cloning errors -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+          }
+        });
+      }
+    </script>
   </head>
 
   <body>
