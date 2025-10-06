@@ -1,5 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export interface RealtimeChatOptions {
+  systemPrompt?: string;
+  memoryContext?: string;
+  initialGreeting?: string;
+  voice?: string;
+  modalities?: Array<"audio" | "text">;
+  agentId?: string;
+  userId?: string;
+  model?: string;
+}
+
 export class AudioRecorder {
   private stream: MediaStream | null = null;
   private audioContext: AudioContext | null = null;
@@ -69,16 +80,39 @@ export class RealtimeChat {
   private dc: RTCDataChannel | null = null;
   private audioEl: HTMLAudioElement;
   private recorder: AudioRecorder | null = null;
+  private options: RealtimeChatOptions;
 
-  constructor(private onMessage: (message: unknown) => void) {
+  constructor(
+    private onMessage: (message: unknown) => void,
+    options: RealtimeChatOptions = {}
+  ) {
     this.audioEl = document.createElement("audio");
     this.audioEl.autoplay = true;
+    this.options = {
+      modalities: ["audio", "text"],
+      voice: "verse",
+      ...options,
+    };
   }
 
   async init() {
     try {
       console.log('Requesting ephemeral token...');
-      const { data, error } = await supabase.functions.invoke("realtime-token");
+      const requestBody = Object.fromEntries(
+        Object.entries({
+          agentId: this.options.agentId,
+          userId: this.options.userId,
+          systemPrompt: this.options.systemPrompt,
+          memoryContext: this.options.memoryContext,
+          voice: this.options.voice,
+          model: this.options.model,
+          modalities: this.options.modalities,
+        }).filter(([, value]) => value !== undefined && value !== null)
+      ) as Record<string, unknown>;
+
+      const { data, error } = await supabase.functions.invoke("realtime-token", {
+        body: requestBody,
+      });
 
       if (error) {
         console.error('Error getting ephemeral token:', error);
@@ -110,9 +144,7 @@ export class RealtimeChat {
       // Set up data channel
       this.dc = this.pc.createDataChannel("oai-events");
 
-      this.dc.addEventListener("open", () => {
-        console.log('Data channel opened');
-      });
+      this.dc.addEventListener("open", this.handleDataChannelOpen);
 
       this.dc.addEventListener("message", (e) => {
         const event = JSON.parse(e.data);
@@ -172,6 +204,83 @@ export class RealtimeChat {
     }
   }
 
+  updateOptions(options: Partial<RealtimeChatOptions>) {
+    this.options = {
+      ...this.options,
+      ...options,
+    };
+
+    if (this.dc && this.dc.readyState === "open") {
+      this.sendSessionInstructions();
+      if (options.initialGreeting) {
+        this.sendAssistantGreeting(options.initialGreeting);
+      }
+    }
+  }
+
+  private handleDataChannelOpen = () => {
+    console.log('Data channel opened');
+    this.sendSessionInstructions();
+    if (this.options.initialGreeting) {
+      this.sendAssistantGreeting(this.options.initialGreeting);
+    }
+  };
+
+  private sendSessionInstructions() {
+    if (!this.dc) return;
+
+    const instructionsParts = [this.options.systemPrompt, this.options.memoryContext]
+      .filter(Boolean)
+      .map((part) => part?.trim())
+      .filter(Boolean) as string[];
+
+    if (!instructionsParts.length && !this.options.voice && !this.options.modalities) {
+      return;
+    }
+
+    const sessionPayload: {
+      type: string;
+      session: {
+        instructions?: string;
+        voice?: string;
+        modalities?: Array<"audio" | "text">;
+      };
+    } = {
+      type: "session.update",
+      session: {},
+    };
+
+    if (instructionsParts.length) {
+      sessionPayload.session.instructions = instructionsParts.join("\n\n");
+    }
+
+    if (this.options.voice) {
+      sessionPayload.session.voice = this.options.voice;
+    }
+
+    if (this.options.modalities) {
+      sessionPayload.session.modalities = this.options.modalities;
+    }
+
+    this.dc.send(JSON.stringify(sessionPayload));
+  }
+
+  private sendAssistantGreeting(instructions: string) {
+    if (!this.dc) return;
+
+    const trimmed = instructions.trim();
+    if (!trimmed) return;
+
+    this.dc.send(JSON.stringify({
+      type: "response.create",
+      response: {
+        instructions: trimmed,
+        modalities: this.options.modalities || ["audio", "text"],
+        voice: this.options.voice,
+      },
+    }));
+  }
+
   private encodeAudioData(float32Array: Float32Array): string {
     const int16Array = new Int16Array(float32Array.length);
     for (let i = 0; i < float32Array.length; i++) {
@@ -216,7 +325,10 @@ export class RealtimeChat {
 
   disconnect() {
     this.recorder?.stop();
-    this.dc?.close();
+    if (this.dc) {
+      this.dc.removeEventListener("open", this.handleDataChannelOpen);
+      this.dc.close();
+    }
     this.pc?.close();
   }
 }

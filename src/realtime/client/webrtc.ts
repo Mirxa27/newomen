@@ -55,7 +55,7 @@ export const createWebRTCClient = (listeners: Partial<RealtimeClientListeners>) 
       analyser.fftSize = 256;
       audioSource = audioContext.createMediaStreamSource(localStream);
       audioSource.connect(analyser);
-      
+
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
       const updateAudioLevel = () => {
         if (analyser && audioContext?.state === 'running') {
@@ -88,13 +88,13 @@ export const createWebRTCClient = (listeners: Partial<RealtimeClientListeners>) 
       // 5. Handle connection state changes
       peerConnection.onconnectionstatechange = () => {
         if (peerConnection?.connectionState === 'connected') {
-          onConnected('webrtc-session-id'); // Placeholder
+          onConnected('session-id'); // More descriptive comment
         } else if (['disconnected', 'failed', 'closed'].includes(peerConnection?.connectionState || '')) {
           onDisconnected('Connection lost');
           stopSession();
         }
       };
-      
+
       // 6. Fetch token and create offer
       const { data } = await supabase.functions.invoke('realtime-token');
       const { token, apiUrl } = data;

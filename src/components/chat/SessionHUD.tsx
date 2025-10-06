@@ -21,9 +21,9 @@ const SessionHUD: React.FC<SessionHUDProps> = ({
   };
 
   const getStatusColor = () => {
-    if (!isConnected) return 'bg-gray-500';
-    if (isSpeaking) return 'bg-green-500 animate-pulse';
-    return 'bg-blue-500';
+    if (!isConnected) return 'bg-rose-400';
+    if (isSpeaking) return 'bg-emerald-400 animate-pulse';
+    return 'bg-sky-400';
   };
 
   const getStatusText = () => {
@@ -33,13 +33,16 @@ const SessionHUD: React.FC<SessionHUDProps> = ({
   };
 
   return (
-    <div className="space-y-3 sm:space-y-4 p-3 sm:p-4 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+    <div className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-4 sm:p-6 shadow-lg backdrop-blur-xl">
       {/* Status */}
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-muted-foreground">Status</span>
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${getStatusColor()}`}></div>
-          <Badge variant={isConnected ? 'default' : 'secondary'} className="text-xs">
+          <Badge
+            variant={isConnected ? 'default' : 'secondary'}
+            className={`text-xs ${isConnected ? 'bg-white/10 text-white backdrop-blur-lg' : 'bg-white/80 text-black'}`}
+          >
             {getStatusText()}
           </Badge>
         </div>
@@ -51,14 +54,14 @@ const SessionHUD: React.FC<SessionHUDProps> = ({
           <Clock className="w-4 h-4" />
           Duration
         </span>
-        <span className="text-lg sm:text-xl font-mono font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-pink-500">
+        <span className="text-lg sm:text-xl font-mono font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-400 to-purple-500">
           {formatDuration(duration)}
         </span>
       </div>
 
       {/* Activity Indicator */}
       {isConnected && (
-        <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between border-t border-white/10 pt-3">
           <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <Activity className="w-4 h-4" />
             Activity
@@ -69,8 +72,8 @@ const SessionHUD: React.FC<SessionHUDProps> = ({
                 key={i}
                 className={`w-1 h-6 sm:h-8 rounded-full transition-all duration-300 ${
                   isSpeaking && i < 4
-                    ? 'bg-gradient-to-t from-purple-500 to-pink-500'
-                    : 'bg-gray-300 dark:bg-gray-600'
+                    ? 'bg-gradient-to-t from-purple-500 via-pink-500 to-amber-400'
+                    : 'bg-white/20'
                 }`}
               ></div>
             ))}
@@ -79,11 +82,11 @@ const SessionHUD: React.FC<SessionHUDProps> = ({
       )}
 
       {/* Tips */}
-      <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+      <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
         <p className="text-xs text-muted-foreground">
-          💡 {isConnected 
-            ? 'Speak naturally - NewMe is listening' 
-            : 'Click the microphone to start'}
+          💡 {isConnected
+            ? 'Speak naturally – NewMe is listening.'
+            : 'Click start when you are ready to begin.'}
         </p>
       </div>
     </div>

@@ -51,7 +51,7 @@ serve(async (req) => {
 
     const questions = challenge.question_set?.questions || [];
     const responses = challenge.responses;
-    let aiAnalysis = challenge.ai_analysis || {};
+    const aiAnalysis = challenge.ai_analysis || {};
     let analysisUpdated = false;
 
     for (const q of questions) {

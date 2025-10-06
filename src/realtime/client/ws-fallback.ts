@@ -50,14 +50,23 @@ export const createWsFallbackClient = (listeners: Partial<RealtimeClientListener
       // 2. Fetch token and create WebSocket connection
       const { data } = await supabase.functions.invoke('realtime-token');
       const { token, wsUrl } = data;
-      
+
       websocket = new WebSocket(`${wsUrl}?token=${token}`);
-      
+
       websocket.onopen = () => {
         onConnected('ws-session-id'); // Placeholder
-        
+
         // 3. Setup audio processing and streaming
-        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        interface ExtendedWindow extends Window {
+          AudioContext: typeof AudioContext;
+          webkitAudioContext?: typeof AudioContext;
+        }
+        const win = window as ExtendedWindow;
+        const AudioContextClass = win.AudioContext || win.webkitAudioContext;
+        if (!AudioContextClass) {
+          throw new Error('AudioContext not supported in this browser');
+        }
+        audioContext = new AudioContextClass();
         audioSource = audioContext.createMediaStreamSource(localStream);
         scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
 

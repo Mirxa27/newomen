@@ -31,8 +31,11 @@ const Assessments = lazy(() => import("./pages/Assessments"));
 
 // Admin Pages
 const AdminAnalytics = lazy(() => import("./pages/admin/Analytics"));
+const Agents = lazy(() => import("./pages/admin/Agents"));
 const AIProviderManagement = lazy(() => import("./pages/admin/AIProviderManagement"));
+const AIConfigurationManager = lazy(() => import("./pages/admin/AIConfigurationManager"));
 const AIPrompting = lazy(() => import("./pages/admin/AIPrompting"));
+const AIAssessmentManagement = lazy(() => import("./pages/admin/AIAssessmentManagement"));
 const VoiceTraining = lazy(() => import("./pages/admin/VoiceTraining"));
 const SessionsLive = lazy(() => import("./pages/admin/SessionsLive"));
 const SessionsHistory = lazy(() => import("./pages/admin/SessionsHistory"));
@@ -120,8 +123,11 @@ const App = () => (
           }>
             <Route index element={<AdminAnalytics />} />
             <Route path="analytics" element={<AdminAnalytics />} />
+            <Route path="agents" element={<Agents />} />
             <Route path="ai-providers" element={<AIProviderManagement />} />
+            <Route path="ai-config" element={<AIConfigurationManager />} />
             <Route path="ai-prompts" element={<AIPrompting />} />
+            <Route path="ai-assessments" element={<AIAssessmentManagement />} />
             <Route path="voice-training" element={<VoiceTraining />} />
             <Route path="sessions-live" element={<SessionsLive />} />
             <Route path="sessions-history" element={<SessionsHistory />} />

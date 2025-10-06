@@ -4,8 +4,11 @@ import { Card } from '@/components/ui/card';
 
 const adminNavItems = [
   { name: 'Analytics', path: '/admin/analytics' },
+  { name: 'Agents', path: '/admin/agents' },
   { name: 'AI Providers', path: '/admin/ai-providers' },
+  { name: 'AI Config', path: '/admin/ai-config' },
   { name: 'AI Prompts', path: '/admin/ai-prompts' },
+  { name: 'AI Assessments', path: '/admin/ai-assessments' },
   { name: 'Voice Training', path: '/admin/voice-training' },
   { name: 'Live Sessions', path: '/admin/sessions-live' },
   { name: 'Session History', path: '/admin/sessions-history' },
@@ -18,8 +21,8 @@ const adminNavItems = [
 
 const AdminLayout: React.FC = () => {
   return (
-    <div className="flex min-h-screen">
-      <aside className="w-64 bg-gray-800 text-white p-4">
+    <div className="app-page-shell flex min-h-screen">
+      <aside className="w-64 bg-black/70 backdrop-blur-xl text-white/90 p-4 border-r border-white/10">
         <h2 className="text-2xl font-bold mb-4">Admin Panel</h2>
         <nav>
           <ul>
@@ -28,7 +31,7 @@ const AdminLayout: React.FC = () => {
                 <NavLink
                   to={item.path}
                   className={({ isActive }) =>
-                    `block p-2 rounded hover:bg-gray-700 ${isActive ? 'bg-gray-900' : ''}`
+                    `block p-2 rounded-lg transition-colors hover:bg-white/10 ${isActive ? 'bg-white/15 text-white' : ''}`
                   }
                 >
                   {item.name}
@@ -38,8 +41,8 @@ const AdminLayout: React.FC = () => {
           </ul>
         </nav>
       </aside>
-      <main className="flex-1 p-6 bg-gray-100">
-        <Card className="p-6">
+      <main className="flex-1 p-6">
+        <Card className="p-6 backdrop-blur-xl bg-white/5 border-white/10 text-foreground">
           <Outlet />
         </Card>
       </main>

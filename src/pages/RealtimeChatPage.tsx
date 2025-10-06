@@ -1,15 +1,16 @@
 // src/pages/RealtimeChatPage.tsx
-import React from 'react';
-import { useRealtimeClient } from '@/hooks/useRealtimeClient';
-import TranscriptPane from '@/components/chat/TranscriptPane';
-import Waveform from '@/components/chat/Waveform';
-import DevicePicker from '@/components/chat/DevicePicker';
-import Composer from '@/components/chat/Composer';
-import SessionHUD from '@/components/chat/SessionHUD';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AlertCircle, Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import DevicePicker from '@/components/chat/DevicePicker';
+import { SessionHUD } from '@/components/chat/SessionHUD';
+import { TranscriptPane } from '@/components/chat/TranscriptPane';
+import { Waveform } from '@/components/chat/Waveform';
+import { useRealtimeClient } from '@/hooks/useRealtimeClient';
 
 const RealtimeChatPage = () => {
   const {
+    isSupported,
     isConnecting,
     isConnected,
     transcripts,
@@ -22,39 +23,153 @@ const RealtimeChatPage = () => {
     updateDevice,
   } = useRealtimeClient();
 
-  return (
-    <div className="grid grid-rows-[auto_1fr_auto] h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      <header className="p-4 border-b border-gray-200 dark:border-gray-800">
-        <h1 className="text-xl font-bold">AI Conversation</h1>
-      </header>
-      
-      <main className="grid md:grid-cols-[1fr_300px] gap-4 p-4 overflow-hidden">
-        <div className="flex flex-col gap-4 overflow-hidden">
-          <SessionHUD isConnected={isConnected} isConnecting={isConnecting} error={error} />
-          <TranscriptPane transcripts={transcripts} />
-          <div className="h-24 w-full">
-            <Waveform audioLevel={audioLevel} />
-          </div>
-        </div>
-        <aside className="hidden md:flex flex-col gap-4 border-l border-gray-200 dark:border-gray-800 p-4">
-          <h2 className="font-bold">Settings</h2>
-          <DevicePicker
-            devices={devices}
-            selectedDevice={selectedDevice}
-            onChange={updateDevice}
-            disabled={isConnected}
-          />
-        </aside>
-      </main>
+  const [duration, setDuration] = useState(0);
 
-      <footer className="p-4 border-t border-gray-200 dark:border-gray-800">
-        <Composer
-          isConnecting={isConnecting}
-          isConnected={isConnected}
-          onStart={start}
-          onStop={stop}
-        />
-      </footer>
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | undefined;
+
+    if (isConnected) {
+      timer = setInterval(() => {
+        setDuration((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setDuration(0);
+    }
+
+    return () => {
+      if (timer) {
+        clearInterval(timer);
+      }
+    };
+  }, [isConnected]);
+
+  const { messages, partialTranscript } = useMemo(() => {
+    const finalTranscripts = transcripts.filter((entry) => entry.isFinal && entry.text.trim().length > 0);
+    const latestPartial = [...transcripts]
+      .reverse()
+      .find((entry) => !entry.isFinal)?.text;
+
+    return {
+      messages: finalTranscripts.map((entry, index) => ({
+        role: 'assistant' as const,
+        content: entry.text,
+        timestamp: new Date(Date.now() - (finalTranscripts.length - index) * 1000),
+      })),
+      partialTranscript: latestPartial ?? '',
+    };
+  }, [transcripts]);
+
+  const isSpeaking = isConnected && audioLevel > 0.2;
+
+  const handleStartSession = () => {
+    start();
+  };
+
+  const handleStopSession = () => {
+    stop();
+  };
+
+  return (
+    <div className="app-page-shell flex flex-col">
+      <div className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6">
+        <div className="mx-auto flex h-full max-w-6xl flex-col gap-6">
+          <header className="glass rounded-3xl border border-white/10 px-6 py-5 shadow-lg">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h1 className="text-2xl font-semibold leading-tight">AI Conversation Prototype</h1>
+                <p className="text-sm text-muted-foreground">
+                  Test the realtime voice experience with the unified background aesthetic.
+                </p>
+              </div>
+              {!isSupported && (
+                <div className="flex items-center gap-2 rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>Your browser does not fully support realtime audio. WebSocket fallback enabled.</span>
+                </div>
+              )}
+            </div>
+          </header>
+
+          <main className="flex flex-1 flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="flex min-h-0 flex-col gap-4">
+              <div className="glass rounded-3xl border border-white/10 p-4 sm:p-6 shadow-lg">
+                <SessionHUD duration={duration} isConnected={isConnected} isSpeaking={isSpeaking} />
+              </div>
+
+              <div className="glass flex min-h-[320px] flex-1 flex-col overflow-hidden rounded-3xl border border-white/10 shadow-lg">
+                <TranscriptPane messages={messages} partialTranscript={partialTranscript} />
+              </div>
+
+              <div className="glass rounded-3xl border border-white/10 p-4 shadow-lg">
+                <Waveform isActive={isSpeaking} />
+              </div>
+            </div>
+
+            <aside className="glass hidden min-h-0 flex-col gap-4 rounded-3xl border border-white/10 p-6 shadow-lg lg:flex">
+              <div>
+                <h2 className="text-lg font-semibold">Session Controls</h2>
+                <p className="text-sm text-muted-foreground">
+                  Choose an input device and manage the call state.
+                </p>
+              </div>
+              <DevicePicker
+                devices={devices}
+                selectedDevice={selectedDevice}
+                onChange={updateDevice}
+                disabled={isConnected || isConnecting || devices.length === 0}
+              />
+
+              {error && (
+                <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                  {error.message}
+                </div>
+              )}
+            </aside>
+          </main>
+
+          <footer className="glass rounded-3xl border border-white/10 px-4 py-4 shadow-lg sm:px-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : isConnecting ? 'bg-amber-400 animate-pulse' : 'bg-gray-400'}`} />
+                <span>
+                  {isConnecting
+                    ? 'Connecting to realtime session...'
+                    : isConnected
+                      ? 'Live session in progress'
+                      : 'Session idle'}
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  onClick={handleStartSession}
+                  disabled={isConnecting || isConnected}
+                  className="gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                >
+                  <Mic className="h-4 w-4" />
+                  Start Session
+                </Button>
+                <Button
+                  onClick={handleStopSession}
+                  disabled={!isConnected}
+                  variant="destructive"
+                  className="gap-2"
+                >
+                  <MicOff className="h-4 w-4" />
+                  Stop Session
+                </Button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="mt-3 flex items-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4" />
+                <span>{error.message}</span>
+              </div>
+            )}
+          </footer>
+        </div>
+      </div>
     </div>
   );
 };
