@@ -28,7 +28,8 @@ export default function MobileFooter() {
   }
 
   return (
-    <nav className="nav-responsive">
+    // Only show on mobile screens (hidden on md and larger)
+    <nav className="nav-responsive md:hidden">
       <div className="flex items-center justify-around gap-1 h-full">
         {navItems.map((item) => {
           const Icon = item.icon;
