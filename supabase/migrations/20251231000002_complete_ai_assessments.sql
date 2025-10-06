@@ -158,27 +158,27 @@ CREATE POLICY "Admins can view all assessment stats" ON user_assessment_stats
     );
 
 -- Create additional indexes for performance
-CREATE INDEX idx_assessments_type_category ON assessments(assessment_type, category);
-CREATE INDEX idx_assessments_difficulty ON assessments(difficulty_level);
-CREATE INDEX idx_assessments_created ON assessments(created_at);
+CREATE INDEX IF NOT EXISTS idx_assessments_type_category ON assessments(assessment_type, category);
+CREATE INDEX IF NOT EXISTS idx_assessments_difficulty ON assessments(difficulty_level);
+CREATE INDEX IF NOT EXISTS idx_assessments_created ON assessments(created_at);
 
-CREATE INDEX idx_quizzes_difficulty ON quizzes(difficulty_level);
-CREATE INDEX idx_quizzes_time_limit ON quizzes(time_limit_minutes);
-CREATE INDEX idx_quizzes_created ON quizzes(created_at);
+CREATE INDEX IF NOT EXISTS idx_quizzes_difficulty ON quizzes(difficulty_level);
+CREATE INDEX IF NOT EXISTS idx_quizzes_time_limit ON quizzes(time_limit_minutes);
+CREATE INDEX IF NOT EXISTS idx_quizzes_created ON quizzes(created_at);
 
-CREATE INDEX idx_challenges_duration ON challenges(duration_days);
-CREATE INDEX idx_challenges_difficulty ON challenges(difficulty_level);
-CREATE INDEX idx_challenges_created ON challenges(created_at);
+CREATE INDEX IF NOT EXISTS idx_challenges_duration ON challenges(duration_days);
+CREATE INDEX IF NOT EXISTS idx_challenges_difficulty ON challenges(difficulty_level);
+CREATE INDEX IF NOT EXISTS idx_challenges_created ON challenges(created_at);
 
-CREATE INDEX idx_assessment_results_score ON assessment_results(percentage_score);
-CREATE INDEX idx_assessment_results_attempt ON assessment_results(attempt_number);
+CREATE INDEX IF NOT EXISTS idx_assessment_results_score ON assessment_results(percentage_score);
+CREATE INDEX IF NOT EXISTS idx_assessment_results_attempt ON assessment_results(attempt_number);
 
-CREATE INDEX idx_quiz_results_score ON quiz_results(percentage_score);
-CREATE INDEX idx_quiz_results_time ON quiz_results(time_taken_seconds);
-CREATE INDEX idx_quiz_results_attempt ON quiz_results(attempt_number);
+CREATE INDEX IF NOT EXISTS idx_quiz_results_score ON quiz_results(percentage_score);
+CREATE INDEX IF NOT EXISTS idx_quiz_results_time ON quiz_results(time_taken_seconds);
+CREATE INDEX IF NOT EXISTS idx_quiz_results_attempt ON quiz_results(attempt_number);
 
-CREATE INDEX idx_challenge_progress_streak ON challenge_progress(current_streak);
-CREATE INDEX idx_challenge_progress_completions ON challenge_progress(total_completions);
+CREATE INDEX IF NOT EXISTS idx_challenge_progress_streak ON challenge_progress(current_streak);
+CREATE INDEX IF NOT EXISTS idx_challenge_progress_completions ON challenge_progress(total_completions);
 
 -- Create functions for automatic stats updates
 CREATE OR REPLACE FUNCTION update_user_assessment_stats()

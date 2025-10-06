@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -68,11 +68,7 @@ export default function AIAssessments() {
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [activeTab, setActiveTab] = useState("assessments");
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -230,7 +226,11 @@ export default function AIAssessments() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const startAssessment = (assessment: Assessment) => {
     navigate(`/assessment/${assessment.id}`);

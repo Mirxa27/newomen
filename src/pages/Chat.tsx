@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { RealtimeChat } from "@/utils/RealtimeAudio";
+import { supabase } from "@/integrations/supabase/client";
+import { trackConversationCompletion } from "@/lib/gamification-events";
 import { TranscriptPane } from "@/components/chat/TranscriptPane";
 import { SessionHUD } from "@/components/chat/SessionHUD";
 import { Composer } from "@/components/chat/Composer";
@@ -138,7 +140,7 @@ const Chat = () => {
     }
   };
 
-  const endConversation = () => {
+  const endConversation = async () => {
     chatRef.current?.disconnect();
     setIsConnected(false);
     setIsSpeaking(false);
@@ -149,6 +151,12 @@ const Chat = () => {
       title: "Session Ended",
       description: `Duration: ${Math.floor(duration / 60)}m ${duration % 60}s`,
     });
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      // Assuming a conversation ID is available, otherwise using a placeholder
+      void trackConversationCompletion(user.id, `conv_${new Date().getTime()}`);
+    }
   };
 
   const handleSendText = async (text: string) => {

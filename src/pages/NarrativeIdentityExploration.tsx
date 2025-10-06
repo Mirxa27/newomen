@@ -10,6 +10,7 @@ import { Loader2, ArrowRight, ArrowLeft, Sparkles, BookOpen, Target, Heart } fro
 import type { LucideIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { trackNarrativeExplorationCompletion } from '@/lib/gamification-events';
 
 interface Question {
   id: number;
@@ -262,6 +263,9 @@ export default function NarrativeIdentityExploration() {
       if (saveError) throw saveError;
 
       setAnalysisResult(analysis);
+
+      // Track narrative exploration completion for gamification
+      void trackNarrativeExplorationCompletion(user.id, `narrative_${user.id}`);
 
       toast({
         title: "Analysis Complete!",

@@ -1,78 +1,67 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Mic, MicOff, Send, PhoneOff } from "lucide-react";
+// src/components/chat/Composer.tsx
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Mic, MicOff, Send } from 'lucide-react';
 
 interface ComposerProps {
-  onSendText: (text: string) => void;
-  onEndSession: () => void;
+  isConnecting: boolean;
   isConnected: boolean;
-  isMuted: boolean;
-  onToggleMute: () => void;
+  onStart: () => void;
+  onStop: () => void;
+  // onSendText: (text: string) => void; // For future text input
 }
 
-export const Composer = ({ 
-  onSendText, 
-  onEndSession, 
+const Composer: React.FC<ComposerProps> = ({
+  isConnecting,
   isConnected,
-  isMuted,
-  onToggleMute
-}: ComposerProps) => {
-  const [text, setText] = useState("");
+  onStart,
+  onStop,
+}) => {
+  const [text, setText] = useState('');
 
-  const handleSend = () => {
+  const handleMicClick = () => {
+    if (isConnected) {
+      onStop();
+    } else {
+      onStart();
+    }
+  };
+
+  const handleSendClick = () => {
     if (text.trim()) {
-      onSendText(text);
-      setText("");
+      // onSendText(text);
+      setText('');
     }
   };
 
   return (
-    <div className="space-y-3">
-      {/* Text Input */}
-      <div className="flex gap-2">
-        <Input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-          placeholder="Type a message..."
-          className="flex-1 h-12 text-base"
-          disabled={!isConnected}
-        />
-        <Button
-          onClick={handleSend}
-          disabled={!text.trim() || !isConnected}
-          size="lg"
-          className="h-12 px-4"
-        >
-          <Send className="w-5 h-5" />
-        </Button>
-      </div>
-
-      {/* Control Buttons */}
-      <div className="flex gap-3 justify-center">
-        <Button
-          onClick={onToggleMute}
-          disabled={!isConnected}
-          variant={isMuted ? "destructive" : "default"}
-          size="lg"
-          className="flex-1 max-w-[120px] h-12"
-        >
-          {isMuted ? <MicOff className="w-5 h-5 mr-2" /> : <Mic className="w-5 h-5 mr-2" />}
-          {isMuted ? "Unmute" : "Mute"}
-        </Button>
-
-        <Button
-          onClick={onEndSession}
-          disabled={!isConnected}
-          variant="destructive"
-          size="lg"
-          className="flex-1 max-w-[140px] h-12"
-        >
-          <PhoneOff className="w-5 h-5 mr-2" />
-          End Chat
-        </Button>
-      </div>
+    <div className="flex items-center gap-2">
+      <Button
+        onClick={handleMicClick}
+        disabled={isConnecting}
+        size="icon"
+        className="rounded-full"
+        aria-label={isConnected ? 'Stop recording' : 'Start recording'}
+      >
+        {isConnected ? (
+          <MicOff className="h-5 w-5" />
+        ) : (
+          <Mic className="h-5 w-5" />
+        )}
+      </Button>
+      <Textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Type a message or use the microphone..."
+        className="flex-grow"
+        rows={1}
+      />
+      <Button onClick={handleSendClick} size="icon" aria-label="Send message">
+        <Send className="h-5 w-5" />
+      </Button>
     </div>
   );
 };
+
+export { Composer };

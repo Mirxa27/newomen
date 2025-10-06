@@ -41,6 +41,8 @@ CREATE TABLE IF NOT EXISTS public.prompt_templates (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE public.prompt_templates ADD CONSTRAINT prompt_templates_use_case_id_name_key UNIQUE (use_case_id, name);
+
 -- Create AI behavior configurations
 CREATE TABLE IF NOT EXISTS public.ai_behaviors (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -80,7 +82,8 @@ INSERT INTO public.ai_use_cases (name, description, category) VALUES
 ('Assessment Analysis', 'AI analysis of assessment results and patterns', 'analysis'),
 ('Goal Setting', 'AI assistance with personal goal setting and tracking', 'coaching'),
 ('Relationship Advice', 'AI relationship and communication guidance', 'advice'),
-('Crisis Support', 'AI support for users in crisis situations', 'support');
+('Crisis Support', 'AI support for users in crisis situations', 'support')
+ON CONFLICT (name) DO NOTHING;
 
 -- Insert default AI behaviors
 INSERT INTO public.ai_behaviors (name, description, personality_traits, communication_style, response_length, emotional_tone) VALUES
@@ -88,51 +91,56 @@ INSERT INTO public.ai_behaviors (name, description, personality_traits, communic
 ('Analytical Guide', 'Logical, thorough, and insightful', '{"analytical": 0.9, "thorough": 0.8, "insightful": 0.8}', 'analytical', 'comprehensive', 'professional'),
 ('Challenging Coach', 'Direct, motivating, and growth-focused', '{"directness": 0.8, "motivation": 0.9, "challenge": 0.7}', 'challenging', 'detailed', 'encouraging'),
 ('Creative Facilitator', 'Imaginative, inspiring, and open-minded', '{"creativity": 0.9, "openness": 0.8, "inspiration": 0.8}', 'creative', 'detailed', 'inspiring'),
-('Crisis Counselor', 'Calm, professional, and supportive', '{"calmness": 0.9, "professional": 0.9, "supportive": 0.8}', 'supportive', 'detailed', 'calm');
+('Crisis Counselor', 'Calm, professional, and supportive', '{"calmness": 0.9, "professional": 0.9, "supportive": 0.8}', 'supportive', 'detailed', 'calm')
+ON CONFLICT (name) DO NOTHING;
 
 -- Insert default prompt templates for assessment completion
-INSERT INTO public.prompt_templates (use_case_id, name, system_prompt, user_prompt_template, variables, is_default) 
-SELECT 
+INSERT INTO public.prompt_templates (use_case_id, name, system_prompt, user_prompt_template, variables, is_default)
+SELECT
   uc.id,
   'Assessment Results Analysis',
   'You are a compassionate and insightful AI companion helping users understand their assessment results. Your role is to provide meaningful insights, celebrate their strengths, and offer gentle guidance for areas of growth. Always maintain a warm, supportive tone while being honest and constructive.',
   'Based on the assessment results for {user_name}, please provide a comprehensive analysis. The user completed a {assessment_type} assessment and scored: {assessment_scores}. Their responses indicate: {key_insights}. Please provide insights, strengths, areas for growth, and actionable next steps.',
   '{"user_name": "string", "assessment_type": "string", "assessment_scores": "object", "key_insights": "string"}',
   true
-FROM public.ai_use_cases uc WHERE uc.name = 'Assessment Completion';
+FROM public.ai_use_cases uc WHERE uc.name = 'Assessment Completion'
+ON CONFLICT (use_case_id, name) DO NOTHING;
 
 -- Insert default prompt templates for couples challenges
 INSERT INTO public.prompt_templates (use_case_id, name, system_prompt, user_prompt_template, variables, is_default)
-SELECT 
+SELECT
   uc.id,
   'Couples Challenge Analysis',
   'You are a relationship expert AI helping couples understand their communication patterns and relationship dynamics. Provide balanced, insightful analysis that helps both partners grow together. Focus on communication, understanding, and mutual growth.',
   'Analyze this couples challenge response from {partner_name}: {challenge_response}. The challenge question was: {challenge_question}. The other partner responded: {other_partner_response}. Provide insights on communication patterns, areas of alignment, and suggestions for deeper connection.',
   '{"partner_name": "string", "challenge_response": "string", "challenge_question": "string", "other_partner_response": "string"}',
   true
-FROM public.ai_use_cases uc WHERE uc.name = 'Couples Challenge';
+FROM public.ai_use_cases uc WHERE uc.name = 'Couples Challenge'
+ON CONFLICT (use_case_id, name) DO NOTHING;
 
 -- Insert default prompt templates for narrative exploration
 INSERT INTO public.prompt_templates (use_case_id, name, system_prompt, user_prompt_template, variables, is_default)
-SELECT 
+SELECT
   uc.id,
   'Narrative Identity Guidance',
   'You are a wise and empathetic guide helping users explore their narrative identity. Your role is to ask thoughtful questions, reflect on their stories, and help them discover deeper meaning in their life experiences. Be curious, non-judgmental, and encouraging.',
   'The user is exploring their narrative identity. They shared: {user_story}. Their current reflection is: {current_thoughts}. Guide them through deeper exploration by asking meaningful questions and offering gentle insights about their story patterns and themes.',
   '{"user_story": "string", "current_thoughts": "string"}',
   true
-FROM public.ai_use_cases uc WHERE uc.name = 'Narrative Exploration';
+FROM public.ai_use_cases uc WHERE uc.name = 'Narrative Exploration'
+ON CONFLICT (use_case_id, name) DO NOTHING;
 
 -- Insert default prompt templates for wellness guidance
 INSERT INTO public.prompt_templates (use_case_id, name, system_prompt, user_prompt_template, variables, is_default)
-SELECT 
+SELECT
   uc.id,
   'Wellness Support',
   'You are a caring wellness companion providing gentle guidance for mental and emotional wellbeing. Offer practical, evidence-based suggestions while maintaining a warm, supportive tone. Always prioritize the user''s safety and encourage professional help when needed.',
   'The user is seeking wellness support. They mentioned: {user_concern}. Their current emotional state is: {emotional_state}. Their goals are: {wellness_goals}. Provide gentle guidance, practical suggestions, and encouragement for their wellness journey.',
   '{"user_concern": "string", "emotional_state": "string", "wellness_goals": "string"}',
   true
-FROM public.ai_use_cases uc WHERE uc.name = 'Wellness Guidance';
+FROM public.ai_use_cases uc WHERE uc.name = 'Wellness Guidance'
+ON CONFLICT (use_case_id, name) DO NOTHING;
 
 -- Enable RLS on new tables
 ALTER TABLE public.ai_use_cases ENABLE ROW LEVEL SECURITY;

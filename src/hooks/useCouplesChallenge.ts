@@ -1,0 +1,158 @@
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+import type { Tables } from '@/integrations/supabase/types';
+import { useUserProfile } from './useUserProfile';
+import { toast } from 'sonner';
+
+type CouplesChallenge = Tables<'couples_challenges'>;
+type ChallengeStatus = CouplesChallenge['status'];
+
+export function useCouplesChallenge(challengeId: string | null) {
+  const { profile } = useUserProfile();
+  const [challenge, setChallenge] = useState<CouplesChallenge | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [channel, setChannel] = useState<RealtimeChannel | null>(null);
+
+  const handleIncomingChanges = useCallback((payload: any) => {
+    setChallenge(payload.new as CouplesChallenge);
+  }, []);
+
+  useEffect(() => {
+    if (!challengeId || !profile) return;
+
+    const fetchChallenge = async () => {
+      setLoading(true);
+      try {
+        const { data, error: fetchError } = await supabase
+          .from('couples_challenges')
+          .select('*')
+          .eq('id', challengeId)
+          .single();
+
+        if (fetchError || !data) {
+          throw fetchError || new Error('Challenge not found.');
+        }
+
+        // Ensure the current user is part of the challenge
+        if (data.initiator_id !== profile.id && data.partner_id !== profile.id && data.partner_id !== null) {
+          throw new Error("You are not authorized to view this challenge.");
+        }
+        
+        // If the user is the second person to join, update the partner_id
+        if (data.initiator_id !== profile.id && data.partner_id === null) {
+          const { data: updatedChallenge, error: updateError } = await supabase
+            .from('couples_challenges')
+            .update({ partner_id: profile.id, status: 'active' })
+            .eq('id', challengeId)
+            .select()
+            .single();
+          
+          if (updateError) throw updateError;
+          setChallenge(updatedChallenge);
+        } else {
+          setChallenge(data);
+        }
+
+      } catch (e: any) {
+        console.error(e);
+        setError(e.message);
+        toast.error(e.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void fetchChallenge();
+
+    const newChannel = supabase
+      .channel(`couples-challenge-${challengeId}`)
+      .on<CouplesChallenge>(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'couples_challenges', filter: `id=eq.${challengeId}` },
+        handleIncomingChanges
+      )
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Subscribed to challenge channel!');
+        }
+        if (err) {
+          console.error('Subscription error:', err);
+          setError('Could not connect to real-time updates.');
+        }
+      });
+
+    setChannel(newChannel);
+
+    return () => {
+      if (channel) {
+        void supabase.removeChannel(channel);
+      }
+    };
+  }, [challengeId, profile, handleIncomingChanges]);
+
+  const submitResponse = useCallback(async (questionId: string, response: string) => {
+    if (!challenge || !profile) return;
+
+    const isInitiator = challenge.initiator_id === profile.id;
+    const currentResponses = (challenge.responses as any) || {};
+    
+    const newResponses = {
+      ...currentResponses,
+      [questionId]: {
+        ...currentResponses[questionId],
+        [isInitiator ? 'initiator_response' : 'partner_response']: response,
+      }
+    };
+
+    const { error: updateError } = await supabase
+      .from('couples_challenges')
+      .update({ responses: newResponses })
+      .eq('id', challenge.id);
+
+    if (updateError) {
+      toast.error('Failed to submit your response.');
+      console.error(updateError);
+    }
+  }, [challenge, profile]);
+
+  return { challenge, loading, error, submitResponse };
+}
+
+export async function createNewChallenge(): Promise<CouplesChallenge | null> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        toast.error("You must be logged in to start a challenge.");
+        return null;
+    }
+
+    // TODO: In a real app, we'd fetch a dynamic set of questions
+    const questionSet = {
+        questions: [
+            { id: 'q1', text: 'What is your favorite memory together?' },
+            { id: 'q2', text: 'What is one thing you admire about your partner?' },
+            { id: 'q3', text: 'What is a shared goal you want to achieve in the next year?' },
+        ]
+    };
+
+    try {
+        const { data, error } = await supabase
+            .from('couples_challenges')
+            .insert({
+                initiator_id: user.id,
+                status: 'pending',
+                question_set: questionSet,
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        toast.success("New challenge created! Share the link with your partner.");
+        return data;
+    } catch (error) {
+        console.error("Error creating challenge:", error);
+        toast.error("Could not create a new challenge.");
+        return null;
+    }
+}

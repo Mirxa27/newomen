@@ -12,13 +12,11 @@ import {
   BookOpen,
   Heart,
   LogOut,
-  Book,
-  Brain,
-  TestTube,
   Zap,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
+import { trackDailyLogin } from "@/lib/gamification-events";
 
 const AFFIRMATIONS = [
   "You are capable of amazing things. Every step forward is progress.",
@@ -33,12 +31,13 @@ const Dashboard = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Tables<"user_profiles"> | null>(null);
+  const [levelThresholds, setLevelThresholds] = useState<Tables<"level_thresholds">[]>([]);
   const [affirmation, setAffirmation] = useState("");
 
   useEffect(() => {
     let isMounted = true;
 
-    const loadProfile = async () => {
+    const loadProfileAndGamificationData = async () => {
       try {
         setLoading(true);
 
@@ -51,23 +50,35 @@ const Dashboard = () => {
           return;
         }
 
-        const { data, error } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from("user_profiles")
           .select("*")
           .eq("user_id", user.id)
           .single();
 
-        if (error) {
-          throw error;
+        if (profileError) {
+          throw profileError;
+        }
+
+        const { data: thresholdsData, error: thresholdsError } = await supabase
+          .from("level_thresholds")
+          .select("*")
+          .order("level", { ascending: true });
+
+        if (thresholdsError) {
+          throw thresholdsError;
         }
 
         if (isMounted) {
-          setProfile(data);
+          setProfile(profileData);
+          setLevelThresholds(thresholdsData);
+          // Track daily login after profile is loaded
+          void trackDailyLogin(user.id);
         }
       } catch (error) {
-        console.error("Error loading dashboard profile:", error);
+        console.error("Error loading dashboard data:", error);
         toast({
-          title: "Unable to load profile",
+          title: "Unable to load dashboard data",
           description: "Please refresh or try signing in again.",
           variant: "destructive",
         });
@@ -78,7 +89,7 @@ const Dashboard = () => {
       }
     };
 
-    void loadProfile();
+    void loadProfileAndGamificationData();
     setAffirmation(AFFIRMATIONS[Math.floor(Math.random() * AFFIRMATIONS.length)]);
 
     return () => {
@@ -101,6 +112,30 @@ const Dashboard = () => {
     );
   }
 
+  const currentCrystalBalance = profile?.crystal_balance || 0;
+  const currentLevel = profile?.current_level || 1;
+  const dailyStreak = profile?.daily_streak || 0;
+
+  const nextLevelThreshold = levelThresholds.find(
+    (threshold) => threshold.level === currentLevel + 1
+  );
+  const currentLevelThreshold = levelThresholds.find(
+    (threshold) => threshold.level === currentLevel
+  );
+
+  const crystalsNeededForNextLevel = nextLevelThreshold
+    ? nextLevelThreshold.crystals_required - currentCrystalBalance
+    : 0;
+
+  const crystalsEarnedInCurrentLevel = currentCrystalBalance - (currentLevelThreshold?.crystals_required || 0);
+  const crystalsRequiredForCurrentLevelUp = (nextLevelThreshold?.crystals_required || 0) - (currentLevelThreshold?.crystals_required || 0);
+
+  const levelProgressPercentage =
+    crystalsRequiredForCurrentLevelUp > 0
+      ? (crystalsEarnedInCurrentLevel / crystalsRequiredForCurrentLevelUp) * 100
+      : 0;
+
+
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -109,7 +144,10 @@ const Dashboard = () => {
             <h1 className="text-4xl font-bold gradient-text">
               Welcome back, {profile?.nickname || "Friend"}!
             </h1>
-            <p className="text-xl text-muted-foreground">{affirmation}</p>
+            <p className="text-xl text-muted-foreground flex items-center gap-2">
+              <Zap className="w-5 h-5 text-accent" /> 
+              <span>{affirmation}</span>
+            </p>
           </div>
           <Button variant="outline" className="glass" onClick={handleSignOut}>
             <LogOut className="w-4 h-4 mr-2" />
@@ -118,14 +156,16 @@ const Dashboard = () => {
         </div>
 
         <GamificationDisplay
-          crystalBalance={profile?.crystal_balance || 0}
-          currentLevel={profile?.current_level || 1}
-          dailyStreak={profile?.daily_streak || 0}
+          crystalBalance={currentCrystalBalance}
+          currentLevel={currentLevel}
+          dailyStreak={dailyStreak}
+          crystalsToNextLevel={crystalsNeededForNextLevel}
+          levelProgressPercentage={levelProgressPercentage}
         />
 
         {/* Featured: Narrative Identity Exploration */}
         <Card
-          className="hover:shadow-lg transition-all cursor-pointer border-2 border-accent bg-gradient-to-br from-primary/10 to-accent/10"
+          className="glass-card hover:shadow-lg transition-all cursor-pointer border-2 border-accent bg-gradient-to-br from-primary/10 to-accent/10"
           onClick={() => navigate("/narrative-exploration")}
         >
           <CardHeader>
@@ -148,7 +188,7 @@ const Dashboard = () => {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card
-            className="hover:shadow-lg transition-shadow cursor-pointer border-2 border-primary"
+            className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
             onClick={() => navigate("/chat")}
           >
             <CardHeader>
@@ -161,20 +201,7 @@ const Dashboard = () => {
           </Card>
 
           <Card
-            className="hover:shadow-lg transition-shadow cursor-pointer border-2 border-accent"
-            onClick={() => navigate("/narrative-exploration")}
-          >
-            <CardHeader>
-              <div className="clay w-12 h-12 rounded-2xl flex items-center justify-center mb-4 bg-gradient-to-br from-accent/20 to-primary/20">
-                <Book className="w-6 h-6 text-accent" />
-              </div>
-              <CardTitle className="gradient-text">Narrative Identity Exploration</CardTitle>
-              <CardDescription>Discover the stories that shape who you are</CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card
-            className="hover:shadow-lg transition-shadow cursor-pointer"
+            className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
             onClick={() => navigate("/member-assessments")}
           >
             <CardHeader>
@@ -187,33 +214,7 @@ const Dashboard = () => {
           </Card>
 
           <Card
-            className="hover:shadow-lg transition-shadow cursor-pointer border-2 border-green-200"
-            onClick={() => navigate("/assessments-new")}
-          >
-            <CardHeader>
-              <div className="clay w-12 h-12 rounded-2xl flex items-center justify-center mb-4 bg-gradient-to-br from-green-100 to-blue-100">
-                <Brain className="w-6 h-6 text-green-600" />
-              </div>
-              <CardTitle className="text-green-700">AI Assessments</CardTitle>
-              <CardDescription>AI-powered assessments with personalized feedback</CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card
-            className="hover:shadow-lg transition-shadow cursor-pointer border-2 border-purple-200"
-            onClick={() => navigate("/assessment-test")}
-          >
-            <CardHeader>
-              <div className="clay w-12 h-12 rounded-2xl flex items-center justify-center mb-4 bg-gradient-to-br from-purple-100 to-pink-100">
-                <TestTube className="w-6 h-6 text-purple-600" />
-              </div>
-              <CardTitle className="text-purple-700">Test AI System</CardTitle>
-              <CardDescription>Try the AI assessment system with sample data</CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card
-            className="hover:shadow-lg transition-shadow cursor-pointer"
+            className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
             onClick={() => navigate("/couples-challenge")}
           >
             <CardHeader>
@@ -226,7 +227,7 @@ const Dashboard = () => {
           </Card>
 
           <Card
-            className="hover:shadow-lg transition-shadow cursor-pointer"
+            className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
             onClick={() => navigate("/community")}
           >
             <CardHeader>
@@ -239,7 +240,7 @@ const Dashboard = () => {
           </Card>
 
           <Card
-            className="hover:shadow-lg transition-shadow cursor-pointer"
+            className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
             onClick={() => navigate("/wellness-library")}
           >
             <CardHeader>
@@ -252,7 +253,7 @@ const Dashboard = () => {
           </Card>
 
           <Card
-            className="hover:shadow-lg transition-shadow cursor-pointer"
+            className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
             onClick={() => navigate("/profile")}
           >
             <CardHeader>

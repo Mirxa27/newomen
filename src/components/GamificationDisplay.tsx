@@ -3,67 +3,85 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Gem, Flame, Trophy, TrendingUp } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface GamificationDisplayProps {
   crystalBalance: number;
   currentLevel: number;
   dailyStreak: number;
+  crystalsToNextLevel: number;
+  levelProgressPercentage: number;
 }
 
-export default function GamificationDisplay({ crystalBalance, currentLevel, dailyStreak }: GamificationDisplayProps) {
-  const levelProgress = (crystalBalance % 100) / 100 * 100;
-  const nextLevelCrystals = (currentLevel + 1) * 100;
-
+export default function GamificationDisplay({
+  crystalBalance,
+  currentLevel,
+  dailyStreak,
+  crystalsToNextLevel,
+  levelProgressPercentage,
+}: GamificationDisplayProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <Card className="border-2 border-primary/20">
+      {/* Crystals Card */}
+      <Card className={cn(
+        "relative overflow-hidden border-2 border-primary/20",
+        "bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm shadow-lg"
+      )}>
         <CardContent className="pt-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Gem className="w-5 h-5 text-primary" />
-              <span className="font-semibold">Crystals</span>
+              <span className="font-semibold text-white">Crystals</span>
             </div>
-            <Badge variant="secondary" className="text-lg">
+            <Badge variant="secondary" className="text-lg bg-primary/20 text-primary-foreground">
               {crystalBalance}
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Earn crystals by completing activities and assessments
+          <p className="text-sm text-gray-300">
+            Earn crystals by completing activities and assessments.
           </p>
         </CardContent>
       </Card>
 
-      <Card className="border-2 border-primary/20">
+      {/* Level Progress Card */}
+      <Card className={cn(
+        "relative overflow-hidden border-2 border-primary/20",
+        "bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm shadow-lg"
+      )}>
         <CardContent className="pt-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Trophy className="w-5 h-5 text-primary" />
-              <span className="font-semibold">Level {currentLevel}</span>
+              <span className="font-semibold text-white">Level {currentLevel}</span>
             </div>
-            <Badge variant="secondary">
+            <Badge variant="secondary" className="bg-primary/20 text-primary-foreground">
               <TrendingUp className="w-3 h-3 mr-1" />
-              {Math.round(levelProgress)}%
+              {Math.round(levelProgressPercentage)}%
             </Badge>
           </div>
-          <Progress value={levelProgress} className="mb-2" />
-          <p className="text-xs text-muted-foreground">
-            {nextLevelCrystals - crystalBalance} crystals to level {currentLevel + 1}
+          <Progress value={levelProgressPercentage} className="mb-2 h-2 bg-gray-700/50" indicatorClassName="bg-gradient-to-r from-purple-500 to-blue-500 shadow-lg" />
+          <p className="text-xs text-gray-300">
+            {crystalsToNextLevel} crystals to level {currentLevel + 1}
           </p>
         </CardContent>
       </Card>
 
-      <Card className="border-2 border-primary/20">
+      {/* Daily Streak Card */}
+      <Card className={cn(
+        "relative overflow-hidden border-2 border-primary/20",
+        "bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm shadow-lg"
+      )}>
         <CardContent className="pt-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Flame className="w-5 h-5 text-orange-500" />
-              <span className="font-semibold">Streak</span>
+              <span className="font-semibold text-white">Streak</span>
             </div>
-            <Badge variant="secondary" className="text-lg">
+            <Badge variant="secondary" className="text-lg bg-orange-500/20 text-orange-300">
               {dailyStreak} days
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-gray-300">
             Check in daily to maintain your streak!
           </p>
         </CardContent>

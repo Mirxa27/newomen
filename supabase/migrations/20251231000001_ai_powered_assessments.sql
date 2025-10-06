@@ -2,7 +2,7 @@
 -- Creates tables and functions for comprehensive AI-driven evaluation system
 
 -- AI Configuration Table
-CREATE TABLE ai_configurations (
+CREATE TABLE IF NOT EXISTS ai_configurations (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT,
@@ -26,7 +26,7 @@ CREATE TABLE ai_configurations (
 );
 
 -- Enhanced Assessments Table with AI Support
-CREATE TABLE assessments (
+CREATE TABLE IF NOT EXISTS assessments (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     title TEXT NOT NULL,
     description TEXT,
@@ -48,7 +48,7 @@ CREATE TABLE assessments (
 );
 
 -- Quiz Table with AI Integration
-CREATE TABLE quizzes (
+CREATE TABLE IF NOT EXISTS quizzes (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     title TEXT NOT NULL,
     description TEXT,
@@ -69,7 +69,7 @@ CREATE TABLE quizzes (
 );
 
 -- Challenge Table with AI Support
-CREATE TABLE challenges (
+CREATE TABLE IF NOT EXISTS challenges (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     title TEXT NOT NULL,
     description TEXT,
@@ -94,7 +94,7 @@ CREATE TABLE challenges (
 );
 
 -- Assessment Results Table with AI Analysis
-CREATE TABLE assessment_results (
+CREATE TABLE IF NOT EXISTS assessment_results (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     assessment_id UUID REFERENCES assessments(id) ON DELETE CASCADE,
     user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
@@ -117,7 +117,7 @@ CREATE TABLE assessment_results (
 );
 
 -- Quiz Results Table with AI Grading
-CREATE TABLE quiz_results (
+CREATE TABLE IF NOT EXISTS quiz_results (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     quiz_id UUID REFERENCES quizzes(id) ON DELETE CASCADE,
     user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
@@ -137,7 +137,7 @@ CREATE TABLE quiz_results (
 );
 
 -- Challenge Progress Table with AI Tracking
-CREATE TABLE challenge_progress (
+CREATE TABLE IF NOT EXISTS challenge_progress (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     challenge_id UUID REFERENCES challenges(id) ON DELETE CASCADE,
     user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
@@ -155,7 +155,7 @@ CREATE TABLE challenge_progress (
 );
 
 -- AI Usage Logs Table
-CREATE TABLE ai_usage_logs (
+CREATE TABLE IF NOT EXISTS ai_usage_logs (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     configuration_id UUID REFERENCES ai_configurations(id),
     user_id UUID REFERENCES user_profiles(id),
@@ -176,7 +176,7 @@ CREATE TABLE ai_usage_logs (
 );
 
 -- User Assessment Statistics
-CREATE TABLE user_assessment_stats (
+CREATE TABLE IF NOT EXISTS user_assessment_stats (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
     total_assessments_completed INTEGER DEFAULT 0,
@@ -197,39 +197,39 @@ CREATE TABLE user_assessment_stats (
 );
 
 -- Create indexes for better performance
-CREATE INDEX idx_ai_configurations_provider ON ai_configurations(provider);
-CREATE INDEX idx_ai_configurations_active ON ai_configurations(is_active);
+CREATE INDEX IF NOT EXISTS idx_ai_configurations_provider ON ai_configurations(provider);
+CREATE INDEX IF NOT EXISTS idx_ai_configurations_active ON ai_configurations(is_active);
 
-CREATE INDEX idx_assessments_type ON assessments(assessment_type);
-CREATE INDEX idx_assessments_category ON assessments(category);
-CREATE INDEX idx_assessments_public ON assessments(is_public, is_active);
-CREATE INDEX idx_assessments_ai ON assessments(is_ai_powered, ai_configuration_id);
+CREATE INDEX IF NOT EXISTS idx_assessments_type ON assessments(assessment_type);
+CREATE INDEX IF NOT EXISTS idx_assessments_category ON assessments(category);
+CREATE INDEX IF NOT EXISTS idx_assessments_public ON assessments(is_public, is_active);
+CREATE INDEX IF NOT EXISTS idx_assessments_ai ON assessments(is_ai_powered, ai_configuration_id);
 
-CREATE INDEX idx_quizzes_category ON quizzes(category);
-CREATE INDEX idx_quizzes_public ON quizzes(is_public, is_active);
-CREATE INDEX idx_quizzes_ai ON quizzes(is_ai_powered, ai_configuration_id);
+CREATE INDEX IF NOT EXISTS idx_quizzes_category ON quizzes(category);
+CREATE INDEX IF NOT EXISTS idx_quizzes_public ON quizzes(is_public, is_active);
+CREATE INDEX IF NOT EXISTS idx_quizzes_ai ON quizzes(is_ai_powered, ai_configuration_id);
 
-CREATE INDEX idx_challenges_type ON challenges(challenge_type);
-CREATE INDEX idx_challenges_category ON challenges(category);
-CREATE INDEX idx_challenges_public ON challenges(is_public, is_active);
-CREATE INDEX idx_challenges_dates ON challenges(start_date, end_date);
+CREATE INDEX IF NOT EXISTS idx_challenges_type ON challenges(challenge_type);
+CREATE INDEX IF NOT EXISTS idx_challenges_category ON challenges(category);
+CREATE INDEX IF NOT EXISTS idx_challenges_public ON challenges(is_public, is_active);
+CREATE INDEX IF NOT EXISTS idx_challenges_dates ON challenges(start_date, end_date);
 
-CREATE INDEX idx_assessment_results_user ON assessment_results(user_id);
-CREATE INDEX idx_assessment_results_assessment ON assessment_results(assessment_id);
-CREATE INDEX idx_assessment_results_completed ON assessment_results(completed_at);
+CREATE INDEX IF NOT EXISTS idx_assessment_results_user ON assessment_results(user_id);
+CREATE INDEX IF NOT EXISTS idx_assessment_results_assessment ON assessment_results(assessment_id);
+CREATE INDEX IF NOT EXISTS idx_assessment_results_completed ON assessment_results(completed_at);
 
-CREATE INDEX idx_quiz_results_user ON quiz_results(user_id);
-CREATE INDEX idx_quiz_results_quiz ON quiz_results(quiz_id);
-CREATE INDEX idx_quiz_results_completed ON quiz_results(completed_at);
+CREATE INDEX IF NOT EXISTS idx_quiz_results_user ON quiz_results(user_id);
+CREATE INDEX IF NOT EXISTS idx_quiz_results_quiz ON quiz_results(quiz_id);
+CREATE INDEX IF NOT EXISTS idx_quiz_results_completed ON quiz_results(completed_at);
 
-CREATE INDEX idx_challenge_progress_user ON challenge_progress(user_id);
-CREATE INDEX idx_challenge_progress_challenge ON challenge_progress(challenge_id);
-CREATE INDEX idx_challenge_progress_completed ON challenge_progress(is_completed);
+CREATE INDEX IF NOT EXISTS idx_challenge_progress_user ON challenge_progress(user_id);
+CREATE INDEX IF NOT EXISTS idx_challenge_progress_challenge ON challenge_progress(challenge_id);
+CREATE INDEX IF NOT EXISTS idx_challenge_progress_completed ON challenge_progress(is_completed);
 
-CREATE INDEX idx_ai_usage_logs_config ON ai_usage_logs(configuration_id);
-CREATE INDEX idx_ai_usage_logs_user ON ai_usage_logs(user_id);
-CREATE INDEX idx_ai_usage_logs_content ON ai_usage_logs(content_type, content_id);
-CREATE INDEX idx_ai_usage_logs_created ON ai_usage_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_logs_config ON ai_usage_logs(configuration_id);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_logs_user ON ai_usage_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_logs_content ON ai_usage_logs(content_type, content_id);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_logs_created ON ai_usage_logs(created_at);
 
 -- Insert default AI configurations
 INSERT INTO ai_configurations (name, description, provider, model_name, temperature, max_tokens, system_prompt) VALUES

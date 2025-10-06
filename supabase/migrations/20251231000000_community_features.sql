@@ -2,7 +2,7 @@
 -- Creates tables for chat rooms, messages, announcements, and related functionality
 
 -- Chat Rooms Table
-CREATE TABLE community_chat_rooms (
+CREATE TABLE IF NOT EXISTS community_chat_rooms (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT,
@@ -13,7 +13,7 @@ CREATE TABLE community_chat_rooms (
 );
 
 -- Chat Messages Table
-CREATE TABLE community_chat_messages (
+CREATE TABLE IF NOT EXISTS community_chat_messages (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     room_id UUID REFERENCES community_chat_rooms(id) ON DELETE CASCADE,
     user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
@@ -26,7 +26,7 @@ CREATE TABLE community_chat_messages (
 );
 
 -- Community Announcements Table
-CREATE TABLE community_announcements (
+CREATE TABLE IF NOT EXISTS community_announcements (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     title TEXT NOT NULL,
     content TEXT NOT NULL,
@@ -41,7 +41,7 @@ CREATE TABLE community_announcements (
 );
 
 -- Announcement Read Status Table
-CREATE TABLE community_announcement_reads (
+CREATE TABLE IF NOT EXISTS community_announcement_reads (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     announcement_id UUID REFERENCES community_announcements(id) ON DELETE CASCADE,
     user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
@@ -50,7 +50,7 @@ CREATE TABLE community_announcement_reads (
 );
 
 -- Session Muting Table (for admin functionality)
-CREATE TABLE session_mutes (
+CREATE TABLE IF NOT EXISTS session_mutes (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     session_id UUID REFERENCES sessions(id) ON DELETE CASCADE,
     muted_by UUID REFERENCES user_profiles(id),
@@ -60,18 +60,18 @@ CREATE TABLE session_mutes (
 );
 
 -- Create indexes for better performance
-CREATE INDEX idx_community_chat_messages_room_id ON community_chat_messages(room_id);
-CREATE INDEX idx_community_chat_messages_user_id ON community_chat_messages(user_id);
-CREATE INDEX idx_community_chat_messages_created_at ON community_chat_messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_community_chat_messages_room_id ON community_chat_messages(room_id);
+CREATE INDEX IF NOT EXISTS idx_community_chat_messages_user_id ON community_chat_messages(user_id);
+CREATE INDEX IF NOT EXISTS idx_community_chat_messages_created_at ON community_chat_messages(created_at);
 
-CREATE INDEX idx_community_announcements_active ON community_announcements(is_active, created_at);
-CREATE INDEX idx_community_announcements_type ON community_announcements(announcement_type);
+CREATE INDEX IF NOT EXISTS idx_community_announcements_active ON community_announcements(is_active, created_at);
+CREATE INDEX IF NOT EXISTS idx_community_announcements_type ON community_announcements(announcement_type);
 
-CREATE INDEX idx_community_announcement_reads_announcement_id ON community_announcement_reads(announcement_id);
-CREATE INDEX idx_community_announcement_reads_user_id ON community_announcement_reads(user_id);
+CREATE INDEX IF NOT EXISTS idx_community_announcement_reads_announcement_id ON community_announcement_reads(announcement_id);
+CREATE INDEX IF NOT EXISTS idx_community_announcement_reads_user_id ON community_announcement_reads(user_id);
 
-CREATE INDEX idx_session_mutes_session_id ON session_mutes(session_id);
-CREATE INDEX idx_session_mutes_active ON session_mutes(is_active);
+CREATE INDEX IF NOT EXISTS idx_session_mutes_session_id ON session_mutes(session_id);
+CREATE INDEX IF NOT EXISTS idx_session_mutes_active ON session_mutes(is_active);
 
 -- Insert default chat rooms
 INSERT INTO community_chat_rooms (name, description, room_type, created_by) VALUES
@@ -90,9 +90,11 @@ ALTER TABLE community_announcement_reads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE session_mutes ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for chat rooms
+DROP POLICY IF EXISTS "Chat rooms are viewable by authenticated users" ON community_chat_rooms;
 CREATE POLICY "Chat rooms are viewable by authenticated users" ON community_chat_rooms
     FOR SELECT USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Only admins can manage chat rooms" ON community_chat_rooms;
 CREATE POLICY "Only admins can manage chat rooms" ON community_chat_rooms
     FOR ALL USING (
         EXISTS (
@@ -103,9 +105,11 @@ CREATE POLICY "Only admins can manage chat rooms" ON community_chat_rooms
     );
 
 -- RLS Policies for chat messages
+DROP POLICY IF EXISTS "Chat messages are viewable by authenticated users" ON community_chat_messages;
 CREATE POLICY "Chat messages are viewable by authenticated users" ON community_chat_messages
     FOR SELECT USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Users can insert their own messages" ON community_chat_messages;
 CREATE POLICY "Users can insert their own messages" ON community_chat_messages
     FOR INSERT WITH CHECK (
         auth.uid() IN (
@@ -113,6 +117,7 @@ CREATE POLICY "Users can insert their own messages" ON community_chat_messages
         )
     );
 
+DROP POLICY IF EXISTS "Users can edit their own messages" ON community_chat_messages;
 CREATE POLICY "Users can edit their own messages" ON community_chat_messages
     FOR UPDATE USING (
         auth.uid() IN (
@@ -121,9 +126,11 @@ CREATE POLICY "Users can edit their own messages" ON community_chat_messages
     );
 
 -- RLS Policies for announcements
+DROP POLICY IF EXISTS "Announcements are viewable by authenticated users" ON community_announcements;
 CREATE POLICY "Announcements are viewable by authenticated users" ON community_announcements
     FOR SELECT USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Only admins can manage announcements" ON community_announcements;
 CREATE POLICY "Only admins can manage announcements" ON community_announcements
     FOR ALL USING (
         EXISTS (
@@ -134,6 +141,7 @@ CREATE POLICY "Only admins can manage announcements" ON community_announcements
     );
 
 -- RLS Policies for announcement reads
+DROP POLICY IF EXISTS "Users can manage their own read status" ON community_announcement_reads;
 CREATE POLICY "Users can manage their own read status" ON community_announcement_reads
     FOR ALL USING (
         auth.uid() IN (
@@ -142,6 +150,7 @@ CREATE POLICY "Users can manage their own read status" ON community_announcement
     );
 
 -- RLS Policies for session mutes
+DROP POLICY IF EXISTS "Only admins can manage session mutes" ON session_mutes;
 CREATE POLICY "Only admins can manage session mutes" ON session_mutes
     FOR ALL USING (
         EXISTS (
@@ -152,6 +161,7 @@ CREATE POLICY "Only admins can manage session mutes" ON session_mutes
     );
 
 -- Function to get unread announcements count
+DROP FUNCTION IF EXISTS get_unread_announcements_count();
 CREATE OR REPLACE FUNCTION get_unread_announcements_count()
 RETURNS INTEGER AS $$
 DECLARE
@@ -179,6 +189,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to mark announcement as read
+DROP FUNCTION IF EXISTS mark_announcement_read(UUID);
 CREATE OR REPLACE FUNCTION mark_announcement_read(p_announcement_id UUID)
 RETURNS VOID AS $$
 DECLARE

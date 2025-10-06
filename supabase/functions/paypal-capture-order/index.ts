@@ -1,96 +1,100 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const PAYPAL_API_BASE = 'https://api.sandbox.paypal.com';
+
+async function getAccessToken() {
+  const clientId = Deno.env.get('PAYPAL_CLIENT_ID');
+  const clientSecret = Deno.env.get('PAYPAL_CLIENT_SECRET');
+  const auth = btoa(`${clientId}:${clientSecret}`);
+
+  const response = await fetch(`${PAYPAL_API_BASE}/v1/oauth2/token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Authorization': `Basic ${auth}`,
+    },
+    body: 'grant_type=client_credentials',
+  });
+
+  const data = await response.json();
+  return data.access_token;
+}
 
 serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' } });
   }
 
   try {
-    const { orderID } = await req.json();
+    const { orderID, tier, userId } = await req.json();
+    const accessToken = await getAccessToken();
 
-    // Validate input
-    if (!orderID) {
-      return new Response(
-        JSON.stringify({ error: "Missing orderID" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Get PayPal configuration from environment
-    const PAYPAL_CLIENT_ID = Deno.env.get("PAYPAL_CLIENT_ID");
-    const PAYPAL_SECRET = Deno.env.get("PAYPAL_SECRET");
-    const PAYPAL_MODE = Deno.env.get("PAYPAL_MODE") || "sandbox"; // sandbox or live
-
-    if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
-      return new Response(
-        JSON.stringify({ error: "PayPal credentials not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const PAYPAL_API_BASE = PAYPAL_MODE === "live" 
-      ? "https://api-m.paypal.com"
-      : "https://api-m.sandbox.paypal.com";
-
-    // Get PayPal access token
-    const auth = btoa(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`);
-    const tokenResponse = await fetch(`${PAYPAL_API_BASE}/v1/oauth2/token`, {
-      method: "POST",
+    const captureResponse = await fetch(`${PAYPAL_API_BASE}/v2/checkout/orders/${orderID}/capture`, {
+      method: 'POST',
       headers: {
-        "Authorization": `Basic ${auth}`,
-        "Content-Type": "application/x-www-form-urlencoded",
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
       },
-      body: "grant_type=client_credentials",
     });
-
-    if (!tokenResponse.ok) {
-      throw new Error("Failed to get PayPal access token");
-    }
-
-    const { access_token } = await tokenResponse.json();
-
-    // Capture the payment
-    const captureResponse = await fetch(
-      `${PAYPAL_API_BASE}/v2/checkout/orders/${orderID}/capture`,
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${access_token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    if (!captureResponse.ok) {
-      const errorText = await captureResponse.text();
-      console.error("PayPal capture failed:", errorText);
-      throw new Error("Failed to capture PayPal payment");
-    }
 
     const captureData = await captureResponse.json();
 
-    // Log successful capture
-    console.log("PayPal payment captured successfully:", {
-      orderId: orderID,
-      status: captureData.status,
-      amount: captureData.purchase_units?.[0]?.payments?.captures?.[0]?.amount,
-    });
+    if (captureData.status === 'COMPLETED') {
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+        { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      );
 
-    return new Response(
-      JSON.stringify(captureData),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+      const renewalDate = new Date();
+      renewalDate.setMonth(renewalDate.getMonth() + 1);
+
+      const { data: subscription, error: subscriptionError } = await supabase
+        .from('subscriptions')
+        .insert({
+          user_id: userId,
+          provider: 'paypal',
+          provider_id: orderID,
+          status: 'active',
+          renewal_date: renewalDate.toISOString(),
+        })
+        .select()
+        .single();
+
+      if (subscriptionError) {
+        throw subscriptionError;
+      }
+
+      let remainingMinutes;
+      if (tier === 'Growth') {
+        remainingMinutes = 100;
+      } else if (tier === 'Transformation') {
+        remainingMinutes = 1000;
+      }
+
+      const { error: userError } = await supabase
+        .from('users')
+        .update({
+          subscription_tier: tier,
+          remaining_minutes: remainingMinutes,
+        })
+        .eq('id', userId);
+
+      if (userError) {
+        throw userError;
+      }
+
+      return new Response(JSON.stringify({ success: true, subscription }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' },
+      });
+    } else {
+      throw new Error('Payment not completed');
+    }
   } catch (error) {
-    console.error("Error in paypal-capture-order:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' },
+    });
   }
 });

@@ -19,7 +19,7 @@
 
     /* Vibrant purple primary */
     --primary: 270 75% 70%;
-    --primary-foreground: 280 20% 10%;
+    --primary-foreground: 0 0% 100%; /* White text on purple */
     --primary-glow: 270 80% 75%;
 
     /* Soft claymorphism secondary */
@@ -32,7 +32,7 @@
 
     /* Teal accent */
     --accent: 180 85% 55%;
-    --accent-foreground: 180 20% 10%;
+    --accent-foreground: 0 0% 100%; /* White text on teal */
 
     /* Destructive */
     --destructive: 0 70% 60%;
@@ -133,6 +133,7 @@
 
   .clay-button {
     @apply clay px-8 py-4 font-semibold;
+    color: white; /* Ensure text is always white on colored buttons */
     transition: var(--transition-smooth);
   }
 
@@ -315,11 +316,11 @@
   .safe-left { padding-left: env(safe-area-inset-left, 0px); }
 
   /* Viewport utilities */
-  .h-screen-safe { 
-    height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); 
+  .h-screen-safe {
+    height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   }
-  .h-dvh-safe { 
-    height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); 
+  .h-dvh-safe {
+    height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   }
 
   /* Touch optimization */
@@ -378,7 +379,7 @@
   .nav-responsive {
     height: 3.5rem;
   }
-  
+
   .footer-spacing {
     padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px) + 0.5rem);
   }
@@ -388,7 +389,7 @@
   .nav-responsive {
     display: none; /* Hide navigation on tablet and desktop */
   }
-  
+
   .footer-spacing {
     padding-bottom: 0; /* Remove footer spacing on larger screens */
   }
@@ -405,7 +406,7 @@
   .nav-responsive {
     height: 3rem;
   }
-  
+
   .footer-spacing {
     padding-bottom: calc(3rem + env(safe-area-inset-bottom, 0px) + 0.5rem);
   }

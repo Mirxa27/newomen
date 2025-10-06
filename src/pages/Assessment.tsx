@@ -11,19 +11,20 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
-  Clock, 
-  CheckCircle, 
-  AlertCircle, 
-  Brain, 
+import {
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  Brain,
   Loader2,
   ArrowLeft,
   ArrowRight,
-  Save,
   Send
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { processAssessmentWithAI, createAssessmentAttempt, submitAssessmentResponses } from "@/lib/ai-assessment-utils";
+import { trackAssessmentCompletion } from "@/lib/gamification-events";
+import type { Tables } from "@/integrations/supabase/types";
 
 interface AssessmentQuestion {
   id: string;
@@ -34,48 +35,40 @@ interface AssessmentQuestion {
   weight?: number;
 }
 
-interface Assessment {
-  id: string;
-  title: string;
-  description: string;
-  type: string;
-  category: string;
-  difficulty_level: string;
-  time_limit_minutes: number;
-  max_attempts: number;
-  is_public: boolean;
-  is_active: boolean;
-  ai_config_id?: string;
+// Extend Tables<'assessments'> to include the 'questions' and 'scoring_rubric' JSON types
+interface Assessment extends Omit<Tables<'assessments'>, 'questions' | 'scoring_rubric'> {
   questions: AssessmentQuestion[];
-  scoring_rubric: any;
-  passing_score: number;
-  created_at: string;
+  scoring_rubric: Record<string, unknown>;
 }
 
-interface AssessmentAttempt {
-  id: string;
-  assessment_id: string;
-  user_id: string;
-  attempt_number: number;
-  started_at: string;
-  status: string;
-  raw_responses: Record<string, any>;
+// Extend Tables<'assessment_attempts'> to include 'raw_responses' JSON type
+interface AssessmentAttempt extends Omit<Tables<'assessment_attempts'>, 'raw_responses'> {
+  raw_responses: Record<string, unknown>;
+}
+
+interface AIAnalysisResult {
+  score: number;
+  feedback: string;
+  explanation: string;
+  strengths: string[];
+  areas_for_improvement: string[];
+  recommendations: string[];
 }
 
 export default function Assessment() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [attempt, setAttempt] = useState<AssessmentAttempt | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [responses, setResponses] = useState<Record<string, any>>({});
+  const [responses, setResponses] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [aiProcessing, setAiProcessing] = useState(false);
-  const [aiResults, setAiResults] = useState<any>(null);
+  const [aiResults, setAiResults] = useState<AIAnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadAssessment = useCallback(async () => {
@@ -84,14 +77,14 @@ export default function Assessment() {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from("assessments_enhanced")
+        .from("assessments") // Changed from assessments_enhanced to assessments
         .select("*")
         .eq("id", id)
         .eq("is_active", true)
         .single();
 
       if (error) throw error;
-      setAssessment(data);
+      setAssessment(data as Assessment); // Cast to Assessment
     } catch (error: unknown) {
       console.error("Error loading assessment:", error);
       setError("Assessment not found or no longer available");
@@ -117,7 +110,7 @@ export default function Assessment() {
         .single();
 
       if (error) throw error;
-      setAttempt(data);
+      setAttempt(data as AssessmentAttempt); // Cast to AssessmentAttempt
       setTimeRemaining(assessment.time_limit_minutes * 60);
     } catch (error: unknown) {
       console.error("Error starting attempt:", error);
@@ -135,7 +128,7 @@ export default function Assessment() {
       // Submit responses
       const timeSpent = Math.max(0, assessment.time_limit_minutes * 60 - timeRemaining);
       const success = await submitAssessmentResponses(attempt.id, responses, Math.floor(timeSpent / 60));
-      
+
       if (!success) {
         throw new Error("Failed to submit assessment");
       }
@@ -151,7 +144,7 @@ export default function Assessment() {
         });
 
         if (aiResult) {
-          setAiResults(aiResult);
+          setAiResults(aiResult as AIAnalysisResult); // Cast to AIAnalysisResult
           toast({
             title: "Assessment completed!",
             description: "AI analysis has been generated for your responses.",
@@ -169,6 +162,12 @@ export default function Assessment() {
           description: "Your responses have been saved.",
         });
       }
+
+      // Track assessment completion for gamification
+      if (attempt && assessment) {
+        void trackAssessmentCompletion(attempt.user_id, assessment.id, 0); // Assuming score is calculated server-side or not directly needed here
+      }
+
     } catch (error: unknown) {
       console.error("Error submitting assessment:", error);
       setError("Failed to submit assessment. Please try again.");
@@ -186,7 +185,7 @@ export default function Assessment() {
       setTimeRemaining(prev => {
         if (prev <= 1) {
           // Auto-submit when time runs out
-          submitAssessment();
+          void submitAssessment(); // Use void to explicitly ignore Promise
           return 0;
         }
         return prev - 1;
@@ -197,7 +196,7 @@ export default function Assessment() {
   }, [timeRemaining, attempt, submitAssessment]);
 
   useEffect(() => {
-    loadAssessment();
+    void loadAssessment(); // Use void to explicitly ignore Promise
   }, [loadAssessment]);
 
   const formatTime = (seconds: number) => {
@@ -206,7 +205,7 @@ export default function Assessment() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleResponseChange = (questionId: string, value: any) => {
+  const handleResponseChange = (questionId: string, value: unknown) => {
     setResponses(prev => ({
       ...prev,
       [questionId]: value
@@ -346,7 +345,7 @@ export default function Assessment() {
                   <p className="text-muted-foreground">{aiResults.explanation}</p>
                 </div>
 
-                {aiResults.strengths.length > 0 && (
+                {aiResults.strengths && aiResults.strengths.length > 0 && (
                   <div>
                     <h3 className="text-xl font-semibold mb-2">Your Strengths</h3>
                     <ul className="list-disc list-inside space-y-1">
@@ -357,7 +356,7 @@ export default function Assessment() {
                   </div>
                 )}
 
-                {aiResults.areas_for_improvement.length > 0 && (
+                {aiResults.areas_for_improvement && aiResults.areas_for_improvement.length > 0 && (
                   <div>
                     <h3 className="text-xl font-semibold mb-2">Areas for Improvement</h3>
                     <ul className="list-disc list-inside space-y-1">
@@ -368,7 +367,7 @@ export default function Assessment() {
                   </div>
                 )}
 
-                {aiResults.recommendations.length > 0 && (
+                {aiResults.recommendations && aiResults.recommendations.length > 0 && (
                   <div>
                     <h3 className="text-xl font-semibold mb-2">Recommendations</h3>
                     <ul className="list-disc list-inside space-y-1">
@@ -434,7 +433,7 @@ export default function Assessment() {
           <CardContent>
             {currentQuestion?.type === 'multiple_choice' && (
               <RadioGroup
-                value={responses[currentQuestion.id] || ''}
+                value={responses[currentQuestion.id] as string || ''}
                 onValueChange={(value) => handleResponseChange(currentQuestion.id, value)}
               >
                 {currentQuestion.options?.map((option, index) => (
@@ -448,7 +447,7 @@ export default function Assessment() {
 
             {currentQuestion?.type === 'text' && (
               <Textarea
-                value={responses[currentQuestion.id] || ''}
+                value={responses[currentQuestion.id] as string || ''}
                 onChange={(e) => handleResponseChange(currentQuestion.id, e.target.value)}
                 placeholder="Enter your response..."
                 rows={4}
@@ -459,7 +458,7 @@ export default function Assessment() {
               <div className="space-y-2">
                 <Label>Rate from 1 to 5:</Label>
                 <RadioGroup
-                  value={responses[currentQuestion.id] || ''}
+                  value={responses[currentQuestion.id] as string || ''}
                   onValueChange={(value) => handleResponseChange(currentQuestion.id, value)}
                 >
                   {[1, 2, 3, 4, 5].map((rating) => (
@@ -474,7 +473,7 @@ export default function Assessment() {
 
             {currentQuestion?.type === 'boolean' && (
               <RadioGroup
-                value={responses[currentQuestion.id] || ''}
+                value={responses[currentQuestion.id] as string || ''}
                 onValueChange={(value) => handleResponseChange(currentQuestion.id, value)}
               >
                 <div className="flex items-center space-x-2">

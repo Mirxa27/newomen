@@ -1,212 +1,123 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import BalanceWheel from '@/components/onboarding/BalanceWheel';
+import { Progress } from '@/components/ui/progress';
+import { ChevronLeft, ChevronRight, Languages, TestTube, Target, ClipboardList } from 'lucide-react';
 
-const LIFE_AREAS = [
-  "Career & Purpose",
-  "Relationships",
-  "Health & Wellness",
-  "Personal Growth",
-  "Finance",
-  "Recreation & Joy",
-  "Environment",
-  "Spirituality"
+const steps = [
+  { id: 1, title: 'Language & Culture', icon: Languages },
+  { id: 2, title: 'Personality Test', icon: TestTube },
+  { id: 3, title: 'Balance Wheel', icon: Target },
+  { id: 4, title: 'Diagnostic Assessment', icon: ClipboardList },
 ];
 
-const PERSONALITY_QUESTIONS = [
-  "I prefer planning ahead rather than being spontaneous",
-  "I find it easy to connect with new people",
-  "I often worry about what others think of me",
-  "I enjoy taking risks and trying new things",
-  "I find it important to help others"
-];
+const LanguageCultureStep = () => (
+  <div className="text-center">
+    <h3 className="text-2xl font-bold mb-2">Language & Culture</h3>
+    <p className="text-muted-foreground">Select your preferred language and cultural context to personalize your experience.</p>
+    <div className="mt-6 p-8 bg-white/5 rounded-lg">
+      <p className="text-lg">Content for this step will be provided soon.</p>
+    </div>
+  </div>
+);
 
-export default function Onboarding() {
-  const [step, setStep] = useState(1);
-  const [personalityAnswers, setPersonalityAnswers] = useState<number[]>([]);
-  const [balanceScores, setBalanceScores] = useState<Record<string, number>>({});
-  const { user } = useAuth();
-  const { toast } = useToast();
+const PersonalityTestStep = () => (
+  <div className="text-center">
+    <h3 className="text-2xl font-bold mb-2">Personality Test</h3>
+    <p className="text-muted-foreground">Discover your unique personality traits.</p>
+    <div className="mt-6 p-8 bg-white/5 rounded-lg">
+      <p className="text-lg">The personality test component will be integrated here.</p>
+    </div>
+  </div>
+);
+
+const BalanceWheelStep = () => (
+  <div className="flex flex-col items-center text-center">
+    <h3 className="text-2xl font-bold mb-2">Balance Wheel</h3>
+    <p className="text-muted-foreground mb-6">Select your current life-focus areas to help us understand your priorities.</p>
+    <BalanceWheel />
+  </div>
+);
+
+const DiagnosticAssessmentStep = () => (
+  <div className="text-center">
+    <h3 className="text-2xl font-bold mb-2">Diagnostic Assessment</h3>
+    <p className="text-muted-foreground">This initial assessment helps us tailor your growth plan.</p>
+    <div className="mt-6 p-8 bg-white/5 rounded-lg">
+      <p className="text-lg">The diagnostic assessment will be available here shortly.</p>
+    </div>
+  </div>
+);
+
+const OnboardingPage = () => {
+  const [currentStep, setCurrentStep] = useState(1);
   const navigate = useNavigate();
 
-  const progress = (step / 3) * 100;
-
-  const handlePersonalityAnswer = (score: number) => {
-    const newAnswers = [...personalityAnswers, score];
-    setPersonalityAnswers(newAnswers);
-
-    if (newAnswers.length === PERSONALITY_QUESTIONS.length) {
-      setTimeout(() => setStep(2), 300);
+  const handleNext = () => {
+    if (currentStep < steps.length) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      navigate('/dashboard');
     }
   };
 
-  const handleBalanceScore = (area: string, score: number) => {
-    setBalanceScores(prev => ({ ...prev, [area]: score }));
-  };
-
-  const completeOnboarding = async () => {
-    try {
-      if (!user) {
-        toast({
-          title: "Sign-in required",
-          description: "Please sign in again to complete onboarding.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Save user profile
-      const { error } = await supabase
-        .from("user_memory_profiles")
-        .insert({
-          user_id: user?.id,
-          personality_type: "explorer", // Simplified for now
-          balance_wheel_scores: balanceScores,
-          narrative_patterns: {},
-          emotional_state_history: {}
-        });
-
-      if (error) throw error;
-
-      // Initialize user profile with Discovery tier
-      await supabase
-        .from("user_profiles")
-        .insert({
-          email: user?.email || "",
-          subscription_tier: "discovery",
-          remaining_minutes: 10,
-          current_level: 1,
-          crystal_balance: 0,
-          daily_streak: 0
-        });
-
-      toast({
-        title: "Welcome to Newomen!",
-        description: "Your journey begins now.",
-      });
-
-      navigate("/dashboard");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Something went wrong completing onboarding.';
-      toast({
-        title: "Error",
-        description: message,
-        variant: "destructive",
-      });
+  const handlePrev = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
     }
   };
+
+  const renderStep = () => {
+    switch (currentStep) {
+      case 1:
+        return <LanguageCultureStep />;
+      case 2:
+        return <PersonalityTestStep />;
+      case 3:
+        return <BalanceWheelStep />;
+      case 4:
+        return <DiagnosticAssessmentStep />;
+      default:
+        return null;
+    }
+  };
+
+  const currentStepData = steps[currentStep - 1];
+  const Icon = currentStepData.icon;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl glass-card p-8">
-        <Progress value={progress} className="mb-8" />
-
-        {step === 1 && (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold mb-2">Discover Yourself</h2>
-              <p className="text-muted-foreground">
-                Question {personalityAnswers.length + 1} of {PERSONALITY_QUESTIONS.length}
-              </p>
+    <div className="flex items-center justify-center min-h-screen">
+      <Card className="w-full max-w-3xl glass-card">
+        <CardHeader>
+          <div className="text-center space-y-2 mb-8">
+            <div className="inline-flex items-center gap-3">
+              <Icon className="w-8 h-8 text-accent" />
+              <CardTitle className="text-3xl gradient-text">{currentStepData.title}</CardTitle>
             </div>
-
-            <div className="space-y-4">
-              <p className="text-lg">
-                {PERSONALITY_QUESTIONS[personalityAnswers.length]}
-              </p>
-
-              <div className="flex gap-2 justify-center">
-                {[1, 2, 3, 4, 5].map((score) => (
-                  <Button
-                    key={score}
-                    onClick={() => handlePersonalityAnswer(score)}
-                    variant="outline"
-                    className="clay-card hover:scale-105 transition-transform"
-                  >
-                    {score}
-                  </Button>
-                ))}
-              </div>
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Disagree</span>
-                <span>Agree</span>
-              </div>
-            </div>
+            <CardDescription>Step {currentStep} of {steps.length}</CardDescription>
           </div>
-        )}
-
-        {step === 2 && (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold mb-2">Balance Wheel</h2>
-              <p className="text-muted-foreground">
-                Rate your satisfaction in each life area (1-10)
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              {LIFE_AREAS.map((area) => (
-                <div key={area} className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>{area}</span>
-                    <span className="text-primary">{balanceScores[area] || 0}</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="1"
-                    max="10"
-                    value={balanceScores[area] || 5}
-                    onChange={(e) => handleBalanceScore(area, parseInt(e.target.value))}
-                    className="w-full"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <Button
-              onClick={() => setStep(3)}
-              disabled={Object.keys(balanceScores).length < LIFE_AREAS.length}
-              className="w-full"
-            >
-              Continue
+          <Progress value={(currentStep / steps.length) * 100} className="w-full" />
+        </CardHeader>
+        <CardContent>
+          <div className="min-h-[300px] flex items-center justify-center p-6">
+            {renderStep()}
+          </div>
+          <div className="flex justify-between mt-8">
+            <Button variant="outline" onClick={handlePrev} disabled={currentStep === 1} className="glass">
+              <ChevronLeft className="w-4 h-4 mr-2" />
+              Previous
+            </Button>
+            <Button onClick={handleNext} className="clay-button">
+              {currentStep === steps.length ? 'Finish & Go to Dashboard' : 'Next'}
+              <ChevronRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
-        )}
-
-        {step === 3 && (
-          <div className="space-y-6 text-center">
-            <div>
-              <h2 className="text-2xl font-bold mb-2">Your Journey Awaits</h2>
-              <p className="text-muted-foreground">
-                Based on your responses, we've identified key areas for growth.
-              </p>
-            </div>
-
-            <div className="glass-card p-6 space-y-4">
-              <h3 className="font-semibold">Top Focus Areas:</h3>
-              <ul className="space-y-2">
-                {Object.entries(balanceScores)
-                  .sort(([, a], [, b]) => a - b)
-                  .slice(0, 3)
-                  .map(([area]) => (
-                    <li key={area} className="clay-card p-3 text-left">
-                      {area}
-                    </li>
-                  ))}
-              </ul>
-            </div>
-
-            <Button onClick={completeOnboarding} className="w-full">
-              Begin My Transformation
-            </Button>
-          </div>
-        )}
+        </CardContent>
       </Card>
     </div>
   );
-}
+};
+
+export default OnboardingPage;

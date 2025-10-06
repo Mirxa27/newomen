@@ -1,405 +1,420 @@
-import { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  Search, 
-  Filter, 
-  Clock, 
-  Users, 
-  Brain, 
-  Trophy,
-  Star,
-  ArrowRight,
-  BookOpen,
+import { Progress } from "@/components/ui/progress";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
+import {
+  ArrowLeft,
+  CheckCircle,
   Target,
-  Zap
+  Brain,
+  Heart,
+  Zap,
+  Loader2,
+  Sparkles,
+  Trophy,
+  BookOpen,
+  Award,
+  TrendingUp,
+  Clock,
 } from "lucide-react";
+import { aiAssessmentService, type AIProcessingResult } from "@/services/AIAssessmentService";
+import type { Json, Tables } from "@/integrations/supabase/types";
 
-interface Assessment {
+// --- Type Definitions ---
+type Assessment = Tables<"assessments">;
+type AssessmentQuestion = { question: string; options: string[] };
+type AssessmentDetails = {
   id: string;
   title: string;
   description: string;
-  type: string;
   category: string;
-  difficulty_level: string;
-  time_limit_minutes: number;
-  max_attempts: number;
-  is_public: boolean;
-  is_active: boolean;
-  ai_config_id?: string;
-  passing_score: number;
-  created_at: string;
-  user_progress?: {
-    best_score: number;
-    total_attempts: number;
-    is_completed: boolean;
-    last_attempt_at: string;
-  };
-}
+  questions: AssessmentQuestion[];
+};
+type UserStats = {
+  total_assessments_completed: number;
+  average_assessment_score: number;
+  current_streak: number;
+};
+type ResultMessage = { title: string; description: string; color: string };
 
-interface AssessmentCategory {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  color: string;
-}
+// --- Main Component ---
+export default function AssessmentsPage() {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [assessments, setAssessments] = useState<AssessmentDetails[]>([]);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [selectedAssessment, setSelectedAssessment] = useState<AssessmentDetails | null>(null);
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [showResults, setShowResults] = useState(false);
+  const [score, setScore] = useState(0);
+  const [aiProcessing, setAiProcessing] = useState(false);
+  const [aiResult, setAiResult] = useState<AIProcessingResult | null>(null);
 
-export default function Assessments() {
-  const [assessments, setAssessments] = useState<Assessment[]>([]);
-  const [categories, setCategories] = useState<AssessmentCategory[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedType, setSelectedType] = useState("all");
-  const [selectedDifficulty, setSelectedDifficulty] = useState("all");
-
+  // --- Data Loading ---
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [assessmentsData, categoriesData] = await Promise.all([
-        supabase
-          .from("assessments_enhanced")
-          .select(`
-            *,
-            user_assessment_progress!left (
-              best_score,
-              total_attempts,
-              is_completed,
-              last_attempt_at
-            )
-          `)
-          .eq("is_active", true)
-          .eq("is_public", true)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("assessment_categories")
-          .select("*")
-          .eq("is_active", true)
-          .order("name")
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/auth");
+        return;
+      }
+
+      const [assessmentsRes, statsRes] = await Promise.all([
+        supabase.from("assessments").select("*").eq("is_active", true),
+        supabase.from("user_assessment_stats").select("*").eq("user_id", user.id).single(),
       ]);
 
-      if (assessmentsData.error) throw assessmentsData.error;
-      if (categoriesData.error) throw categoriesData.error;
+      if (assessmentsRes.error) throw assessmentsRes.error;
+      
+      const parsedAssessments = assessmentsRes.data
+        .map(normalizeSupabaseAssessment)
+        .filter((a): a is AssessmentDetails => a !== null);
+      setAssessments(parsedAssessments);
 
-      setAssessments(assessmentsData.data || []);
-      setCategories(categoriesData.data || []);
-    } catch (error: unknown) {
-      console.error("Error loading assessments:", error);
+      if (statsRes.data) {
+        setUserStats(statsRes.data as UserStats);
+      } else {
+         setUserStats({ total_assessments_completed: 0, average_assessment_score: 0, current_streak: 0 });
+      }
+
+    } catch (error) {
+      console.error("Error loading assessments data:", error);
+      toast.error("Failed to load assessments data.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  const filteredAssessments = assessments.filter(assessment => {
-    const matchesSearch = assessment.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         assessment.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === "all" || assessment.category === selectedCategory;
-    const matchesType = selectedType === "all" || assessment.type === selectedType;
-    const matchesDifficulty = selectedDifficulty === "all" || assessment.difficulty_level === selectedDifficulty;
+  // --- Assessment Logic ---
+  const startAssessment = (assessment: AssessmentDetails) => {
+    setSelectedAssessment(assessment);
+    setCurrentQuestion(0);
+    setAnswers({});
+    setShowResults(false);
+    setScore(0);
+    setAiResult(null);
+  };
 
-    return matchesSearch && matchesCategory && matchesType && matchesDifficulty;
-  });
+  const handleAnswer = (answer: string) => {
+    setAnswers((prev) => ({ ...prev, [currentQuestion]: answer }));
+  };
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy': return 'bg-green-100 text-green-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'hard': return 'bg-orange-100 text-orange-800';
-      case 'expert': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+  const handleNext = () => {
+    if (!selectedAssessment) return;
+    if (!answers[currentQuestion]) {
+      toast.error("Please select an answer");
+      return;
+    }
+    if (currentQuestion < selectedAssessment.questions.length - 1) {
+      setCurrentQuestion((prev) => prev + 1);
+    } else {
+      void calculateResults();
     }
   };
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'assessment': return <BookOpen className="w-5 h-5" />;
-      case 'quiz': return <Target className="w-5 h-5" />;
-      case 'challenge': return <Trophy className="w-5 h-5" />;
-      default: return <BookOpen className="w-5 h-5" />;
+  const handlePrevious = () => {
+    setCurrentQuestion((prev) => Math.max(0, prev - 1));
+  };
+
+  const calculateResults = async () => {
+    if (!selectedAssessment) return;
+    setAiProcessing(true);
+    setShowResults(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const result = await aiAssessmentService.processAssessmentWithAI(
+        selectedAssessment.id,
+        user.id,
+        answers
+      );
+
+      if (!result.success) throw new Error(result.error_message || "AI processing failed");
+      
+      setScore(result.percentage_score ?? 0);
+      setAiResult(result);
+      toast.success("AI analysis completed!");
+
+      // Save results to DB
+      await supabase.from("assessment_results").insert({
+        user_id: user.id,
+        assessment_id: selectedAssessment.id,
+        answers: answers as unknown as Json,
+        raw_score: result.percentage_score,
+        percentage_score: result.percentage_score,
+        ai_feedback: result.feedback,
+        ai_insights: result.insights as Json,
+        ai_recommendations: result.recommendations,
+        completed_at: new Date().toISOString(),
+      });
+
+      // Award crystals
+      const { data: profile } = await supabase.from("user_profiles").select("crystal_balance").eq("user_id", user.id).single();
+      await supabase.from("user_profiles").update({ crystal_balance: (profile?.crystal_balance || 0) + 50 }).eq("user_id", user.id);
+      toast.success("Assessment completed! +50 Crystals earned.");
+
+    } catch (error) {
+      console.error("Error processing assessment:", error);
+      toast.error("Failed to process assessment. Please try again.");
+      setShowResults(false);
+    } finally {
+      setAiProcessing(false);
     }
   };
 
-  const getCategoryIcon = (categoryName: string) => {
-    const category = categories.find(cat => cat.name === categoryName);
-    if (!category) return <BookOpen className="w-5 h-5" />;
-    
-    switch (category.icon) {
-      case 'user': return <Users className="w-5 h-5" />;
-      case 'heart': return <Star className="w-5 h-5" />;
-      case 'users': return <Users className="w-5 h-5" />;
-      case 'briefcase': return <BookOpen className="w-5 h-5" />;
-      case 'book-open': return <BookOpen className="w-5 h-5" />;
-      case 'trophy': return <Trophy className="w-5 h-5" />;
-      default: return <BookOpen className="w-5 h-5" />;
-    }
-  };
+  // --- UI Render ---
+  if (loading) return <LoadingState />;
+  if (showResults && selectedAssessment) return <ResultsView />;
+  if (selectedAssessment) return <AssessmentView />;
+  return <AssessmentListView />;
 
-  if (loading) {
+  // --- Sub-components ---
+  function LoadingState() {
     return (
-      <div className="min-h-screen bg-background py-12 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>Loading assessments...</p>
-          </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading Assessment Center...</p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background py-12 px-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">Assessments & Quizzes</h1>
-          <p className="text-muted-foreground text-lg">
-            Discover AI-powered assessments to understand yourself better
-          </p>
-        </div>
-
-        {/* Filters */}
-        <div className="mb-8 space-y-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search assessments..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+  function AssessmentListView() {
+    return (
+      <div className="min-h-screen p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+            <div>
+              <h1 className="text-4xl font-bold gradient-text">Assessment Center</h1>
+              <p className="text-muted-foreground">
+                Discover insights about yourself with our assessments
+              </p>
             </div>
-            <div className="flex gap-2">
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.name}>
-                      {category.name}
-                    </SelectItem>
+          </div>
+
+          {userStats && <StatsOverview stats={userStats} />}
+
+          <Tabs defaultValue="assessments">
+            <TabsList className="grid w-full grid-cols-1">
+              <TabsTrigger value="assessments">Assessments</TabsTrigger>
+            </TabsList>
+            <TabsContent value="assessments" className="mt-6">
+              {assessments.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Brain className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                  <p>No assessments available yet. Check back soon!</p>
+                </div>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {assessments.map((assessment) => (
+                    <Card
+                      key={assessment.id}
+                      className="glass-card hover:scale-105 transition-transform cursor-pointer group"
+                      onClick={() => startAssessment(assessment)}
+                    >
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div className="clay w-12 h-12 rounded-2xl flex items-center justify-center mb-4">
+                            <Brain className="w-6 h-6 text-primary" />
+                          </div>
+                          <Badge variant="secondary" className="capitalize">
+                            {assessment.category}
+                          </Badge>
+                        </div>
+                        <CardTitle className="group-hover:gradient-text transition-all">{assessment.title}</CardTitle>
+                        <CardDescription>{assessment.description}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center justify-between text-sm text-muted-foreground">
+                          <span>{assessment.questions.length} Questions</span>
+                          <span>~{Math.max(1, Math.ceil(assessment.questions.length * 0.5))} min</span>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))}
-                </SelectContent>
-              </Select>
-              <Select value={selectedType} onValueChange={setSelectedType}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="assessment">Assessments</SelectItem>
-                  <SelectItem value="quiz">Quizzes</SelectItem>
-                  <SelectItem value="challenge">Challenges</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Difficulty" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Levels</SelectItem>
-                  <SelectItem value="easy">Easy</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="hard">Hard</SelectItem>
-                  <SelectItem value="expert">Expert</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-
-        {/* Categories */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">Categories</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {categories.map((category) => (
-              <Card 
-                key={category.id} 
-                className={`cursor-pointer transition-all hover:shadow-md ${
-                  selectedCategory === category.name ? 'ring-2 ring-primary' : ''
-                }`}
-                onClick={() => setSelectedCategory(selectedCategory === category.name ? 'all' : category.name)}
-              >
-                <CardContent className="p-4 text-center">
-                  <div className="flex justify-center mb-2">
-                    {getCategoryIcon(category.name)}
-                  </div>
-                  <h3 className="font-medium">{category.name}</h3>
-                  <p className="text-sm text-muted-foreground">{category.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* Assessments Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAssessments.map((assessment) => (
-            <Card key={assessment.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {getTypeIcon(assessment.type)}
-                    <Badge variant="outline" className="capitalize">
-                      {assessment.type}
-                    </Badge>
-                  </div>
-                  {assessment.ai_config_id && (
-                    <Badge variant="default" className="flex items-center gap-1">
-                      <Brain className="w-3 h-3" />
-                      AI
-                    </Badge>
-                  )}
                 </div>
-                <CardTitle className="text-xl">{assessment.title}</CardTitle>
-                <CardDescription className="line-clamp-2">
-                  {assessment.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    {assessment.time_limit_minutes} min
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Users className="w-4 h-4" />
-                    {assessment.max_attempts} attempts
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Badge className={getDifficultyColor(assessment.difficulty_level)}>
-                    {assessment.difficulty_level}
-                  </Badge>
-                  <div className="text-sm text-muted-foreground">
-                    {assessment.passing_score}% to pass
-                  </div>
-                </div>
-
-                {assessment.user_progress && (
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Your Progress</span>
-                      <span>{assessment.user_progress.best_score}%</span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div 
-                        className="bg-primary h-2 rounded-full transition-all"
-                        style={{ width: `${assessment.user_progress.best_score}%` }}
-                      />
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {assessment.user_progress.total_attempts} attempts
-                      {assessment.user_progress.is_completed && (
-                        <span className="ml-2 text-green-600 font-medium">✓ Completed</span>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <Link to={`/assessment/${assessment.id}`}>
-                  <Button className="w-full">
-                    {assessment.user_progress ? 'Continue' : 'Start Assessment'}
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {filteredAssessments.length === 0 && (
-          <div className="text-center py-12">
-            <BookOpen className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-xl font-semibold mb-2">No assessments found</h3>
-            <p className="text-muted-foreground">
-              Try adjusting your search criteria or check back later for new assessments.
-            </p>
-          </div>
-        )}
-
-        {/* Featured Section */}
-        <div className="mt-12">
-          <h2 className="text-2xl font-semibold mb-6">Featured Assessments</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="border-primary/20 bg-primary/5">
-              <CardHeader>
-                <div className="flex items-center gap-2 mb-2">
-                  <Brain className="w-5 h-5 text-primary" />
-                  <Badge variant="default">AI-Powered</Badge>
-                </div>
-                <CardTitle>Personality Assessment</CardTitle>
-                <CardDescription>
-                  Discover your personality type with our advanced AI analysis
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1 mb-1">
-                      <Clock className="w-4 h-4" />
-                      15 minutes
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
-                      Medium difficulty
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    Coming Soon
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-primary/20 bg-primary/5">
-              <CardHeader>
-                <div className="flex items-center gap-2 mb-2">
-                  <Trophy className="w-5 h-5 text-primary" />
-                  <Badge variant="default">Challenge</Badge>
-                </div>
-                <CardTitle>Emotional Intelligence Challenge</CardTitle>
-                <CardDescription>
-                  Test and improve your emotional intelligence skills
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1 mb-1">
-                      <Clock className="w-4 h-4" />
-                      20 minutes
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
-                      Hard difficulty
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    Coming Soon
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  function StatsOverview({ stats }: { stats: UserStats }) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="glass-card">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-yellow-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Completed</p>
+                <p className="text-2xl font-bold">{stats.total_assessments_completed}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="glass-card">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-green-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Avg Score</p>
+                <p className="text-2xl font-bold">
+                  {stats.average_assessment_score > 0 ? Math.round(stats.average_assessment_score) : '--'}%
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="glass-card">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-blue-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Current Streak</p>
+                <p className="text-2xl font-bold">{stats.current_streak}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  function AssessmentView() {
+    if (!selectedAssessment) return null;
+    const question = selectedAssessment.questions[currentQuestion];
+    const progress = ((currentQuestion + 1) / selectedAssessment.questions.length) * 100;
+
+    return (
+      <div className="min-h-screen py-12 px-4">
+        <div className="max-w-2xl mx-auto">
+          <Card className="glass-card">
+            <CardHeader>
+              <div className="flex items-center justify-between mb-4">
+                <Button variant="ghost" onClick={() => setSelectedAssessment(null)}>
+                  <ArrowLeft className="w-4 h-4 mr-2" /> Back
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Question {currentQuestion + 1} of {selectedAssessment.questions.length}
+                </span>
+              </div>
+              <Progress value={progress} className="h-2 mb-4" />
+              <CardTitle className="text-xl">{selectedAssessment.title}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-4">{question?.question}</h3>
+                <RadioGroup value={answers[currentQuestion] ?? ""} onValueChange={handleAnswer}>
+                  {question?.options.map((option, index) => (
+                    <div key={index} className="flex items-center space-x-3 p-4 rounded-xl hover:bg-muted/50 transition-colors border border-border">
+                      <RadioGroupItem value={option} id={`q${currentQuestion}-opt${index}`} />
+                      <Label htmlFor={`q${currentQuestion}-opt${index}`} className="flex-1 cursor-pointer">{option}</Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+              <div className="flex gap-3">
+                <Button onClick={handlePrevious} disabled={currentQuestion === 0} variant="outline" className="flex-1 glass">Previous</Button>
+                <Button onClick={handleNext} className="flex-1 clay-button" disabled={!answers[currentQuestion]}>
+                  {currentQuestion === selectedAssessment.questions.length - 1 ? "Finish" : "Next"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  function ResultsView() {
+    const resultMessage = useMemo<ResultMessage>(() => {
+      if (score >= 80) return { title: "Excellent!", description: "You show strong understanding in this area.", color: "text-green-500" };
+      if (score >= 60) return { title: "Good Progress", description: "You're on the right track with room to grow.", color: "text-blue-500" };
+      return { title: "Keep Growing", description: "This is a great area to focus your development.", color: "text-amber-500" };
+    }, [score]);
+
+    return (
+      <div className="min-h-screen py-12 px-4">
+        <div className="max-w-2xl mx-auto">
+          <Card className="glass-card">
+            <CardHeader className="text-center space-y-3">
+              <CheckCircle className={`w-16 h-16 mx-auto ${resultMessage.color}`} />
+              <CardTitle className="text-3xl">{resultMessage.title}</CardTitle>
+              <CardDescription className="text-lg">{selectedAssessment?.title}</CardDescription>
+              {aiProcessing && (
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Generating AI insights...</span>
+                </div>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="clay p-6 space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-semibold">Your Score</span>
+                  <span className="text-3xl font-bold gradient-text">{score}%</span>
+                </div>
+                <Progress value={score} className="h-3" />
+                <p className="text-muted-foreground">{resultMessage.description}</p>
+              </div>
+
+              {aiResult?.success && (
+                <div className="clay p-6 space-y-4">
+                  <h3 className="font-semibold flex items-center gap-2"><Sparkles className="w-5 h-5 text-primary" />AI-Powered Insights</h3>
+                  {aiResult.feedback && <div className="bg-muted/50 p-4 rounded-lg"><p className="text-sm leading-relaxed">{aiResult.feedback}</p></div>}
+                  {aiResult.recommendations && <div><h4 className="font-medium mb-2">Personalized Recommendations</h4><p className="text-sm text-muted-foreground">{aiResult.recommendations}</p></div>}
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <Button onClick={() => setSelectedAssessment(null)} className="flex-1" variant="outline">Browse Assessments</Button>
+                <Button onClick={() => navigate("/chat")} className="flex-1 clay-button">Discuss with AI</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 }
+
+// --- Helper Functions ---
+const normalizeSupabaseAssessment = (record: Assessment): AssessmentDetails | null => {
+  const questions = Array.isArray(record.questions) ? record.questions.map(q => ({
+    question: (q as any)?.question ?? "",
+    options: Array.isArray((q as any)?.options) ? (q as any).options.map(String) : [],
+  })) : [];
+
+  if (questions.length === 0) return null;
+
+  return {
+    id: record.id,
+    title: record.title,
+    description: record.description ?? "Personalized assessment",
+    category: record.category ?? "growth",
+    questions,
+  };
+};

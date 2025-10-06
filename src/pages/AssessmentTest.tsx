@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,12 +8,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
-  Brain, 
-  CheckCircle, 
-  Clock, 
-  Loader2, 
-  ArrowRight, 
+import {
+  Brain,
+  CheckCircle,
+  Clock,
+  Loader2,
+  ArrowRight,
   ArrowLeft,
   Send,
   TestTube
@@ -40,13 +40,13 @@ interface TestAssessment {
 
 export default function AssessmentTest() {
   const [assessment, setAssessment] = useState<TestAssessment | null>(null);
-  const [attempt, setAttempt] = useState<any>(null);
+  const [attempt, setAttempt] = useState<Record<string, unknown> | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [responses, setResponses] = useState<Record<string, any>>({});
+  const [responses, setResponses] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [aiProcessing, setAiProcessing] = useState(false);
-  const [aiResults, setAiResults] = useState<any>(null);
+  const [aiResults, setAiResults] = useState<Record<string, unknown> | null>(null);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const { toast } = useToast();
 
@@ -94,7 +94,7 @@ export default function AssessmentTest() {
 
       setAssessment(testAssessment);
       setTimeRemaining(testAssessment.time_limit_minutes * 60);
-      
+
       // Simulate creating an attempt
       const mockAttempt = {
         id: 'test-attempt-1',
@@ -123,7 +123,7 @@ export default function AssessmentTest() {
     }
   };
 
-  const handleResponseChange = (questionId: string, value: any) => {
+  const handleResponseChange = (questionId: string, value: unknown) => {
     setResponses(prev => ({
       ...prev,
       [questionId]: value
@@ -142,14 +142,14 @@ export default function AssessmentTest() {
     }
   };
 
-  const submitTestAssessment = async () => {
+  const submitTestAssessment = useCallback(async () => {
     if (!assessment || !attempt) return;
 
     setSubmitting(true);
     try {
       // Simulate AI processing
       setAiProcessing(true);
-      
+
       // Simulate AI analysis
       setTimeout(() => {
         const mockAIResult = {
@@ -200,7 +200,7 @@ export default function AssessmentTest() {
         variant: "destructive",
       });
     }
-  };
+  }, [assessment, attempt, toast]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -223,7 +223,7 @@ export default function AssessmentTest() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeRemaining, attempt]);
+  }, [timeRemaining, attempt, submitTestAssessment]);
 
   const currentQuestionData = assessment?.questions[currentQuestion];
   const isLastQuestion = assessment ? currentQuestion === assessment.questions.length - 1 : false;

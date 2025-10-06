@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { 
-  getAIUseCases, 
-  getAIBehaviors, 
-  getAIConfiguration, 
+import {
+  getAIUseCases,
+  getAIBehaviors,
+  getAIConfiguration,
   generateAIResponse,
   type AIProviderConfig,
   type PromptTemplate,
@@ -67,7 +67,7 @@ export function useAIProvider() {
   const generateResponse = useCallback(async (
     useCaseId: string,
     userMessage: string,
-    variables: Record<string, any> = {}
+    variables: Record<string, unknown> = {}
   ) => {
     setLoading(true);
     setError(null);
@@ -144,14 +144,14 @@ export function useAIResponse(useCaseId: string) {
 
   const generateResponse = useCallback(async (
     userMessage: string,
-    variables: Record<string, any> = {}
+    variables: Record<string, unknown> = {}
   ) => {
     if (!useCaseId) return;
 
     setLoading(true);
     setError(null);
     setResponse(null);
-    
+
     try {
       const aiResponse = await generateAIResponse(useCaseId, userMessage, variables);
       setResponse(aiResponse);

@@ -36,7 +36,7 @@ const Landing = () => {
               <Button 
                 size="lg" 
                 variant="outline" 
-                className="glass-card text-lg px-12 py-6 border-2 hover:bg-white/10"
+                className="glass text-lg px-12 py-6 border-2 border-white/20 hover:bg-white/10"
               >
                 Learn More
               </Button>
@@ -102,12 +102,14 @@ const Landing = () => {
                   ))}
                 </ul>
                 
-                <Button 
-                  className={`w-full ${tier.featured ? 'clay-button bg-gradient-to-r from-primary to-accent' : 'glass'}`}
-                  size="lg"
-                >
-                  {tier.cta}
-                </Button>
+                <Link to="/auth" className="w-full">
+                  <Button 
+                    className={`w-full ${tier.featured ? 'clay-button bg-gradient-to-r from-primary to-accent' : 'glass'}`}
+                    size="lg"
+                  >
+                    {tier.cta}
+                  </Button>
+                </Link>
               </div>
             ))}
           </div>

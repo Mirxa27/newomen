@@ -18,7 +18,7 @@ export default function TermsOfService() {
 
         <div>
           <h1 className="text-5xl font-bold gradient-text mb-4">Terms of Service</h1>
-          <p className="text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
+          <p className="text-muted-foreground">Last updated: October 6, 2025</p>
         </div>
 
         <Card>

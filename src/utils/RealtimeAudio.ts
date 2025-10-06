@@ -19,19 +19,19 @@ export class AudioRecorder {
           autoGainControl: true
         }
       });
-      
+
       this.audioContext = new AudioContext({
         sampleRate: 24000,
       });
-      
+
       this.source = this.audioContext.createMediaStreamSource(this.stream);
       this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
-      
+
       this.processor.onaudioprocess = (e) => {
         const inputData = e.inputBuffer.getChannelData(0);
         this.onAudioData(new Float32Array(inputData));
       };
-      
+
       this.source.connect(this.processor);
       this.processor.connect(this.audioContext.destination);
     } catch (error) {
@@ -66,7 +66,7 @@ export class RealtimeChat {
   private audioEl: HTMLAudioElement;
   private recorder: AudioRecorder | null = null;
 
-  constructor(private onMessage: (message: any) => void) {
+  constructor(private onMessage: (message: unknown) => void) {
     this.audioEl = document.createElement("audio");
     this.audioEl.autoplay = true;
   }
@@ -75,7 +75,7 @@ export class RealtimeChat {
     try {
       console.log('Requesting ephemeral token...');
       const { data, error } = await supabase.functions.invoke("realtime-token");
-      
+
       if (error) throw error;
       if (!data?.client_secret?.value) {
         throw new Error("Failed to get ephemeral token");
@@ -99,7 +99,7 @@ export class RealtimeChat {
 
       // Set up data channel
       this.dc = this.pc.createDataChannel("oai-events");
-      
+
       this.dc.addEventListener("open", () => {
         console.log('Data channel opened');
       });
@@ -117,7 +117,7 @@ export class RealtimeChat {
       // Connect to OpenAI's Realtime API
       const baseUrl = "https://api.openai.com/v1/realtime";
       const model = "gpt-4o-realtime-preview-2024-12-17";
-      
+
       console.log('Connecting to OpenAI Realtime API...');
       const sdpResponse = await fetch(`${baseUrl}?model=${model}`, {
         method: "POST",
@@ -136,7 +136,7 @@ export class RealtimeChat {
         type: "answer" as RTCSdpType,
         sdp: await sdpResponse.text(),
       };
-      
+
       await this.pc.setRemoteDescription(answer);
       console.log("WebRTC connection established");
 
@@ -163,16 +163,16 @@ export class RealtimeChat {
       const s = Math.max(-1, Math.min(1, float32Array[i]));
       int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
     }
-    
+
     const uint8Array = new Uint8Array(int16Array.buffer);
     let binary = '';
     const chunkSize = 0x8000;
-    
+
     for (let i = 0; i < uint8Array.length; i += chunkSize) {
       const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
       binary += String.fromCharCode.apply(null, Array.from(chunk));
     }
-    
+
     return btoa(binary);
   }
 

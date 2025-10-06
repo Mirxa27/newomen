@@ -1,4 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
+import type {
+  AssessmentAnswers,
+  QuizAnswers,
+  ProgressData,
+  CacheData,
+  AIResponseData,
+  ProviderConfiguration,
+  AssessmentResponseData,
+  QuizResponseData
+} from "@/types/ai-types";
 
 export interface AIConfiguration {
   id: string;
@@ -32,27 +42,27 @@ export interface AIResponse {
 
 export interface AssessmentSubmission {
   assessment_id: string;
-  answers: Record<string, any>;
+  answers: AssessmentAnswers;
   user_id: string;
 }
 
 export interface QuizSubmission {
   quiz_id: string;
-  answers: Record<string, any>;
+  answers: QuizAnswers;
   user_id: string;
   time_taken_seconds?: number;
 }
 
 export interface ChallengeSubmission {
   challenge_id: string;
-  progress_data: Record<string, any>;
+  progress_data: ProgressData;
   user_id: string;
 }
 
 export class AIService {
   private configurations: Map<string, AIConfiguration> = new Map();
   private rateLimitMap: Map<string, number[]> = new Map();
-  private cache: Map<string, { data: any; timestamp: number }> = new Map();
+  private cache: Map<string, { data: AIResponse; timestamp: number }> = new Map();
 
   constructor() {
     this.loadConfigurations();
@@ -145,16 +155,18 @@ export class AIService {
       // Log usage (skip until database functions are available)
       console.log('AI usage logging skipped until database is set up');
 
-      // Cache result
-      this.setCachedResult(cacheKey, result);
-
-      return {
+      const aiResponse: AIResponse = {
         success: true,
         content: response.content,
         usage: response.usage,
         cost_usd: response.cost_usd,
         processing_time_ms: Date.now() - startTime
       };
+
+      // Cache result
+      this.setCachedResult(cacheKey, aiResponse);
+
+      return aiResponse;
 
     } catch (error) {
       console.error('Error generating assessment result:', error);
@@ -305,12 +317,11 @@ export class AIService {
   }
 
   private async callOpenAI(config: AIConfiguration, prompt: string, startTime: number): Promise<AIResponse> {
-    try {
-      // Get API key from Supabase secrets (in production)
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
+    // Get API key from Supabase secrets (in production)
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Not authenticated');
 
-      const response = await fetch(`${config.api_base_url || 'https://api.openai.com'}/v1/chat/completions`, {
+    const response = await fetch(`${config.api_base_url || 'https://api.openai.com'}/v1/chat/completions`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY || 'your-api-key'}`,
@@ -350,15 +361,10 @@ export class AIService {
         cost_usd: totalCost,
         processing_time_ms: Date.now() - startTime
       };
-
-    } catch (error) {
-      throw error;
-    }
   }
 
   private async callAnthropic(config: AIConfiguration, prompt: string, startTime: number): Promise<AIResponse> {
-    try {
-      const response = await fetch(`${config.api_base_url || 'https://api.anthropic.com'}/v1/messages`, {
+    const response = await fetch(`${config.api_base_url || 'https://api.anthropic.com'}/v1/messages`, {
         method: 'POST',
         headers: {
           'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY || 'your-api-key',
@@ -399,10 +405,6 @@ export class AIService {
         cost_usd: totalCost,
         processing_time_ms: Date.now() - startTime
       };
-
-    } catch (error) {
-      throw error;
-    }
   }
 
   private async buildAssessmentPrompt(submission: AssessmentSubmission, config: AIConfiguration): Promise<string> {
@@ -500,7 +502,7 @@ export class AIService {
     return template;
   }
 
-  private parseAssessmentResponse(content: string): any {
+  private parseAssessmentResponse(content: string): AssessmentResponseData {
     try {
       return JSON.parse(content);
     } catch {
@@ -515,7 +517,7 @@ export class AIService {
     }
   }
 
-  private parseQuizResponse(content: string): any {
+  private parseQuizResponse(content: string): QuizResponseData {
     try {
       return JSON.parse(content);
     } catch {
@@ -626,7 +628,7 @@ export class AIService {
     return null;
   }
 
-  private setCachedResult(key: string, data: any): void {
+  private setCachedResult(key: string, data: AIResponse): void {
     this.cache.set(key, { data, timestamp: Date.now() });
   }
 

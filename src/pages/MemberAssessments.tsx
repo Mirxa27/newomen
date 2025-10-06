@@ -94,7 +94,7 @@ const parseQuestionSet = (value: SupabaseAssessment["questions"]): AssessmentQue
       ) {
         return {
           question: String((entry as Record<string, unknown>).question ?? ""),
-          options: Array.isArray((entry as Record<string, unknown>).options) 
+          options: Array.isArray((entry as Record<string, unknown>).options)
             ? ((entry as Record<string, unknown>).options as unknown[]).map((option) => String(option ?? ""))
             : [],
         };
@@ -104,7 +104,7 @@ const parseQuestionSet = (value: SupabaseAssessment["questions"]): AssessmentQue
     .filter((question): question is AssessmentQuestion => Boolean(question));
 };
 
-const normalizeSupabaseAssessment = (record: any): AssessmentDetails | null => {
+const normalizeSupabaseAssessment = (record: SupabaseAssessment): AssessmentDetails | null => {
   const questions = parseQuestionSet(record.questions);
 
   if (questions.length === 0) {
