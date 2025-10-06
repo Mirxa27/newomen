@@ -8,6 +8,7 @@ import { TranscriptPane } from "@/components/chat/TranscriptPane";
 import { SessionHUD } from "@/components/chat/SessionHUD";
 import { Composer } from "@/components/chat/Composer";
 import { Waveform } from "@/components/chat/Waveform";
+import "@/styles/responsive.css";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -175,27 +176,27 @@ const Chat = () => {
 
   if (!isConnected && !isConnecting) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="glass-card p-8 max-w-2xl w-full space-y-6">
+      <div className="min-h-screen flex items-center justify-center space-responsive-md">
+        <div className="card-responsive max-w-2xl w-full space-y-6">
           <Button 
             variant="ghost" 
             onClick={() => navigate('/dashboard')}
-            className="mb-4"
+            className="mb-4 btn-responsive"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
           </Button>
 
           <div className="text-center space-y-4">
-            <h1 className="text-4xl font-bold gradient-text">Talk with NewMe</h1>
-            <p className="text-lg text-muted-foreground">
+            <h1 className="heading-responsive gradient-text">Talk with NewMe</h1>
+            <p className="text-responsive-lg text-muted-foreground">
               Your empathetic AI companion for personal growth
             </p>
           </div>
 
-          <div className="clay-card p-6 space-y-3">
-            <h3 className="font-semibold">What to expect:</h3>
-            <ul className="space-y-2 text-sm text-muted-foreground">
+          <div className="card-responsive space-y-3">
+            <h3 className="font-semibold text-responsive-base">What to expect:</h3>
+            <ul className="space-y-2 text-responsive-sm text-muted-foreground">
               <li>• Real-time voice conversation</li>
               <li>• Empathetic and supportive guidance</li>
               <li>• Switch between voice and text anytime</li>
@@ -206,7 +207,7 @@ const Chat = () => {
           <Button 
             onClick={startConversation}
             disabled={isConnecting}
-            className="w-full py-8 text-xl glow-effect"
+            className="w-full py-8 text-responsive-xl glow-effect btn-responsive"
             size="lg"
           >
             {isConnecting ? "Connecting..." : "🎙️ Start Conversation"}

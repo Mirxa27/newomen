@@ -1,0 +1,436 @@
+/* Responsive Design System for Newomen.me */
+
+/* CSS Custom Properties for Responsive Design */
+:root {
+  /* Responsive Breakpoints */
+  --breakpoint-xs: 320px;   /* Extra small phones */
+  --breakpoint-sm: 480px;   /* Small phones */
+  --breakpoint-md: 768px;   /* Tablets */
+  --breakpoint-lg: 1024px;  /* Small desktops */
+  --breakpoint-xl: 1280px;  /* Large desktops */
+  --breakpoint-2xl: 1920px; /* Ultra-wide screens */
+
+  /* Touch Target Sizes */
+  --touch-target-min: 44px;  /* iOS/Android minimum */
+  --touch-target-comfort: 48px; /* Comfortable size */
+  --touch-target-large: 56px;  /* Large/accessibility */
+
+  /* Safe Area Support */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+
+  /* Fluid Typography */
+  --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+  --text-sm: clamp(0.875rem, 0.8rem + 0.375vw, 1rem);
+  --text-base: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);
+  --text-lg: clamp(1.125rem, 1rem + 0.625vw, 1.25rem);
+  --text-xl: clamp(1.25rem, 1.1rem + 0.75vw, 1.5rem);
+  --text-2xl: clamp(1.5rem, 1.3rem + 1vw, 2rem);
+  --text-3xl: clamp(1.875rem, 1.6rem + 1.375vw, 2.5rem);
+
+  /* Fluid Spacing */
+  --space-xs: clamp(0.25rem, 0.2rem + 0.25vw, 0.5rem);
+  --space-sm: clamp(0.5rem, 0.4rem + 0.5vw, 1rem);
+  --space-md: clamp(1rem, 0.8rem + 1vw, 1.5rem);
+  --space-lg: clamp(1.5rem, 1.2rem + 1.5vw, 2rem);
+  --space-xl: clamp(2rem, 1.6rem + 2vw, 3rem);
+
+  /* Container Sizes */
+  --container-xs: 100%;
+  --container-sm: 100%;
+  --container-md: 768px;
+  --container-lg: 1024px;
+  --container-xl: 1280px;
+  --container-2xl: 1920px;
+}
+
+/* Base Responsive Utilities */
+@layer utilities {
+  /* Responsive Text Sizes */
+  .text-responsive-xs { font-size: var(--text-xs); }
+  .text-responsive-sm { font-size: var(--text-sm); }
+  .text-responsive-base { font-size: var(--text-base); }
+  .text-responsive-lg { font-size: var(--text-lg); }
+  .text-responsive-xl { font-size: var(--text-xl); }
+  .text-responsive-2xl { font-size: var(--text-2xl); }
+  .text-responsive-3xl { font-size: var(--text-3xl); }
+
+  /* Responsive Spacing */
+  .space-responsive-xs { padding: var(--space-xs); }
+  .space-responsive-sm { padding: var(--space-sm); }
+  .space-responsive-md { padding: var(--space-md); }
+  .space-responsive-lg { padding: var(--space-lg); }
+  .space-responsive-xl { padding: var(--space-xl); }
+
+  /* Touch Target Utilities */
+  .touch-target-min {
+    min-width: var(--touch-target-min);
+    min-height: var(--touch-target-min);
+  }
+
+  .touch-target-comfort {
+    min-width: var(--touch-target-comfort);
+    min-height: var(--touch-target-comfort);
+  }
+
+  .touch-target-large {
+    min-width: var(--touch-target-large);
+    min-height: var(--touch-target-large);
+  }
+
+  /* Safe Area Utilities */
+  .safe-area-top { padding-top: var(--safe-area-top); }
+  .safe-area-right { padding-right: var(--safe-area-right); }
+  .safe-area-bottom { padding-bottom: var(--safe-area-bottom); }
+  .safe-area-left { padding-left: var(--safe-area-left); }
+  .safe-area-all {
+    padding-top: var(--safe-area-top);
+    padding-right: var(--safe-area-right);
+    padding-bottom: var(--safe-area-bottom);
+    padding-left: var(--safe-area-left);
+  }
+
+  /* Container Queries */
+  @container (min-width: 320px) {
+    .container-responsive {
+      width: 100%;
+      max-width: 100%;
+    }
+  }
+
+  @container (min-width: 480px) {
+    .container-responsive {
+      max-width: 480px;
+    }
+  }
+
+  @container (min-width: 768px) {
+    .container-responsive {
+      max-width: 768px;
+    }
+  }
+
+  @container (min-width: 1024px) {
+    .container-responsive {
+      max-width: 1024px;
+    }
+  }
+
+  @container (min-width: 1280px) {
+    .container-responsive {
+      max-width: 1280px;
+    }
+  }
+
+  @container (min-width: 1920px) {
+    .container-responsive {
+      max-width: 1920px;
+    }
+  }
+
+  /* Mobile-First Responsive Classes */
+  .mobile-only {
+    display: block;
+  }
+
+  .tablet-up {
+    display: none;
+  }
+
+  .desktop-up {
+    display: none;
+  }
+
+  @media (min-width: 768px) {
+    .mobile-only {
+      display: none;
+    }
+    
+    .tablet-up {
+      display: block;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .desktop-up {
+      display: block;
+    }
+  }
+
+  /* Responsive Grid System */
+  .grid-responsive {
+    display: grid;
+    gap: var(--space-sm);
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 480px) {
+    .grid-responsive {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (min-width: 768px) {
+    .grid-responsive {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .grid-responsive {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  /* Responsive Flexbox */
+  .flex-responsive {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  @media (min-width: 768px) {
+    .flex-responsive {
+      flex-direction: row;
+    }
+  }
+
+  /* Responsive Typography */
+  .heading-responsive {
+    font-size: var(--text-2xl);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  @media (min-width: 768px) {
+    .heading-responsive {
+      font-size: var(--text-3xl);
+    }
+  }
+
+  /* Responsive Images */
+  .img-responsive {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+  }
+
+  /* Responsive Buttons */
+  .btn-responsive {
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--text-sm);
+    min-height: var(--touch-target-comfort);
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
+  }
+
+  @media (min-width: 768px) {
+    .btn-responsive {
+      padding: var(--space-md) var(--space-lg);
+      font-size: var(--text-base);
+    }
+  }
+
+  /* Responsive Cards */
+  .card-responsive {
+    padding: var(--space-md);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  @media (min-width: 768px) {
+    .card-responsive {
+      padding: var(--space-lg);
+      border-radius: 1.5rem;
+    }
+  }
+
+  /* Responsive Navigation */
+  .nav-responsive {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: var(--space-sm) var(--space-xs);
+    padding-bottom: calc(var(--space-sm) + var(--safe-area-bottom));
+  }
+
+  @media (min-width: 768px) {
+    .nav-responsive {
+      display: none;
+    }
+  }
+
+  /* Responsive Footer Spacing */
+  .footer-spacing {
+    padding-bottom: calc(80px + var(--safe-area-bottom));
+  }
+
+  @media (min-width: 768px) {
+    .footer-spacing {
+      padding-bottom: 0;
+    }
+  }
+
+  /* Responsive Chat Layout */
+  .chat-responsive {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .chat-header-responsive {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: var(--space-md);
+  }
+
+  .chat-content-responsive {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-md);
+    padding-bottom: calc(120px + var(--safe-area-bottom));
+  }
+
+  .chat-footer-responsive {
+    position: sticky;
+    bottom: 0;
+    z-index: 40;
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: var(--space-md);
+    padding-bottom: calc(var(--space-md) + var(--safe-area-bottom));
+  }
+
+  @media (min-width: 768px) {
+    .chat-content-responsive {
+      padding-bottom: var(--space-md);
+    }
+    
+    .chat-footer-responsive {
+      position: relative;
+      padding-bottom: var(--space-md);
+    }
+  }
+
+  /* Responsive Form Elements */
+  .form-responsive {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .input-responsive {
+    width: 100%;
+    padding: var(--space-sm);
+    font-size: var(--text-base);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    color: inherit;
+  }
+
+  .textarea-responsive {
+    width: 100%;
+    min-height: 120px;
+    padding: var(--space-sm);
+    font-size: var(--text-base);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    color: inherit;
+    resize: vertical;
+  }
+
+  /* Responsive Animations */
+  .animate-responsive {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .hover-responsive:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Responsive Shadows */
+  .shadow-responsive {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  }
+
+  @media (min-width: 768px) {
+    .shadow-responsive {
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+  }
+
+  /* Responsive Borders */
+  .border-responsive {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  @media (min-width: 768px) {
+    .border-responsive {
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+  }
+}
+
+/* Print Styles */
+@media print {
+  .nav-responsive,
+  .footer-spacing {
+    display: none;
+  }
+  
+  .chat-responsive {
+    height: auto;
+    overflow: visible;
+  }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .card-responsive {
+    border: 2px solid currentColor;
+  }
+  
+  .btn-responsive {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-responsive {
+    transition: none;
+  }
+  
+  .hover-responsive:hover {
+    transform: none;
+  }
+}
+
+/* Dark Mode Optimizations */
+@media (prefers-color-scheme: dark) {
+  .card-responsive {
+    background: rgba(0, 0, 0, 0.8);
+  }
+  
+  .nav-responsive {
+    background: rgba(0, 0, 0, 0.95);
+  }
+}

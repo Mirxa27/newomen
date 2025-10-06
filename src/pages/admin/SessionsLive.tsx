@@ -9,43 +9,44 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Activity, Mic, MicOff, PhoneOff, Eye, MessageSquare, User, Clock } from "lucide-react";
 
-type SessionRow = {
+interface UserProfile {
+  nickname: string | null;
+  email: string;
+  avatar_url: string | null;
+  subscription_tier: string | null;
+}
+
+interface Agent {
+  name: string;
+}
+
+interface SessionRow {
   id: string;
   agent_id: string | null;
   start_ts: string;
   status: string;
-  user_profiles: {
-    nickname: string | null;
-    email: string;
-    avatar_url: string | null;
-    subscription_tier: string | null;
-  } | null;
-  agents: { name: string } | null;
-  is_muted: boolean | null;
-};
+  user_profiles: UserProfile | null;
+  agents: Agent | null;
+  is_muted: boolean;
+}
 
-type SessionResponse = {
+interface SessionResponse {
   id: string;
   agent_id: string | null;
   start_ts: string;
   status: string;
   is_muted: boolean | null;
-  user_profiles: {
-    nickname: string | null;
-    email: string;
-    avatar_url: string | null;
-    subscription_tier: string | null;
-  } | null;
-  agents: { name: string } | null;
-};
+  user_profiles: UserProfile | null;
+  agents: Agent | null;
+}
 
-type MessageRow = {
+interface MessageRow {
   id: string;
   sender: string;
   text_content: string | null;
   audio_url: string | null;
   ts: string;
-};
+}
 
 export default function SessionsLive() {
   const [sessions, setSessions] = useState<SessionRow[]>([]);
