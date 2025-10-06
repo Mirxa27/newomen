@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Sparkles, Settings, Users, BarChart, Activity, FileText, Zap, Database, Bot } from "lucide-react";
+import { Sparkles, Settings, Users, BarChart, Activity, FileText, Zap, Database, Bot, Brain } from "lucide-react";
 import AIConfiguration from "./admin/AIConfiguration";
 import SessionsLive from "./admin/SessionsLive";
 import SessionsHistory from "./admin/SessionsHistory";

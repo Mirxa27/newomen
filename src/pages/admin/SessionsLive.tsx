@@ -54,9 +54,17 @@ export default function SessionsLive() {
         )
         .eq("status", "active")
         .order("start_ts", { ascending: false });
-
       if (error) throw error;
-      setSessions((data as SessionRow[]) || []);
+      const typedData = (data || []).map((item) => ({
+        id: item.id,
+        agent_id: item.agent_id,
+        start_ts: item.start_ts,
+        status: item.status,
+        user_profiles: item.user_profiles,
+        agents: item.agents,
+        is_muted: item.is_muted ?? false,
+      }));
+      setSessions(typedData);
     } catch (error) {
       console.error("Error loading sessions:", error);
     } finally {

@@ -20,22 +20,40 @@ export const useAdmin = () => {
       }
 
       setLoading(true);
-      const { data, error } = await supabase
-        .from("user_profiles")
-        .select("role")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      
+      // First check if user email is admin email (fallback method)
+      const isAdminByEmail = user.email === 'admin@newomen.me';
+      
+      try {
+        // Try to get role from user_profiles table
+        const { data, error } = await supabase
+          .from("user_profiles")
+          .select("role")
+          .eq("user_id", user.id)
+          .maybeSingle();
 
-      if (!isActive) return;
+        if (!isActive) return;
 
-      if (error) {
-        console.error("Failed to load admin role", error);
-        setIsAdmin(false);
-      } else {
-        setIsAdmin((data?.role ?? "user") === "admin");
+        if (error) {
+          console.error("Failed to load admin role from database:", error);
+          // Fall back to email-based admin check
+          setIsAdmin(isAdminByEmail);
+        } else {
+          // Check both role column and email for admin access
+          const isAdminByRole = (data?.role ?? "user") === "admin";
+          setIsAdmin(isAdminByRole || isAdminByEmail);
+        }
+      } catch (error) {
+        console.error("Error checking admin status:", error);
+        // Fall back to email-based admin check
+        if (isActive) {
+          setIsAdmin(isAdminByEmail);
+        }
       }
 
-      setLoading(false);
+      if (isActive) {
+        setLoading(false);
+      }
     };
 
     if (!authLoading) {

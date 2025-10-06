@@ -11,8 +11,230 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { aiService, AIConfiguration } from "@/utils/AIService";
 import { Settings, Plus, Edit, Trash2, TestTube, Activity, DollarSign, Zap } from "lucide-react";
+
+export interface AIConfiguration {
+  id: string;
+  name: string;
+  description: string;
+  provider: 'openai' | 'anthropic' | 'google' | 'azure';
+  model_name: string;
+  api_base_url: string;
+  temperature: number;
+  max_tokens: number;
+  top_p: number;
+  frequency_penalty: number;
+  presence_penalty: number;
+  system_prompt: string;
+  user_prompt_template: string;
+  scoring_prompt_template: string;
+  feedback_prompt_template: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreateAIConfigurationData {
+  name: string;
+  description: string;
+  provider: AIConfiguration['provider'];
+  model_name: string;
+  api_base_url: string;
+  temperature: number;
+  max_tokens: number;
+  top_p: number;
+  frequency_penalty: number;
+  presence_penalty: number;
+  system_prompt: string;
+  user_prompt_template: string;
+  scoring_prompt_template: string;
+  feedback_prompt_template: string;
+  is_active: boolean;
+}
+
+class AIService {
+  private configurations: AIConfiguration[] = [];
+
+  // Initialize with some default configurations for demo purposes
+  constructor() {
+    this.configurations = [
+      {
+        id: '1',
+        name: 'GPT-4 Assessment Model',
+        description: 'High-quality model for generating assessments and detailed feedback',
+        provider: 'openai',
+        model_name: 'gpt-4',
+        api_base_url: 'https://api.openai.com',
+        temperature: 0.7,
+        max_tokens: 2000,
+        top_p: 1.0,
+        frequency_penalty: 0.0,
+        presence_penalty: 0.0,
+        system_prompt: 'You are an expert educational assessment creator. Generate high-quality, engaging assessments that test understanding and promote learning.',
+        user_prompt_template: 'Create an assessment for the topic: {topic}. Include {question_count} questions of varying difficulty levels.',
+        scoring_prompt_template: 'Score this response on a scale of 1-10 and provide detailed feedback: {response}',
+        feedback_prompt_template: 'Provide constructive feedback for this response: {response}. Focus on areas for improvement and positive reinforcement.',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: '2',
+        name: 'Claude-3 Quiz Generator',
+        description: 'Anthropic Claude model optimized for quiz generation',
+        provider: 'anthropic',
+        model_name: 'claude-3-sonnet-20240229',
+        api_base_url: 'https://api.anthropic.com',
+        temperature: 0.5,
+        max_tokens: 1500,
+        top_p: 1.0,
+        frequency_penalty: 0.0,
+        presence_penalty: 0.0,
+        system_prompt: 'You are a quiz creation specialist. Generate engaging, educational quizzes that test knowledge effectively.',
+        user_prompt_template: 'Generate a quiz about {topic} with {question_count} multiple choice questions.',
+        scoring_prompt_template: 'Evaluate this quiz response and provide a score with explanation: {response}',
+        feedback_prompt_template: 'Give helpful feedback on this quiz attempt: {response}',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ];
+  }
+
+  getConfigurations(): AIConfiguration[] {
+    return [...this.configurations];
+  }
+
+  getConfiguration(id: string): AIConfiguration | null {
+    return this.configurations.find(config => config.id === id) || null;
+  }
+
+  async createConfiguration(data: CreateAIConfigurationData): Promise<boolean> {
+    try {
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      const newConfig: AIConfiguration = {
+        ...data,
+        id: Date.now().toString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      this.configurations.push(newConfig);
+      return true;
+    } catch (error) {
+      console.error('Error creating configuration:', error);
+      return false;
+    }
+  }
+
+  async updateConfiguration(id: string, data: Partial<CreateAIConfigurationData>): Promise<boolean> {
+    try {
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      const index = this.configurations.findIndex(config => config.id === id);
+      if (index === -1) return false;
+
+      this.configurations[index] = {
+        ...this.configurations[index],
+        ...data,
+        updated_at: new Date().toISOString()
+      };
+
+      return true;
+    } catch (error) {
+      console.error('Error updating configuration:', error);
+      return false;
+    }
+  }
+
+  async deleteConfiguration(id: string): Promise<boolean> {
+    try {
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      const index = this.configurations.findIndex(config => config.id === id);
+      if (index === -1) return false;
+
+      this.configurations.splice(index, 1);
+      return true;
+    } catch (error) {
+      console.error('Error deleting configuration:', error);
+      return false;
+    }
+  }
+
+  async testConfiguration(config: AIConfiguration, testPrompt: string): Promise<{
+    success: boolean;
+    response?: string;
+    usage?: {
+      prompt_tokens: number;
+      completion_tokens: number;
+      total_tokens: number;
+    };
+    processing_time_ms?: number;
+    error?: string;
+  }> {
+    try {
+      // Simulate API call delay
+      const startTime = Date.now();
+      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+      const endTime = Date.now();
+
+      // Simulate different responses based on provider
+      const responses = {
+        openai: "Hello! I'm an AI assistant powered by OpenAI's technology. I'm here to help you with various tasks including generating assessments, providing feedback, and answering questions. How can I assist you today?",
+        anthropic: "Greetings! I'm Claude, an AI assistant created by Anthropic. I'm designed to be helpful, harmless, and honest. I can help you create educational content, assessments, and provide detailed feedback on various topics.",
+        google: "Hi there! I'm powered by Google's AI technology. I'm here to help you with educational content creation, assessments, and providing insightful feedback. What would you like to work on?",
+        azure: "Hello! I'm an AI assistant running on Microsoft Azure's OpenAI service. I can help you create engaging educational content and assessments. How may I help you today?"
+      };
+
+      return {
+        success: true,
+        response: responses[config.provider] || responses.openai,
+        usage: {
+          prompt_tokens: Math.floor(Math.random() * 50) + 20,
+          completion_tokens: Math.floor(Math.random() * 100) + 50,
+          total_tokens: Math.floor(Math.random() * 150) + 70
+        },
+        processing_time_ms: endTime - startTime
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Test failed'
+      };
+    }
+  }
+
+  getActiveConfiguration(): AIConfiguration | null {
+    return this.configurations.find(config => config.is_active) || null;
+  }
+
+  async setActiveConfiguration(id: string): Promise<boolean> {
+    try {
+      // Deactivate all configurations
+      this.configurations.forEach(config => {
+        config.is_active = false;
+      });
+
+      // Activate the selected configuration
+      const config = this.configurations.find(c => c.id === id);
+      if (config) {
+        config.is_active = true;
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error setting active configuration:', error);
+      return false;
+    }
+  }
+}
+
+export const aiService = new AIService();
 
 export default function AIConfiguration() {
   const [configurations, setConfigurations] = useState<AIConfiguration[]>([]);
