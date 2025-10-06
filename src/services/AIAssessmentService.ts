@@ -146,9 +146,14 @@ class AIAssessmentService {
 
   async createAIConfiguration(config: Partial<AIConfiguration>): Promise<AIConfiguration | null> {
     try {
+      // Ensure required fields are present
+      if (!config.name || !config.provider || !config.model_name) {
+        throw new Error("Missing required fields: name, provider, model_name");
+      }
+      
       const { data, error } = await supabase
         .from("ai_configurations")
-        .insert(config)
+        .insert(config as any)
         .select()
         .single();
 
@@ -770,12 +775,18 @@ Respond in JSON format with the following structure:
 
   private async logAIUsage(log: Partial<AIUsageLog>): Promise<void> {
     try {
+      // Ensure required fields are present
+      if (!log.api_provider || !log.model_name) {
+        console.warn("Missing required fields for AI usage log");
+        return;
+      }
+      
       await supabase
         .from("ai_usage_logs")
         .insert({
           ...log,
           created_at: new Date().toISOString()
-        });
+        } as any);
     } catch (error) {
       console.error("Error logging AI usage:", error);
     }
