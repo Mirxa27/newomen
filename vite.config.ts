@@ -19,6 +19,10 @@ export default defineConfig(({ mode }) => ({
     sourcemap: mode === 'development',
     rollupOptions: {
       output: {
+        // Force cache bust with timestamp
+        entryFileNames: `[name]-[hash]-${Date.now()}.js`,
+        chunkFileNames: `[name]-[hash]-${Date.now()}.js`,
+        assetFileNames: `[name]-[hash]-${Date.now()}.[ext]`,
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
             // Keep React together to avoid context issues
