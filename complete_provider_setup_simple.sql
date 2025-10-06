@@ -187,49 +187,5 @@ GRANT ALL ON public.models TO authenticated;
 GRANT ALL ON public.voices TO authenticated;
 GRANT ALL ON public.provider_api_keys TO authenticated;
 
--- 15. Create some sample providers for testing
-INSERT INTO public.providers (name, type, api_base, status) VALUES
-  ('OpenAI', 'openai', 'https://api.openai.com/v1', 'active'),
-  ('Anthropic', 'anthropic', 'https://api.anthropic.com/v1', 'active'),
-  ('Google Gemini', 'gemini', 'https://generativelanguage.googleapis.com/v1beta', 'active')
-ON CONFLICT (name) DO NOTHING;
-
--- 16. Create some sample models for testing
-INSERT INTO public.models (provider_id, model_id, display_name, modality, context_limit, enabled) 
-SELECT 
-  p.id,
-  'gpt-4',
-  'GPT-4',
-  'text',
-  128000,
-  true
-FROM public.providers p 
-WHERE p.name = 'OpenAI' AND p.type = 'openai'
-ON CONFLICT (provider_id, model_id) DO NOTHING;
-
-INSERT INTO public.models (provider_id, model_id, display_name, modality, context_limit, enabled) 
-SELECT 
-  p.id,
-  'gpt-3.5-turbo',
-  'GPT-3.5 Turbo',
-  'text',
-  16000,
-  true
-FROM public.providers p 
-WHERE p.name = 'OpenAI' AND p.type = 'openai'
-ON CONFLICT (provider_id, model_id) DO NOTHING;
-
-INSERT INTO public.models (provider_id, model_id, display_name, modality, context_limit, enabled) 
-SELECT 
-  p.id,
-  'claude-3-sonnet-20240229',
-  'Claude 3 Sonnet',
-  'text',
-  200000,
-  true
-FROM public.providers p 
-WHERE p.name = 'Anthropic' AND p.type = 'anthropic'
-ON CONFLICT (provider_id, model_id) DO NOTHING;
-
--- 17. Verify the setup
+-- 15. Verify the setup
 SELECT 'Provider setup completed successfully (simplified version)' as status;

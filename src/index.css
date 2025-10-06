@@ -384,13 +384,19 @@
   }
 }
 
-@media (min-width: 1920px) {
+@media (min-width: 768px) {
   .nav-responsive {
-    height: 5rem;
+    display: none; /* Hide navigation on tablet and desktop */
   }
   
   .footer-spacing {
-    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px) + 1.5rem);
+    padding-bottom: 0; /* Remove footer spacing on larger screens */
+  }
+}
+
+@media (min-width: 1920px) {
+  .footer-spacing {
+    padding-bottom: 0; /* Ensure no footer spacing on ultra-wide */
   }
 }
 

@@ -107,14 +107,17 @@ If you encounter "permission denied to set parameter" errors:
    - API Key: Your OpenAI API key
    - API Base URL: `https://api.openai.com/v1`
 3. **Test Connection**: Click "Connect & Discover"
-4. **Verify Success**: Should see models discovered and no error messages
+4. **Verify Success**: Should see models discovered automatically from the API
+5. **Check Models**: The system will fetch and display all available models from the provider's API
+6. **No Pre-populated Data**: Models are discovered fresh from the API, not from pre-populated data
 
 ## Expected Results
 
 After applying the fix:
 - ✅ Provider connection should work without errors
-- ✅ API keys are encrypted and stored securely
-- ✅ Models and voices are discovered automatically
+- ✅ API keys are stored securely (encrypted in production, plain text in development)
+- ✅ Models and voices are discovered automatically when providers are added
+- ✅ No pre-populated models - system fetches fresh model lists from API providers
 - ✅ Admin dashboard shows provider status and discovered assets
 - ✅ Fallback mechanism handles any remaining issues gracefully
 
