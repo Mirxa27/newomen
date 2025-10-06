@@ -15,4 +15,29 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    sourcemap: mode === 'development',
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            // Keep React together to avoid context issues
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'react-core';
+            }
+            // Separate UI libraries
+            if (id.includes('@radix-ui') || id.includes('sonner') || id.includes('@tanstack')) {
+              return 'ui-libs';
+            }
+            // Supabase and other services
+            if (id.includes('@supabase')) {
+              return 'supabase';
+            }
+            // Everything else
+            return 'vendor';
+          }
+        },
+      },
+    },
+  },
 }));

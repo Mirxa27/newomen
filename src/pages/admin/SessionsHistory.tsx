@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { Search, Eye, MessageSquare, User, Clock, DollarSign, Download, Filter, BarChart3, Calendar, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
+import { useUserRole } from "@/hooks/useUserRole";
 
 // Original session type
 type SessionHistoryRow = Tables<"sessions"> & {
@@ -42,6 +43,16 @@ type AnalyticsData = {
 };
 
 export default function SessionsHistory() {
+  const { permissions, loading: roleLoading } = useUserRole();
+
+  // Redirect if user doesn't have permission
+  useEffect(() => {
+    if (!roleLoading && !permissions?.canViewHistory) {
+      toast.error("You don't have permission to view session history");
+      window.location.href = '/admin/dashboard';
+    }
+  }, [permissions, roleLoading]);
+
   // State for legacy sessions
   const [sessions, setSessions] = useState<SessionHistoryRow[]>([]);
   // State for NewMe conversations

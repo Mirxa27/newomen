@@ -28,16 +28,45 @@ const AuthPage = () => {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              email: email,
+            }
+          }
+        });
+
         if (error) throw error;
-        toast.success('Check your email for the confirmation link!');
+
+        // Profile creation is now handled automatically by database trigger
+        toast.success('Account created! Check your email for the confirmation link.');
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         navigate('/onboarding');
       }
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'An error occurred');
+      console.error('Auth error:', error);
+
+      // Provide more specific error messages
+      let errorMessage = 'An error occurred';
+      if (error instanceof Error) {
+        if (error.message.includes('User already registered')) {
+          errorMessage = 'An account with this email already exists. Try signing in instead.';
+        } else if (error.message.includes('Password should be')) {
+          errorMessage = 'Password must be at least 6 characters long.';
+        } else if (error.message.includes('Invalid email')) {
+          errorMessage = 'Please enter a valid email address.';
+        } else if (error.message.includes('signup_disabled')) {
+          errorMessage = 'Sign up is currently disabled. Please contact support.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

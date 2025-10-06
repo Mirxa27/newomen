@@ -386,6 +386,24 @@
   @media (max-width: 768px) {
     .tablet-up\:hidden { display: none !important; }
   }
+
+  /* Mobile footer navigation */
+  .nav-responsive {
+    @apply fixed bottom-0 left-0 right-0 z-40;
+    @apply bg-background/95 backdrop-blur-xl border-t border-border/50;
+    height: 4rem;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .footer-spacing {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px) + 0.5rem);
+  }
+
+  /* Touch target for mobile nav items */
+  .touch-target-comfort {
+    @apply touch-comfort;
+  }
 }
 
 /* Media queries for enhanced responsive behavior */

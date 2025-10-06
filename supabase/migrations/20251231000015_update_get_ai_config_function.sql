@@ -3,8 +3,8 @@
 DROP FUNCTION IF EXISTS get_ai_config_for_service(TEXT, UUID);
 
 CREATE OR REPLACE FUNCTION get_ai_config_for_service(
-  p_service_type TEXT,
-  p_service_id UUID DEFAULT NULL
+  service_type_param TEXT,
+  service_id_param UUID DEFAULT NULL
 )
 RETURNS TABLE (
   config_id UUID,
@@ -25,12 +25,15 @@ RETURNS TABLE (
   provider_name TEXT,
   cost_per_1k_input_tokens DECIMAL,
   cost_per_1k_output_tokens DECIMAL
-) AS $$
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $function$
 BEGIN
   RETURN QUERY
   SELECT
-    ac.id AS config_id,
-    ac.name AS config_name,
+    ac.id,
+    ac.name,
     ac.provider,
     ac.model_name,
     ac.api_base_url,
@@ -49,8 +52,8 @@ BEGIN
     ac.cost_per_1k_output_tokens
   FROM ai_service_configs sc
   JOIN ai_configurations ac ON ac.id = sc.ai_configuration_id
-  WHERE sc.service_type = p_service_type
-    AND (p_service_id IS NULL OR sc.service_id = p_service_id)
+  WHERE sc.service_type = service_type_param
+    AND (service_id_param IS NULL OR sc.service_id = service_id_param)
     AND sc.is_active = true
     AND ac.is_active = true
   ORDER BY
@@ -58,4 +61,4 @@ BEGIN
     sc.is_fallback ASC
   LIMIT 1;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$function$;

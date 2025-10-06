@@ -2,19 +2,18 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { type RealtimeChannel } from '@supabase/supabase-js';
 import { type Tables } from '@/integrations/supabase/types';
-import { type UserProfile } from './useUserProfile';
-import { type RealtimePayload, type ResponseData, type CouplesChallenge, type ChallengeStatus } from './useCouplesChallenge';
-import { type toast } from 'sonner';
+import { useUserProfile } from './useUserProfile';
+import { toast } from 'sonner';
 
-type CouplesChallenge = Tables<'couples_challenges'>;
-type ChallengeStatus = CouplesChallenge['status'];
+export type CouplesChallenge = Tables<'couples_challenges'>;
+export type ChallengeStatus = CouplesChallenge['status'];
 
-interface RealtimePayload {
+export interface RealtimePayload {
   new: CouplesChallenge;
   old: CouplesChallenge;
 }
 
-interface ResponseData {
+export interface ResponseData {
   [questionId: string]: {
     initiator_response?: string;
     partner_response?: string;
@@ -84,6 +83,7 @@ export function useCouplesChallenge(challengeId: string | null) {
 
     // Use the correct Supabase realtime syntax
     newChannel.on(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       'postgres_changes' as any, // Temporary workaround for Supabase types
       {
         event: 'UPDATE',
@@ -115,12 +115,12 @@ export function useCouplesChallenge(challengeId: string | null) {
     if (!challenge || !profile) return;
 
     const isInitiator = challenge.initiator_id === profile.id;
-    const currentResponses = challenge.responses as Record<string, any> || {};
+    const currentResponses = (challenge.responses as Record<string, ResponseData[string]>) || {};
 
     const newResponses = {
       ...currentResponses,
       [questionId]: {
-        ...currentResponses[questionId],
+        ...(currentResponses[questionId] as ResponseData[string]),
         [isInitiator ? 'initiator_response' : 'partner_response']: response,
       }
     };

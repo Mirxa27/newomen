@@ -99,7 +99,7 @@ CREATE POLICY "Only admins can manage chat rooms" ON community_chat_rooms
     FOR ALL USING (
         EXISTS (
             SELECT 1 FROM user_profiles
-            WHERE user_id = auth.uid()
+            WHERE id = auth.uid()
             AND email = 'admin@newomen.me'
         )
     );
@@ -111,19 +111,11 @@ CREATE POLICY "Chat messages are viewable by authenticated users" ON community_c
 
 DROP POLICY IF EXISTS "Users can insert their own messages" ON community_chat_messages;
 CREATE POLICY "Users can insert their own messages" ON community_chat_messages
-    FOR INSERT WITH CHECK (
-        auth.uid() IN (
-            SELECT user_id FROM user_profiles WHERE id = user_id
-        )
-    );
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can edit their own messages" ON community_chat_messages;
 CREATE POLICY "Users can edit their own messages" ON community_chat_messages
-    FOR UPDATE USING (
-        auth.uid() IN (
-            SELECT user_id FROM user_profiles WHERE id = user_id
-        )
-    );
+    FOR UPDATE USING (auth.uid() = user_id);
 
 -- RLS Policies for announcements
 DROP POLICY IF EXISTS "Announcements are viewable by authenticated users" ON community_announcements;
@@ -135,7 +127,7 @@ CREATE POLICY "Only admins can manage announcements" ON community_announcements
     FOR ALL USING (
         EXISTS (
             SELECT 1 FROM user_profiles
-            WHERE user_id = auth.uid()
+            WHERE id = auth.uid()
             AND email = 'admin@newomen.me'
         )
     );
@@ -143,11 +135,7 @@ CREATE POLICY "Only admins can manage announcements" ON community_announcements
 -- RLS Policies for announcement reads
 DROP POLICY IF EXISTS "Users can manage their own read status" ON community_announcement_reads;
 CREATE POLICY "Users can manage their own read status" ON community_announcement_reads
-    FOR ALL USING (
-        auth.uid() IN (
-            SELECT user_id FROM user_profiles WHERE id = user_id
-        )
-    );
+    FOR ALL USING (auth.uid() = user_id);
 
 -- RLS Policies for session mutes
 DROP POLICY IF EXISTS "Only admins can manage session mutes" ON session_mutes;
@@ -155,7 +143,7 @@ CREATE POLICY "Only admins can manage session mutes" ON session_mutes
     FOR ALL USING (
         EXISTS (
             SELECT 1 FROM user_profiles
-            WHERE user_id = auth.uid()
+            WHERE id = auth.uid()
             AND email = 'admin@newomen.me'
         )
     );
@@ -163,15 +151,18 @@ CREATE POLICY "Only admins can manage session mutes" ON session_mutes
 -- Function to get unread announcements count
 DROP FUNCTION IF EXISTS get_unread_announcements_count();
 CREATE OR REPLACE FUNCTION get_unread_announcements_count()
-RETURNS INTEGER AS $$
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $function$
 DECLARE
-    user_id UUID;
+    current_user_id UUID;
     unread_count INTEGER;
 BEGIN
     -- Get current user ID
-    user_id := (SELECT id FROM user_profiles WHERE user_id = auth.uid());
+    current_user_id := (SELECT id FROM user_profiles WHERE id = auth.uid());
 
-    IF user_id IS NULL THEN
+    IF current_user_id IS NULL THEN
         RETURN 0;
     END IF;
 
@@ -181,30 +172,33 @@ BEGIN
     WHERE a.is_active = true
     AND NOT EXISTS (
         SELECT 1 FROM community_announcement_reads r
-        WHERE r.announcement_id = a.id AND r.user_id = user_id
+        WHERE r.announcement_id = a.id AND r.user_id = current_user_id
     );
 
     RETURN unread_count;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$function$;
 
 -- Function to mark announcement as read
 DROP FUNCTION IF EXISTS mark_announcement_read(UUID);
 CREATE OR REPLACE FUNCTION mark_announcement_read(p_announcement_id UUID)
-RETURNS VOID AS $$
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $function$
 DECLARE
-    user_id UUID;
+    current_user_id UUID;
 BEGIN
     -- Get current user ID
-    user_id := (SELECT id FROM user_profiles WHERE user_id = auth.uid());
+    current_user_id := (SELECT id FROM user_profiles WHERE id = auth.uid());
 
-    IF user_id IS NULL THEN
+    IF current_user_id IS NULL THEN
         RAISE EXCEPTION 'User not authenticated';
     END IF;
 
     -- Insert or update read status
     INSERT INTO community_announcement_reads (announcement_id, user_id)
-    VALUES (p_announcement_id, user_id)
+    VALUES (p_announcement_id, current_user_id)
     ON CONFLICT (announcement_id, user_id) DO NOTHING;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$function$;

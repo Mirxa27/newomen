@@ -1,6 +1,11 @@
 -- AI-Powered Assessments, Quizzes, and Challenges Migration
 -- Creates tables and functions for comprehensive AI-driven evaluation system
 
+BEGIN;
+
+-- Drop any existing index to avoid conflicts
+DROP INDEX IF EXISTS idx_assessments_type;
+
 -- AI Configuration Table
 CREATE TABLE IF NOT EXISTS ai_configurations (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
