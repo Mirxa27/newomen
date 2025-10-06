@@ -19,41 +19,46 @@ import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 export interface AIConfiguration {
   id: string;
   name: string;
-  description: string;
-  provider: 'openai' | 'anthropic' | 'google' | 'azure';
+  description?: string;
+  provider: 'openai' | 'anthropic' | 'google' | 'azure' | 'custom';
+  provider_name?: string;
   model_name: string;
-  api_base_url: string;
+  api_base_url?: string;
+  api_version?: string;
   temperature: number;
   max_tokens: number;
   top_p: number;
   frequency_penalty: number;
   presence_penalty: number;
-  system_prompt: string;
-  user_prompt_template: string;
-  scoring_prompt_template: string;
-  feedback_prompt_template: string;
+  system_prompt?: string;
+  user_prompt_template?: string;
   is_active: boolean;
+  is_default?: boolean;
+  cost_per_1k_prompt_tokens?: number;
+  cost_per_1k_completion_tokens?: number;
+  test_status?: string;
   created_at?: string;
   updated_at?: string;
 }
 
 export interface CreateAIConfigurationData {
   name: string;
-  description: string;
+  description?: string;
   provider: AIConfiguration['provider'];
+  provider_name?: string;
   model_name: string;
-  api_base_url: string;
+  api_base_url?: string;
+  api_version?: string;
   temperature: number;
   max_tokens: number;
   top_p: number;
   frequency_penalty: number;
   presence_penalty: number;
-  system_prompt: string;
-  user_prompt_template: string;
-  scoring_prompt_template: string;
-  feedback_prompt_template: string;
+  system_prompt?: string;
+  user_prompt_template?: string;
   is_active: boolean;
 }
+
 
 export default function AIConfigurationPage() {
   const [configurations, setConfigurations] = useState<AIConfiguration[]>([]);
@@ -64,7 +69,7 @@ export default function AIConfigurationPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [configToDelete, setConfigToDelete] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CreateAIConfigurationData>({
     name: "",
     description: "",
     provider: "openai" as AIConfiguration["provider"],
@@ -77,8 +82,6 @@ export default function AIConfigurationPage() {
     presence_penalty: 0.0,
     system_prompt: "",
     user_prompt_template: "",
-    scoring_prompt_template: "",
-    feedback_prompt_template: "",
     is_active: true
   });
 
@@ -93,7 +96,7 @@ export default function AIConfigurationPage() {
         .select("*")
         .order("name");
       if (error) throw error;
-      setConfigurations(data || []);
+      setConfigurations((data || []) as AIConfiguration[]);
     } catch (error) {
       console.error("Error loading configurations:", error);
       toast.error("Failed to load AI configurations");
@@ -116,8 +119,6 @@ export default function AIConfigurationPage() {
       presence_penalty: 0.0,
       system_prompt: "",
       user_prompt_template: "",
-      scoring_prompt_template: "",
-      feedback_prompt_template: "",
       is_active: true
     });
   };
@@ -169,7 +170,23 @@ export default function AIConfigurationPage() {
 
   const handleEdit = (config: AIConfiguration) => {
     setEditingConfig(config);
-    setFormData(config);
+    setFormData({
+      name: config.name,
+      description: config.description || "",
+      provider: config.provider,
+      provider_name: config.provider_name,
+      model_name: config.model_name,
+      api_base_url: config.api_base_url || "",
+      api_version: config.api_version,
+      temperature: config.temperature,
+      max_tokens: config.max_tokens,
+      top_p: config.top_p,
+      frequency_penalty: config.frequency_penalty,
+      presence_penalty: config.presence_penalty,
+      system_prompt: config.system_prompt || "",
+      user_prompt_template: config.user_prompt_template || "",
+      is_active: config.is_active
+    });
   };
 
   const testConfiguration = async (config: AIConfiguration) => {
