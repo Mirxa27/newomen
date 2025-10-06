@@ -35,8 +35,8 @@ interface AssessmentQuestion {
   weight?: number;
 }
 
-// Extend Tables<'assessments'> to include the 'questions' and 'scoring_rubric' JSON types
-interface Assessment extends Omit<Tables<'assessments'>, 'questions' | 'scoring_rubric'> {
+// Extend Tables<'assessments_enhanced'> to include the 'questions' and 'scoring_rubric' JSON types
+interface Assessment extends Omit<Tables<'assessments_enhanced'>, 'questions' | 'scoring_rubric'> {
   questions: AssessmentQuestion[];
   scoring_rubric: Record<string, unknown>;
 }
@@ -77,14 +77,17 @@ export default function Assessment() {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from("assessments") // Changed from assessments_enhanced to assessments
+        .from("assessments_enhanced")
         .select("*")
         .eq("id", id)
         .eq("is_active", true)
         .single();
 
       if (error) throw error;
-      setAssessment(data as Assessment); // Cast to Assessment
+
+      // Cast with proper type handling
+      const assessmentData = data as unknown as Assessment;
+      setAssessment(assessmentData);
     } catch (error: unknown) {
       console.error("Error loading assessment:", error);
       setError("Assessment not found or no longer available");
@@ -111,7 +114,7 @@ export default function Assessment() {
 
       if (error) throw error;
       setAttempt(data as AssessmentAttempt); // Cast to AssessmentAttempt
-      setTimeRemaining(assessment.time_limit_minutes * 60);
+      setTimeRemaining((assessment.time_limit_minutes || 30) * 60);
     } catch (error: unknown) {
       console.error("Error starting attempt:", error);
       setError("Failed to start assessment. Please try again.");

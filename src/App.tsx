@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
@@ -22,6 +22,7 @@ const WellnessLibrary = lazy(() => import("./pages/WellnessLibrary"));
 const Community = lazy(() => import("./pages/Community"));
 const AccountSettings = lazy(() => import("./pages/AccountSettings"));
 const AboutUs = lazy(() => import("./pages/AboutUs"));
+const Pricing = lazy(() => import("./pages/Pricing"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const NarrativeIdentityExploration = lazy(() => import("./pages/NarrativeIdentityExploration"));
@@ -62,8 +63,12 @@ const App = () => (
           <Route path="/" element={<MainLayout><Landing /></MainLayout>} />
           <Route path="/auth" element={<MainLayout><Auth /></MainLayout>} />
           <Route path="/about" element={<MainLayout><AboutUs /></MainLayout>} />
+          <Route path="/about-us" element={<Navigate to="/about" replace />} />
+          <Route path="/pricing" element={<MainLayout><Pricing /></MainLayout>} />
           <Route path="/privacy" element={<MainLayout><PrivacyPolicy /></MainLayout>} />
+          <Route path="/privacy-policy" element={<MainLayout><PrivacyPolicy /></MainLayout>} />
           <Route path="/terms" element={<MainLayout><TermsOfService /></MainLayout>} />
+          <Route path="/terms-of-service" element={<MainLayout><TermsOfService /></MainLayout>} />
           <Route path="/assessments" element={<MainLayout><Assessments /></MainLayout>} />
           <Route path="/assessments/:assessmentId" element={<MainLayout><Assessments /></MainLayout>} />
           <Route path="/onboarding" element={

@@ -38,6 +38,17 @@ interface TestAssessment {
   ai_config_id?: string;
 }
 
+interface AIResults {
+  score: number;
+  feedback: string;
+  explanation: string;
+  insights: string[];
+  recommendations: string[];
+  strengths: string[];
+  areas_for_improvement: string[];
+  [key: string]: unknown;
+}
+
 export default function AssessmentTest() {
   const [assessment, setAssessment] = useState<TestAssessment | null>(null);
   const [attempt, setAttempt] = useState<Record<string, unknown> | null>(null);
@@ -46,7 +57,7 @@ export default function AssessmentTest() {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [aiProcessing, setAiProcessing] = useState(false);
-  const [aiResults, setAiResults] = useState<Record<string, unknown> | null>(null);
+  const [aiResults, setAiResults] = useState<AIResults | null>(null);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const { toast } = useToast();
 
@@ -152,7 +163,7 @@ export default function AssessmentTest() {
 
       // Simulate AI analysis
       setTimeout(() => {
-        const mockAIResult = {
+        const mockAIResult: AIResults = {
           score: Math.floor(Math.random() * 40) + 60, // 60-100
           feedback: "Based on your responses, you demonstrate strong emotional intelligence and effective communication skills. Your approach to problem-solving shows both analytical thinking and empathy.",
           explanation: "Your answers indicate a balanced personality with strengths in interpersonal relationships and stress management. You show good self-awareness and adaptability.",
@@ -392,7 +403,7 @@ export default function AssessmentTest() {
           <CardContent>
             {currentQuestionData?.type === 'multiple_choice' && (
               <RadioGroup
-                value={responses[currentQuestionData.id] || ''}
+                value={String(responses[currentQuestionData.id] || '')}
                 onValueChange={(value) => handleResponseChange(currentQuestionData.id, value)}
               >
                 {currentQuestionData.options?.map((option, index) => (
@@ -406,7 +417,7 @@ export default function AssessmentTest() {
 
             {currentQuestionData?.type === 'text' && (
               <Textarea
-                value={responses[currentQuestionData.id] || ''}
+                value={String(responses[currentQuestionData.id] || '')}
                 onChange={(e) => handleResponseChange(currentQuestionData.id, e.target.value)}
                 placeholder="Enter your response..."
                 rows={4}
@@ -417,7 +428,7 @@ export default function AssessmentTest() {
               <div className="space-y-2">
                 <Label>Rate from 1 to 5:</Label>
                 <RadioGroup
-                  value={responses[currentQuestionData.id] || ''}
+                  value={String(responses[currentQuestionData.id] || '')}
                   onValueChange={(value) => handleResponseChange(currentQuestionData.id, value)}
                 >
                   {[1, 2, 3, 4, 5].map((rating) => (
@@ -432,7 +443,7 @@ export default function AssessmentTest() {
 
             {currentQuestionData?.type === 'boolean' && (
               <RadioGroup
-                value={responses[currentQuestionData.id] || ''}
+                value={String(responses[currentQuestionData.id] || '')}
                 onValueChange={(value) => handleResponseChange(currentQuestionData.id, value)}
               >
                 <div className="flex items-center space-x-2">

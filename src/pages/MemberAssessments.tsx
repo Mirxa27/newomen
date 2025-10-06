@@ -23,7 +23,7 @@ import { memberAssessments } from "@/data/memberAssessments";
 import { aiAssessmentService, type AIProcessingResult } from "@/services/AIAssessmentService";
 import type { Json, Tables } from "@/integrations/supabase/types";
 
-type SupabaseAssessment = Tables<"assessments">;
+type SupabaseAssessment = Tables<"assessments_enhanced">;
 
 type AssessmentQuestion = {
   question: string;
@@ -156,7 +156,7 @@ export default function MemberAssessments() {
       try {
         setLoading(true);
         const { data, error } = await supabase
-          .from("assessments")
+          .from("assessments_enhanced")
           .select("id, title, description, category, difficulty_level, questions")
           .eq("is_active", true)
           .order("created_at", { ascending: false });
@@ -167,7 +167,7 @@ export default function MemberAssessments() {
 
         if (data && data.length > 0) {
           const parsed = data
-            .map((record) => normalizeSupabaseAssessment(record))
+            .map((record) => normalizeSupabaseAssessment(record as SupabaseAssessment))
             .filter((assessment): assessment is AssessmentDetails => Boolean(assessment));
 
           if (parsed.length > 0) {

@@ -119,7 +119,7 @@ export default function AIAssessments() {
       // Load quizzes
       let quizzesData;
       try {
-        const { data } = await supabase
+        const { data } = await (supabase as any)
           .from("quizzes")
           .select("*")
           .eq("is_public", true)
@@ -157,7 +157,7 @@ export default function AIAssessments() {
       // Load challenges
       let challengesData;
       try {
-        const { data } = await supabase
+        const { data } = await (supabase as any)
           .from("challenges")
           .select("*")
           .eq("is_public", true)
@@ -199,7 +199,7 @@ export default function AIAssessments() {
       // Load user stats
       let statsData;
       try {
-        const { data } = await supabase
+        const { data } = await (supabase as any)
           .from("user_assessment_stats")
           .select("*")
           .eq("user_id", user.id)

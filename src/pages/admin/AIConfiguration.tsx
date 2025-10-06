@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import ResponsiveTable from "@/components/ui/ResponsiveTable";
 import { toast } from "sonner";
 import { Settings, Plus, Edit, Trash2, TestTube, Activity, DollarSign, Zap, Save, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -236,7 +237,7 @@ export default function AIConfigurationPage() {
           </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto glass-card">
             <DialogHeader>
-              <DialogTitle>Create AI Configuration</DialogTitle>
+              <DialogTitle className="gradient-text">Create AI Configuration</DialogTitle>
               <DialogDescription>
                 Configure a new AI model for assessments, quizzes, and challenges
               </DialogDescription>
@@ -379,7 +380,7 @@ export default function AIConfigurationPage() {
         <TabsContent value="configurations" className="space-y-4">
           <Card className="glass-card">
             <CardHeader>
-              <CardTitle>AI Model Configurations</CardTitle>
+              <CardTitle className="gradient-text">AI Model Configurations</CardTitle>
               <CardDescription>
                 Manage AI models and their settings for different types of content
               </CardDescription>
@@ -392,16 +393,17 @@ export default function AIConfigurationPage() {
                   <p>Create your first AI configuration to get started</p>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Provider</TableHead>
-                      <TableHead>Model</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
+                <ResponsiveTable>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Provider</TableHead>
+                        <TableHead>Model</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
                   <TableBody>
                     {configurations.map((config) => (
                       <TableRow key={config.id}>
@@ -457,6 +459,7 @@ export default function AIConfigurationPage() {
                     ))}
                   </TableBody>
                 </Table>
+                </ResponsiveTable>
               )}
             </CardContent>
           </Card>
@@ -465,7 +468,7 @@ export default function AIConfigurationPage() {
         <TabsContent value="monitoring" className="space-y-4">
           <Card className="glass-card">
             <CardHeader>
-              <CardTitle>AI Usage Monitoring</CardTitle>
+              <CardTitle className="gradient-text">AI Usage Monitoring</CardTitle>
               <CardDescription>
                 Monitor AI API usage, performance, and error rates
               </CardDescription>
@@ -483,7 +486,7 @@ export default function AIConfigurationPage() {
         <TabsContent value="costs" className="space-y-4">
           <Card className="glass-card">
             <CardHeader>
-              <CardTitle>Cost Analysis</CardTitle>
+              <CardTitle className="gradient-text">Cost Analysis</CardTitle>
               <CardDescription>
                 Track AI API costs and usage patterns
               </CardDescription>
@@ -503,7 +506,7 @@ export default function AIConfigurationPage() {
       <Dialog open={!!editingConfig} onOpenChange={() => setEditingConfig(null)}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto glass-card">
           <DialogHeader>
-            <DialogTitle>Edit AI Configuration</DialogTitle>
+            <DialogTitle className="gradient-text">Edit AI Configuration</DialogTitle>
             <DialogDescription>
               Modify the AI model configuration settings
             </DialogDescription>
@@ -616,7 +619,7 @@ export default function AIConfigurationPage() {
       {testResults && (
         <Card className="glass-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 gradient-text">
               <TestTube className="w-5 h-5" />
               Test Results
             </CardTitle>

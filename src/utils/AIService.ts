@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { NEWME_SYSTEM_PROMPT, NEWME_GREETING_TEMPLATES } from "@/config/newme-system-prompt";
+import { newMeMemoryService } from "@/services/NewMeMemoryService";
 import type {
   AssessmentAnswers,
   QuizAnswers,
@@ -14,18 +15,22 @@ import type {
 export interface AIConfiguration {
   id: string;
   name: string;
-  provider: 'openai' | 'anthropic' | 'google' | 'azure';
-  model_name: string;
+  provider: 'openai' | 'anthropic' | 'google' | 'azure' | 'custom';
+  provider_name?: string;
+  model: string;  // Note: using 'model' to match other parts of code
+  apiKey: string;
   api_base_url?: string;
+  api_version?: string;
   temperature: number;
-  max_tokens: number;
-  top_p: number;
-  frequency_penalty: number;
-  presence_penalty: number;
-  system_prompt?: string;
-  user_prompt_template?: string;
-  scoring_prompt_template?: string;
-  feedback_prompt_template?: string;
+  maxTokens: number;
+  topP?: number;
+  frequencyPenalty?: number;
+  presencePenalty?: number;
+  systemPrompt?: string;
+  isDefault?: boolean;
+  custom_headers?: Record<string, string>;
+  cost_per_1k_input_tokens?: number;
+  cost_per_1k_output_tokens?: number;
 }
 
 export interface AIResponse {
@@ -71,64 +76,79 @@ export class AIService {
 
   private async loadConfigurations() {
     try {
-      // Try to load from database, fallback to default configurations
-      try {
-        const { data, error } = await supabase
-          .from('ai_configurations')
-          .select('*')
-          .eq('is_active', true);
+      const { data, error } = await supabase
+        .from('ai_configurations')
+        .select('*')
+        .eq('is_active', true);
 
-        if (error) throw error;
+      if (error) throw error;
 
-        this.configurations.clear();
-        data?.forEach(config => {
-          this.configurations.set(config.id, config as AIConfiguration);
+      this.configurations.clear();
+      data?.forEach(config => {
+        this.configurations.set(config.id, {
+          id: config.id,
+          name: config.name,
+          provider: config.provider as 'openai' | 'anthropic' | 'google' | 'azure' | 'custom',
+          provider_name: config.provider_name || undefined,
+          model: config.model_name,
+          apiKey: config.api_key_encrypted || '', // Note: This should be decrypted in production
+          api_base_url: config.api_base_url || undefined,
+          api_version: config.api_version || undefined,
+          temperature: Number(config.temperature),
+          maxTokens: config.max_tokens,
+          topP: config.top_p ? Number(config.top_p) : undefined,
+          frequencyPenalty: config.frequency_penalty ? Number(config.frequency_penalty) : undefined,
+          presencePenalty: config.presence_penalty ? Number(config.presence_penalty) : undefined,
+          systemPrompt: config.system_prompt || undefined,
+          isDefault: config.is_default || false,
+          custom_headers: (config.custom_headers as Record<string, string>) || undefined,
+          cost_per_1k_input_tokens: config.cost_per_1k_prompt_tokens ? Number(config.cost_per_1k_prompt_tokens) : undefined,
+          cost_per_1k_output_tokens: config.cost_per_1k_completion_tokens ? Number(config.cost_per_1k_completion_tokens) : undefined,
         });
-      } catch (dbError) {
-        console.warn('AI configurations table not available yet, using default configurations');
-        // Set up default configurations
-        this.configurations.set('default-assessment', {
-          id: 'default-assessment',
-          name: 'OpenAI GPT-4 Assessment',
-          provider: 'openai',
-          model_name: 'gpt-4',
-          temperature: 0.7,
-          max_tokens: 1500,
-          top_p: 1.0,
-          frequency_penalty: 0.0,
-          presence_penalty: 0.0,
-          system_prompt: 'You are an expert psychologist and assessment evaluator. Provide detailed, constructive feedback.'
-        });
+      });
 
-        // NewMe Voice Agent Configuration
+      // Also load the NewMe configuration with the system prompt
+      const newMeConfig = data?.find(c => c.name === 'NewMe Voice Agent');
+      if (newMeConfig) {
+        const baseConfig = this.configurations.get(newMeConfig.id);
+        if (baseConfig) {
+          this.configurations.set('newme-voice-agent', {
+            ...baseConfig,
+            systemPrompt: NEWME_SYSTEM_PROMPT,
+          });
+        }
+      } else {
+        // Fallback NewMe configuration
         this.configurations.set('newme-voice-agent', {
           id: 'newme-voice-agent',
           name: 'NewMe Voice Agent',
           provider: 'openai',
-          model_name: 'gpt-4-turbo-preview',
+          model: 'gpt-4-turbo-preview',
+          apiKey: import.meta.env.VITE_OPENAI_API_KEY || '',
           temperature: 0.8,
-          max_tokens: 2000,
-          top_p: 0.95,
-          frequency_penalty: 0.3,
-          presence_penalty: 0.6,
-          system_prompt: NEWME_SYSTEM_PROMPT
-        });
-
-        this.configurations.set('default-quiz', {
-          id: 'default-quiz',
-          name: 'OpenAI GPT-3.5 Quiz Grading',
-          provider: 'openai',
-          model_name: 'gpt-3.5-turbo',
-          temperature: 0.3,
-          max_tokens: 1000,
-          top_p: 1.0,
-          frequency_penalty: 0.0,
-          presence_penalty: 0.0,
-          system_prompt: 'You are a precise quiz grader. Provide accurate scoring and clear explanations.'
+          maxTokens: 2000,
+          topP: 1.0,
+          frequencyPenalty: 0.0,
+          presencePenalty: 0.6,
+          systemPrompt: NEWME_SYSTEM_PROMPT,
         });
       }
-    } catch (error) {
-      console.error('Error loading AI configurations:', error);
+    } catch (dbError) {
+      console.warn('Could not load AI configurations from database:', dbError);
+      // Set up fallback NewMe configuration
+      this.configurations.set('newme-voice-agent', {
+        id: 'newme-voice-agent',
+        name: 'NewMe Voice Agent',
+        provider: 'openai',
+        model: 'gpt-4-turbo-preview',
+        apiKey: import.meta.env.VITE_OPENAI_API_KEY || '',
+        temperature: 0.8,
+        maxTokens: 2000,
+        topP: 1.0,
+        frequencyPenalty: 0.0,
+        presencePenalty: 0.6,
+        systemPrompt: NEWME_SYSTEM_PROMPT,
+      });
     }
   }
 
@@ -319,6 +339,9 @@ export class AIService {
           return await this.callOpenAI(config, prompt, startTime);
         case 'anthropic':
           return await this.callAnthropic(config, prompt, startTime);
+        case 'custom':
+        case 'azure':
+          return await this.callCustomProvider(config, prompt, startTime);
         default:
           throw new Error(`Unsupported AI provider: ${config.provider}`);
       }
@@ -343,16 +366,16 @@ export class AIService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: config.model_name,
+          model: config.model,
           messages: [
-            { role: 'system', content: config.system_prompt || 'You are a helpful assistant.' },
+            { role: 'system', content: config.systemPrompt || 'You are a helpful assistant.' },
             { role: 'user', content: prompt }
           ],
           temperature: config.temperature,
-          max_tokens: config.max_tokens,
-          top_p: config.top_p,
-          frequency_penalty: config.frequency_penalty,
-          presence_penalty: config.presence_penalty,
+          max_tokens: config.maxTokens,
+          top_p: config.topP,
+          frequency_penalty: config.frequencyPenalty,
+          presence_penalty: config.presencePenalty,
         }),
       });
 
@@ -364,7 +387,7 @@ export class AIService {
       const data = await response.json();
 
       // Calculate cost (approximate)
-      const costPerToken = this.getOpenAICost(config.model_name);
+      const costPerToken = this.getOpenAICost(config.model);
       const promptCost = (data.usage?.prompt_tokens || 0) * costPerToken.prompt;
       const completionCost = (data.usage?.completion_tokens || 0) * costPerToken.completion;
       const totalCost = promptCost + completionCost;
@@ -387,12 +410,12 @@ export class AIService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: config.model_name,
-          system: config.system_prompt,
+          model: config.model,
+          system: config.systemPrompt,
           messages: [{ role: 'user', content: prompt }],
-          max_tokens: config.max_tokens,
+          max_tokens: config.maxTokens,
           temperature: config.temperature,
-          top_p: config.top_p,
+          top_p: config.topP,
         }),
       });
 
@@ -404,7 +427,7 @@ export class AIService {
       const data = await response.json();
 
       // Calculate cost (approximate)
-      const costPerToken = this.getAnthropicCost(config.model_name);
+      const costPerToken = this.getAnthropicCost(config.model);
       const inputCost = (data.usage?.input_tokens || 0) * costPerToken.input;
       const outputCost = (data.usage?.output_tokens || 0) * costPerToken.output;
       const totalCost = inputCost + outputCost;
@@ -422,6 +445,89 @@ export class AIService {
       };
   }
 
+  /**
+   * Call custom OpenAI-compatible provider (Azure OpenAI, Groq, Together AI, etc.)
+   * Supports custom base URLs, API versions, and headers
+   */
+  private async callCustomProvider(config: AIConfiguration, prompt: string, startTime: number): Promise<AIResponse> {
+    if (!config.api_base_url) {
+      throw new Error('Custom provider requires api_base_url to be configured');
+    }
+
+    // Build headers - merge custom headers with authentication
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(config.custom_headers || {})
+    };
+
+    // Add API key - support different auth header formats
+    if (config.apiKey) {
+      // Azure uses different auth, others typically use Bearer token
+      if (config.provider === 'azure') {
+        headers['api-key'] = config.apiKey;
+      } else {
+        headers['Authorization'] = `Bearer ${config.apiKey}`;
+      }
+    }
+
+    // Build URL - handle Azure's special URL structure with API version
+    let url = config.api_base_url;
+    if (config.provider === 'azure' && config.api_version) {
+      // Azure URL format: {base_url}/openai/deployments/{model}/chat/completions?api-version={version}
+      url = `${config.api_base_url}/openai/deployments/${config.model}/chat/completions?api-version=${config.api_version}`;
+    } else if (!url.includes('/chat/completions')) {
+      // Standard OpenAI-compatible endpoint
+      url = `${url}/v1/chat/completions`;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: config.model,
+        messages: [
+          { role: 'system', content: config.systemPrompt || 'You are a helpful assistant.' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: config.temperature,
+        max_tokens: config.maxTokens,
+        ...(config.topP && { top_p: config.topP }),
+        ...(config.frequencyPenalty && { frequency_penalty: config.frequencyPenalty }),
+        ...(config.presencePenalty && { presence_penalty: config.presencePenalty }),
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage = response.statusText;
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.error?.message || errorData.message || errorText;
+      } catch {
+        errorMessage = errorText;
+      }
+      throw new Error(`Custom provider API error: ${errorMessage}`);
+    }
+
+    const data = await response.json();
+
+    // Calculate cost if available from config
+    let totalCost = 0;
+    if (config.cost_per_1k_input_tokens && config.cost_per_1k_output_tokens && data.usage) {
+      const promptCost = (data.usage.prompt_tokens || 0) * (config.cost_per_1k_input_tokens / 1000);
+      const completionCost = (data.usage.completion_tokens || 0) * (config.cost_per_1k_output_tokens / 1000);
+      totalCost = promptCost + completionCost;
+    }
+
+    return {
+      success: true,
+      content: data.choices[0]?.message?.content || '',
+      usage: data.usage,
+      cost_usd: totalCost,
+      processing_time_ms: Date.now() - startTime
+    };
+  }
+
   private async buildAssessmentPrompt(submission: AssessmentSubmission, config: AIConfiguration): Promise<string> {
     // Get assessment details
     const { data: assessment } = await supabase
@@ -432,11 +538,11 @@ export class AIService {
 
     if (!assessment) throw new Error('Assessment not found');
 
-    const template = config.user_prompt_template || `
+    return `
       Please analyze the following assessment responses and provide detailed feedback:
 
       Assessment: ${assessment.title}
-      Type: ${assessment.assessment_type}
+      Type: ${assessment.type}
 
       Responses:
       ${JSON.stringify(submission.answers, null, 2)}
@@ -451,24 +557,15 @@ export class AIService {
 
       Format your response as JSON.
     `;
-
-    return template;
   }
 
   private async buildQuizPrompt(submission: QuizSubmission, config: AIConfiguration): Promise<string> {
-    const { data: quiz } = await supabase
-      .from('quizzes')
-      .select('*')
-      .eq('id', submission.quiz_id)
-      .single();
-
-    if (!quiz) throw new Error('Quiz not found');
-
-    const template = config.user_prompt_template || `
+    // Note: Quizzes table not yet implemented in database
+    // Using basic prompt template for now
+    return `
       Please grade the following quiz submission:
 
-      Quiz: ${quiz.title}
-      Category: ${quiz.category}
+      Quiz ID: ${submission.quiz_id}
 
       Answers:
       ${JSON.stringify(submission.answers, null, 2)}
@@ -482,24 +579,15 @@ export class AIService {
 
       Format your response as JSON.
     `;
-
-    return template;
   }
 
   private async buildChallengePrompt(submission: ChallengeSubmission, config: AIConfiguration): Promise<string> {
-    const { data: challenge } = await supabase
-      .from('challenges')
-      .select('*')
-      .eq('id', submission.challenge_id)
-      .single();
-
-    if (!challenge) throw new Error('Challenge not found');
-
-    const template = config.user_prompt_template || `
+    // Note: Challenges table not yet implemented in database
+    // Using basic prompt template for now
+    return `
       Please provide feedback for the following challenge progress:
 
-      Challenge: ${challenge.title}
-      Type: ${challenge.challenge_type}
+      Challenge ID: ${submission.challenge_id}
 
       Progress Data:
       ${JSON.stringify(submission.progress_data, null, 2)}
@@ -513,8 +601,6 @@ export class AIService {
 
       Format your response as JSON.
     `;
-
-    return template;
   }
 
   private parseAssessmentResponse(content: string): AssessmentResponseData {
@@ -545,73 +631,83 @@ export class AIService {
   }
 
   private async getBestConfigurationForAssessment(assessmentId: string): Promise<AIConfiguration | null> {
-    try {
-      // Try to get configuration from database, fallback to default
-      try {
-        const { data } = await supabase
-          .from('assessments')
-          .select('ai_configuration_id')
-          .eq('id', assessmentId)
-          .single();
-
-        if (data?.ai_configuration_id) {
-          return this.configurations.get(data.ai_configuration_id) || null;
-        }
-      } catch (dbError) {
-        console.warn('Assessments table not available yet');
-      }
-
-      // Fallback to default configuration
-      return Array.from(this.configurations.values())[0] || null;
-    } catch {
-      return null;
-    }
+    return this.getConfigurationForService('assessment_generation', assessmentId);
   }
 
   private async getBestConfigurationForQuiz(quizId: string): Promise<AIConfiguration | null> {
-    try {
-      // Try to get configuration from database, fallback to default
-      try {
-        const { data } = await supabase
-          .from('quizzes')
-          .select('ai_configuration_id')
-          .eq('id', quizId)
-          .single();
-
-        if (data?.ai_configuration_id) {
-          return this.configurations.get(data.ai_configuration_id) || null;
-        }
-      } catch (dbError) {
-        console.warn('Quizzes table not available yet');
-      }
-
-      return Array.from(this.configurations.values())[0] || null;
-    } catch {
-      return null;
-    }
+    return this.getConfigurationForService('quiz_generation', quizId);
   }
 
   private async getBestConfigurationForChallenge(challengeId: string): Promise<AIConfiguration | null> {
-    try {
-      // Try to get configuration from database, fallback to default
-      try {
-        const { data } = await supabase
-          .from('challenges')
-          .select('ai_configuration_id')
-          .eq('id', challengeId)
-          .single();
+    return this.getConfigurationForService('challenge_generation', challengeId);
+  }
 
-        if (data?.ai_configuration_id) {
-          return this.configurations.get(data.ai_configuration_id) || null;
-        }
-      } catch (dbError) {
-        console.warn('Challenges table not available yet');
+  private async getConfigurationForService(
+    serviceType: string,
+    serviceId?: string
+  ): Promise<AIConfiguration | null> {
+    try {
+      // Use database function to get best config with service mappings
+      const { data, error } = await supabase.rpc('get_ai_config_for_service', {
+        p_service_type: serviceType,
+        p_service_id: serviceId || null
+      });
+
+      if (error) {
+        console.warn(`Error getting config for ${serviceType}:`, error);
+        return this.getDefaultConfiguration();
       }
 
-      return Array.from(this.configurations.values())[0] || null;
-    } catch {
-      return null;
+      // RPC returns an array, get first element
+      const configData = Array.isArray(data) ? data[0] : data;
+
+      if (!configData) {
+        return this.getDefaultConfiguration();
+      }
+
+      // Map database row to AIConfiguration interface
+      const config: AIConfiguration = {
+        id: configData.config_id,
+        name: configData.config_name,
+        provider: configData.provider as 'openai' | 'anthropic' | 'google' | 'azure' | 'custom',
+        model: configData.model_name,
+        apiKey: '', // API key should be fetched securely, not from this function
+        temperature: Number(configData.temperature),
+        maxTokens: configData.max_tokens,
+        topP: configData.top_p ? Number(configData.top_p) : undefined,
+        frequencyPenalty: configData.frequency_penalty ? Number(configData.frequency_penalty) : undefined,
+        presencePenalty: configData.presence_penalty ? Number(configData.presence_penalty) : undefined,
+        systemPrompt: configData.system_prompt || undefined,
+        isDefault: configData.is_default || false,
+        provider_name: configData.provider_name || undefined,
+        api_base_url: configData.api_base_url || undefined,
+        api_version: configData.api_version || undefined,
+        custom_headers: (configData.custom_headers as Record<string, string>) || undefined,
+        cost_per_1k_input_tokens: configData.cost_per_1k_input_tokens ? Number(configData.cost_per_1k_input_tokens) : undefined,
+        cost_per_1k_output_tokens: configData.cost_per_1k_output_tokens ? Number(configData.cost_per_1k_output_tokens) : undefined
+      };
+
+      // Get API key from main configurations map
+      const storedConfig = Array.from(this.configurations.values()).find(c => c.id === config.id);
+      if (storedConfig) {
+        config.apiKey = storedConfig.apiKey;
+      }
+
+      return config;
+    } catch (error) {
+      console.error(`Error in getConfigurationForService(${serviceType}):`, error);
+      return this.getDefaultConfiguration();
     }
+  }
+
+  private getDefaultConfiguration(): AIConfiguration | null {
+    // Return first active configuration or NewMe config
+    for (const config of this.configurations.values()) {
+      if (config.id === 'newme' || config.isDefault) {
+        return config;
+      }
+    }
+    return Array.from(this.configurations.values())[0] || null;
   }
 
   private checkRateLimit(userId: string): boolean {
@@ -688,9 +784,30 @@ export class AIService {
   // Admin methods for configuration management
   async createConfiguration(config: Omit<AIConfiguration, 'id'>): Promise<boolean> {
     try {
+      // Map AIConfiguration to database schema
+      const dbConfig = {
+        name: config.name,
+        provider: config.provider,
+        provider_name: config.provider_name,
+        model_name: config.model,
+        api_key_encrypted: config.apiKey, // Note: Should encrypt before storing
+        api_base_url: config.api_base_url,
+        api_version: config.api_version,
+        temperature: config.temperature,
+        max_tokens: config.maxTokens,
+        top_p: config.topP,
+        frequency_penalty: config.frequencyPenalty,
+        presence_penalty: config.presencePenalty,
+        system_prompt: config.systemPrompt,
+        custom_headers: config.custom_headers,
+        is_default: config.isDefault,
+        cost_per_1k_prompt_tokens: config.cost_per_1k_input_tokens,
+        cost_per_1k_completion_tokens: config.cost_per_1k_output_tokens,
+      };
+
       const { error } = await supabase
         .from('ai_configurations')
-        .insert(config);
+        .insert(dbConfig);
 
       if (error) throw error;
 
@@ -745,21 +862,14 @@ export class AIService {
   }
 
   /**
-   * NewMe Voice Agent - Generate conversational response
+   * NewMe Voice Agent - Generate conversational response with memory integration
    */
   async generateNewMeResponse(
     userMessage: string,
     userId: string,
     conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [],
-    userContext?: {
-      nickname?: string;
-      lastConversationDate?: string;
-      lastConversationTopic?: string;
-      completedAssessments?: string[];
-      emotionalPatterns?: string[];
-      preferences?: Record<string, string | number | boolean>;
-    }
-  ): Promise<AIResponse> {
+    conversationId?: string
+  ): Promise<AIResponse & { conversationId?: string }> {
     const startTime = Date.now();
 
     try {
@@ -773,30 +883,67 @@ export class AIService {
         throw new Error('Rate limit exceeded. Please wait before continuing the conversation.');
       }
 
+      // Get or create active conversation
+      let activeConversation = conversationId
+        ? null
+        : await newMeMemoryService.getActiveConversation(userId);
+
+      if (!activeConversation && !conversationId) {
+        activeConversation = await newMeMemoryService.createConversation({
+          user_id: userId,
+          topics_discussed: [],
+          emotional_tone: 'neutral'
+        });
+      }
+
+      const currentConversationId = conversationId || activeConversation?.id;
+
+      // Load user context from memory system
+      const userContext = await newMeMemoryService.getUserContext(userId);
+
       // Build context-aware prompt
       let contextPrompt = '';
       if (userContext) {
         contextPrompt = `\n\n### CURRENT USER CONTEXT:\n`;
+
+        // Add nickname if available
         if (userContext.nickname) {
           contextPrompt += `- User's preferred nickname: ${userContext.nickname}\n`;
         }
-        if (userContext.lastConversationDate) {
-          contextPrompt += `- Last conversation: ${userContext.lastConversationDate}\n`;
+
+        // Add important memories
+        if (userContext.important_memories && userContext.important_memories.length > 0) {
+          contextPrompt += `- Important memories:\n`;
+          userContext.important_memories.slice(0, 5).forEach(memory => {
+            contextPrompt += `  * ${memory.type}: ${memory.key} = ${memory.value}\n`;
+          });
         }
-        if (userContext.lastConversationTopic) {
-          contextPrompt += `- Last topic discussed: ${userContext.lastConversationTopic}\n`;
+
+        // Add last conversation info
+        if (userContext.last_conversation_date) {
+          const daysSince = newMeMemoryService.calculateDaysSinceLastConversation(
+            userContext.last_conversation_date
+          );
+          contextPrompt += `- Last conversation: ${daysSince} days ago\n`;
+          if (userContext.last_conversation_topic) {
+            contextPrompt += `- Last topic: ${userContext.last_conversation_topic}\n`;
+          }
         }
-        if (userContext.completedAssessments && userContext.completedAssessments.length > 0) {
-          contextPrompt += `- Completed assessments: ${userContext.completedAssessments.join(', ')}\n`;
+
+        // Add emotional patterns
+        if (userContext.emotional_patterns && userContext.emotional_patterns.length > 0) {
+          contextPrompt += `- Emotional patterns: ${userContext.emotional_patterns.slice(0, 3).join(', ')}\n`;
         }
-        if (userContext.emotionalPatterns && userContext.emotionalPatterns.length > 0) {
-          contextPrompt += `- Emotional patterns observed: ${userContext.emotionalPatterns.join(', ')}\n`;
+
+        // Add completed assessments
+        if (userContext.completed_assessments && userContext.completed_assessments.length > 0) {
+          contextPrompt += `- Completed assessments: ${userContext.completed_assessments.join(', ')}\n`;
         }
       }
 
       // Build conversation messages as a string prompt
-      let fullPrompt = config.system_prompt + contextPrompt + '\n\n';
-      
+      let fullPrompt = (config.systemPrompt || '') + contextPrompt + '\n\n';
+
       // Add conversation history
       if (conversationHistory.length > 0) {
         fullPrompt += '### CONVERSATION HISTORY:\n';
@@ -805,7 +952,7 @@ export class AIService {
         });
         fullPrompt += '\n';
       }
-      
+
       // Add current user message
       fullPrompt += `### CURRENT USER MESSAGE:\nUSER: ${userMessage}\n\n`;
       fullPrompt += 'Respond as NewMe, staying fully in character:';
@@ -814,6 +961,23 @@ export class AIService {
 
       if (!response.success) {
         throw new Error(response.error || 'AI processing failed');
+      }
+
+      // Store message in memory if we have a conversation ID
+      if (currentConversationId) {
+        await newMeMemoryService.addMessage({
+          conversation_id: currentConversationId,
+          role: 'user',
+          content: userMessage
+        });
+
+        if (response.content) {
+          await newMeMemoryService.addMessage({
+            conversation_id: currentConversationId,
+            role: 'assistant',
+            content: response.content
+          });
+        }
       }
 
       // Log usage
@@ -825,6 +989,7 @@ export class AIService {
           'newme-voice-agent',
           response.usage?.prompt_tokens || 0,
           response.usage?.completion_tokens || 0,
+          response.usage?.total_tokens || 0,
           response.cost_usd || 0,
           true,
           undefined
@@ -838,7 +1003,8 @@ export class AIService {
         content: response.content,
         usage: response.usage,
         cost_usd: response.cost_usd,
-        processing_time_ms: Date.now() - startTime
+        processing_time_ms: Date.now() - startTime,
+        conversationId: currentConversationId
       };
 
     } catch (error) {
@@ -853,38 +1019,55 @@ export class AIService {
   }
 
   /**
-   * Get NewMe greeting based on user context
+   * Get NewMe greeting based on user context from memory system
    */
-  getNewMeGreeting(userContext?: {
-    isFirstTime?: boolean;
-    nickname?: string;
-    lastConversationTopic?: string;
-    daysSinceLastConversation?: number;
-  }): string {
-    
-    if (userContext?.isFirstTime) {
-      const templates = NEWME_GREETING_TEMPLATES.firstTime;
-      return templates[Math.floor(Math.random() * templates.length)];
-    }
+  async getNewMeGreeting(userId: string): Promise<string> {
+    try {
+      // Load user context from memory
+      const userContext = await newMeMemoryService.getUserContext(userId);
 
-    if (userContext?.daysSinceLastConversation && userContext.daysSinceLastConversation > 7) {
-      const templates = NEWME_GREETING_TEMPLATES.afterLongBreak;
-      let greeting = templates[Math.floor(Math.random() * templates.length)];
-      if (userContext.nickname) {
-        greeting = greeting.replace('[nickname]', userContext.nickname);
+      // Check if first time user
+      if (!userContext || !userContext.last_conversation_date) {
+        const templates = NEWME_GREETING_TEMPLATES.firstTime;
+        return templates[Math.floor(Math.random() * templates.length)];
       }
-      if (userContext.lastConversationTopic) {
-        greeting = greeting.replace('[last topic]', userContext.lastConversationTopic);
+
+      // Calculate days since last conversation
+      const daysSince = newMeMemoryService.calculateDaysSinceLastConversation(
+        userContext.last_conversation_date
+      );
+
+      // Get nickname if available
+      const nickname = userContext.nickname;
+
+      // After long break
+      if (daysSince > 7) {
+        const templates = NEWME_GREETING_TEMPLATES.afterLongBreak;
+        let greeting = templates[Math.floor(Math.random() * templates.length)];
+        if (nickname) {
+          greeting = greeting.replace('[nickname]', nickname);
+        }
+        // Use last conversation topic if available
+        if (userContext.last_conversation_topic) {
+          greeting = greeting.replace('[last topic]', userContext.last_conversation_topic);
+        } else {
+          greeting = greeting.replace(' about [last topic]', '');
+        }
+        return greeting;
+      }
+
+      // Returning user
+      const templates = NEWME_GREETING_TEMPLATES.returning;
+      let greeting = templates[Math.floor(Math.random() * templates.length)];
+      if (nickname) {
+        greeting = greeting.replace('[nickname]', nickname);
       }
       return greeting;
+    } catch (error) {
+      console.error('Error getting NewMe greeting:', error);
+      // Fallback to generic greeting
+      return NEWME_GREETING_TEMPLATES.firstTime[0];
     }
-
-    const templates = NEWME_GREETING_TEMPLATES.returning;
-    let greeting = templates[Math.floor(Math.random() * templates.length)];
-    if (userContext?.nickname) {
-      greeting = greeting.replace('[nickname]', userContext.nickname);
-    }
-    return greeting;
   }
 }
 

@@ -20,32 +20,47 @@ import {
   Loader2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
-interface APIConfig {
-  id?: string;
-  service: string;
-  client_id: string;
-  client_secret: string;
-  mode: 'sandbox' | 'live';
-  is_active: boolean;
-  last_tested?: string;
-  test_status?: 'success' | 'failed' | null;
-}
+type APIIntegrationConfig = Tables<'api_integrations'>;
+type AIConfigurationRow = Tables<'ai_configurations'>;
 
 const APISettings = () => {
-  const [paypalConfig, setPaypalConfig] = useState<APIConfig>({
+  const [paypalConfig, setPaypalConfig] = useState<APIIntegrationConfig>({
+    id: '',
     service: 'paypal',
     client_id: '',
     client_secret: '',
     mode: 'sandbox',
     is_active: false,
+    last_tested: null,
+    test_status: null,
+    created_at: null,
+    updated_at: null,
   });
 
-  const [openAIConfig, setOpenAIConfig] = useState({
-    api_key: '',
-    organization_id: '',
+  const [openAIConfig, setOpenAIConfig] = useState<AIConfigurationRow>({
+    id: '',
+    name: 'OpenAI Default',
+    description: 'Default OpenAI configuration for AI features',
+    provider: 'openai',
+    model_name: 'gpt-4', // Default model
+    api_base_url: 'https://api.openai.com/v1',
+    api_key_encrypted: '',
+    temperature: 0.7,
+    max_tokens: 1000,
+    top_p: 1.0,
+    frequency_penalty: 0.0,
+    presence_penalty: 0.0,
+    system_prompt: 'You are a helpful AI assistant.',
+    user_prompt_template: null,
+    scoring_prompt_template: null,
+    feedback_prompt_template: null,
     is_active: false,
+    created_at: null,
+    updated_at: null,
+    created_by: null,
   });
 
   const [showSecrets, setShowSecrets] = useState({
@@ -64,9 +79,9 @@ const APISettings = () => {
   const loadConfigurations = async () => {
     setLoading(true);
     try {
-      // Load PayPal configuration
+      // Load PayPal configuration from api_integrations
       const { data: paypalData, error: paypalError } = await supabase
-        .from('api_configurations')
+        .from('api_integrations')
         .select('*')
         .eq('service', 'paypal')
         .single();
@@ -74,24 +89,20 @@ const APISettings = () => {
       if (paypalError && paypalError.code !== 'PGRST116') {
         console.error('Error loading PayPal config:', paypalError);
       } else if (paypalData) {
-        setPaypalConfig(paypalData);
+        setPaypalConfig(paypalData as APIIntegrationConfig);
       }
 
-      // Load OpenAI configuration
+      // Load OpenAI configuration from ai_configurations
       const { data: openaiData, error: openaiError } = await supabase
-        .from('api_configurations')
+        .from('ai_configurations')
         .select('*')
-        .eq('service', 'openai')
+        .eq('provider', 'openai')
         .single();
 
       if (openaiError && openaiError.code !== 'PGRST116') {
         console.error('Error loading OpenAI config:', openaiError);
       } else if (openaiData) {
-        setOpenAIConfig({
-          api_key: openaiData.client_id || '',
-          organization_id: openaiData.client_secret || '',
-          is_active: openaiData.is_active,
-        });
+        setOpenAIConfig(openaiData as AIConfigurationRow);
       }
     } catch (error) {
       console.error('Error loading configurations:', error);
@@ -104,35 +115,32 @@ const APISettings = () => {
   const savePayPalConfig = async () => {
     setSaving(true);
     try {
-      const configData = {
+      const configData: TablesInsert<'api_integrations'> = {
         service: 'paypal',
         client_id: paypalConfig.client_id,
         client_secret: paypalConfig.client_secret,
         mode: paypalConfig.mode,
         is_active: paypalConfig.is_active,
+        last_tested: paypalConfig.last_tested,
+        test_status: paypalConfig.test_status,
       };
 
       if (paypalConfig.id) {
-        // Update existing
         const { error } = await supabase
-          .from('api_configurations')
-          .update(configData)
+          .from('api_integrations')
+          .update(configData as TablesUpdate<'api_integrations'>)
           .eq('id', paypalConfig.id);
-
         if (error) throw error;
       } else {
-        // Insert new
         const { data, error } = await supabase
-          .from('api_configurations')
+          .from('api_integrations')
           .insert([configData])
           .select()
           .single();
-
         if (error) throw error;
         setPaypalConfig({ ...paypalConfig, id: data.id });
       }
 
-      // Update Supabase Edge Function secrets
       await updateSupabaseSecrets({
         PAYPAL_CLIENT_ID: paypalConfig.client_id,
         PAYPAL_SECRET: paypalConfig.client_secret,
@@ -151,38 +159,48 @@ const APISettings = () => {
   const saveOpenAIConfig = async () => {
     setSaving(true);
     try {
-      const configData = {
-        service: 'openai',
-        client_id: openAIConfig.api_key,
-        client_secret: openAIConfig.organization_id,
+      const configData: TablesInsert<'ai_configurations'> = {
+        id: openAIConfig.id,
+        name: openAIConfig.name,
+        description: openAIConfig.description,
+        provider: openAIConfig.provider,
+        model_name: openAIConfig.model_name,
+        api_base_url: openAIConfig.api_base_url,
+        api_key_encrypted: openAIConfig.api_key_encrypted,
+        temperature: openAIConfig.temperature,
+        max_tokens: openAIConfig.max_tokens,
+        top_p: openAIConfig.top_p,
+        frequency_penalty: openAIConfig.frequency_penalty,
+        presence_penalty: openAIConfig.presence_penalty,
+        system_prompt: openAIConfig.system_prompt,
+        user_prompt_template: openAIConfig.user_prompt_template,
+        scoring_prompt_template: openAIConfig.scoring_prompt_template,
+        feedback_prompt_template: openAIConfig.feedback_prompt_template,
         is_active: openAIConfig.is_active,
+        created_at: openAIConfig.created_at,
+        updated_at: openAIConfig.updated_at,
+        created_by: openAIConfig.created_by,
       };
 
-      const { data: existing } = await supabase
-        .from('api_configurations')
-        .select('id')
-        .eq('service', 'openai')
-        .single();
-
-      if (existing) {
+      if (openAIConfig.id) {
         const { error } = await supabase
-          .from('api_configurations')
-          .update(configData)
-          .eq('id', existing.id);
-
+          .from('ai_configurations')
+          .update(configData as TablesUpdate<'ai_configurations'>)
+          .eq('id', openAIConfig.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('api_configurations')
-          .insert([configData]);
-
+        const { data, error } = await supabase
+          .from('ai_configurations')
+          .insert([configData])
+          .select()
+          .single();
         if (error) throw error;
+        setOpenAIConfig({ ...openAIConfig, id: data.id });
       }
 
-      // Update Supabase Edge Function secrets
       await updateSupabaseSecrets({
-        OPENAI_API_KEY: openAIConfig.api_key,
-        OPENAI_ORG_ID: openAIConfig.organization_id,
+        OPENAI_API_KEY: openAIConfig.api_key_encrypted || '',
+        OPENAI_ORG_ID: openAIConfig.description || '', // Using description for org ID for now
       });
 
       toast.success('OpenAI configuration saved successfully');
@@ -195,10 +213,7 @@ const APISettings = () => {
   };
 
   const updateSupabaseSecrets = async (secrets: Record<string, string>) => {
-    // Note: This would need to be done via Supabase CLI or API
-    // For now, we'll show instructions to the admin
     console.log('Update these secrets in Supabase:', secrets);
-
     toast.info(
       'Remember to update Edge Function secrets via CLI: npx supabase secrets set KEY=value',
       { duration: 5000 }
@@ -208,7 +223,6 @@ const APISettings = () => {
   const testPayPalConnection = async () => {
     setTesting(true);
     try {
-      // Test PayPal connection by getting an access token
       const response = await fetch(
         `https://api-m.${paypalConfig.mode}.paypal.com/v1/oauth2/token`,
         {
@@ -229,10 +243,9 @@ const APISettings = () => {
         };
         setPaypalConfig(updatedConfig);
 
-        // Update test status in database
         if (paypalConfig.id) {
           await supabase
-            .from('api_configurations')
+            .from('api_integrations')
             .update({
               test_status: 'success',
               last_tested: new Date().toISOString(),
@@ -265,9 +278,9 @@ const APISettings = () => {
     try {
       const response = await fetch('https://api.openai.com/v1/models', {
         headers: {
-          'Authorization': `Bearer ${openAIConfig.api_key}`,
-          ...(openAIConfig.organization_id && {
-            'OpenAI-Organization': openAIConfig.organization_id,
+          'Authorization': `Bearer ${openAIConfig.api_key_encrypted}`,
+          ...(openAIConfig.description && {
+            'OpenAI-Organization': openAIConfig.description,
           }),
         },
       });
@@ -297,7 +310,7 @@ const APISettings = () => {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
+          <h1 className="text-3xl font-bold flex items-center gap-2 gradient-text">
             <Settings className="h-8 w-8" />
             API Settings
           </h1>
@@ -307,16 +320,17 @@ const APISettings = () => {
         </div>
       </div>
 
-      <Alert>
+      <Alert className="glass-card">
         <Shield className="h-4 w-4" />
+        <AlertTitle>Security Notice</AlertTitle>
         <AlertDescription>
-          <strong>Security Notice:</strong> API keys and secrets are encrypted and stored securely.
+          API keys and secrets are encrypted and stored securely.
           After saving, you'll need to update Supabase Edge Function secrets via CLI for the integrations to work.
         </AlertDescription>
       </Alert>
 
       <Tabs defaultValue="paypal" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-2 glass">
           <TabsTrigger value="paypal" className="flex items-center gap-2">
             <DollarSign className="h-4 w-4" />
             PayPal
@@ -359,7 +373,7 @@ const APISettings = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Active Status */}
-              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-center justify-between p-4 glass rounded-lg">
                 <div>
                   <Label className="text-base font-semibold">Enable PayPal Integration</Label>
                   <p className="text-sm text-muted-foreground mt-1">
@@ -367,7 +381,7 @@ const APISettings = () => {
                   </p>
                 </div>
                 <Switch
-                  checked={paypalConfig.is_active}
+                  checked={paypalConfig.is_active || false}
                   onCheckedChange={(checked) =>
                     setPaypalConfig({ ...paypalConfig, is_active: checked })
                   }
@@ -381,7 +395,7 @@ const APISettings = () => {
                   <button
                     type="button"
                     onClick={() => setPaypalConfig({ ...paypalConfig, mode: 'sandbox' })}
-                    className={`p-4 rounded-lg border-2 transition-all ${
+                    className={`p-4 rounded-lg border-2 transition-all glass ${
                       paypalConfig.mode === 'sandbox'
                         ? 'border-primary bg-primary/10'
                         : 'border-border hover:border-primary/50'
@@ -397,7 +411,7 @@ const APISettings = () => {
                   <button
                     type="button"
                     onClick={() => setPaypalConfig({ ...paypalConfig, mode: 'live' })}
-                    className={`p-4 rounded-lg border-2 transition-all ${
+                    className={`p-4 rounded-lg border-2 transition-all glass ${
                       paypalConfig.mode === 'live'
                         ? 'border-primary bg-primary/10'
                         : 'border-border hover:border-primary/50'
@@ -424,6 +438,7 @@ const APISettings = () => {
                   onChange={(e) =>
                     setPaypalConfig({ ...paypalConfig, client_id: e.target.value })
                   }
+                  className="glass"
                 />
                 <p className="text-xs text-muted-foreground">
                   Get this from your PayPal Developer Dashboard
@@ -442,7 +457,7 @@ const APISettings = () => {
                     onChange={(e) =>
                       setPaypalConfig({ ...paypalConfig, client_secret: e.target.value })
                     }
-                    className="pr-10"
+                    className="pr-10 glass"
                   />
                   <button
                     type="button"
@@ -479,7 +494,7 @@ const APISettings = () => {
                   onClick={testPayPalConnection}
                   variant="outline"
                   disabled={!paypalConfig.client_id || !paypalConfig.client_secret || testing}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 glass"
                 >
                   {testing ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -503,10 +518,10 @@ const APISettings = () => {
               </div>
 
               {/* Setup Instructions */}
-              <Alert>
+              <Alert className="glass-card">
                 <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Setup Instructions</AlertTitle>
                 <AlertDescription>
-                  <strong>Setup Instructions:</strong>
                   <ol className="list-decimal list-inside mt-2 space-y-1 text-sm">
                     <li>Create a PayPal Developer account at developer.paypal.com</li>
                     <li>Create a new App in the Dashboard</li>
@@ -542,7 +557,7 @@ const APISettings = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Active Status */}
-              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-center justify-between p-4 glass rounded-lg">
                 <div>
                   <Label className="text-base font-semibold">Enable OpenAI Integration</Label>
                   <p className="text-sm text-muted-foreground mt-1">
@@ -550,7 +565,7 @@ const APISettings = () => {
                   </p>
                 </div>
                 <Switch
-                  checked={openAIConfig.is_active}
+                  checked={openAIConfig.is_active || false}
                   onCheckedChange={(checked) =>
                     setOpenAIConfig({ ...openAIConfig, is_active: checked })
                   }
@@ -565,11 +580,11 @@ const APISettings = () => {
                     id="openai-key"
                     type={showSecrets.openai_key ? 'text' : 'password'}
                     placeholder="sk-..."
-                    value={openAIConfig.api_key}
+                    value={openAIConfig.api_key_encrypted || ''}
                     onChange={(e) =>
-                      setOpenAIConfig({ ...openAIConfig, api_key: e.target.value })
+                      setOpenAIConfig({ ...openAIConfig, api_key_encrypted: e.target.value })
                     }
-                    className="pr-10"
+                    className="pr-10 glass"
                   />
                   <button
                     type="button"
@@ -597,10 +612,11 @@ const APISettings = () => {
                   id="openai-org"
                   type="text"
                   placeholder="org-..."
-                  value={openAIConfig.organization_id}
+                  value={openAIConfig.description || ''} // Using description for org ID for now
                   onChange={(e) =>
-                    setOpenAIConfig({ ...openAIConfig, organization_id: e.target.value })
+                    setOpenAIConfig({ ...openAIConfig, description: e.target.value })
                   }
+                  className="glass"
                 />
                 <p className="text-xs text-muted-foreground">
                   Only required if you're part of multiple organizations
@@ -612,8 +628,8 @@ const APISettings = () => {
                 <Button
                   onClick={testOpenAIConnection}
                   variant="outline"
-                  disabled={!openAIConfig.api_key || testing}
-                  className="flex items-center gap-2"
+                  disabled={!openAIConfig.api_key_encrypted || testing}
+                  className="flex items-center gap-2 glass"
                 >
                   {testing ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -624,7 +640,7 @@ const APISettings = () => {
                 </Button>
                 <Button
                   onClick={saveOpenAIConfig}
-                  disabled={!openAIConfig.api_key || saving}
+                  disabled={!openAIConfig.api_key_encrypted || saving}
                   className="flex items-center gap-2 clay-button bg-gradient-to-r from-primary to-accent"
                 >
                   {saving ? (
@@ -637,10 +653,10 @@ const APISettings = () => {
               </div>
 
               {/* Setup Instructions */}
-              <Alert>
+              <Alert className="glass-card">
                 <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Setup Instructions</AlertTitle>
                 <AlertDescription>
-                  <strong>Setup Instructions:</strong>
                   <ol className="list-decimal list-inside mt-2 space-y-1 text-sm">
                     <li>Sign up for OpenAI at platform.openai.com</li>
                     <li>Navigate to API Keys section</li>

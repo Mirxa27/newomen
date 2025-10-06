@@ -108,14 +108,14 @@ export default function GamificationSettings() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Gamification Settings</h1>
+      <h1 className="text-3xl font-bold gradient-text">Gamification Settings</h1>
       <p className="text-muted-foreground">
         Configure Crystal rewards for user actions and define level progression thresholds.
       </p>
 
-      <Card>
+      <Card className="glass-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 gradient-text">
             <Gem className="w-5 h-5" />
             Crystal Rewards
           </CardTitle>
@@ -130,6 +130,7 @@ export default function GamificationSettings() {
               value={settings.crystal_reward_session}
               onChange={handleChange}
               min="0"
+              className="glass"
             />
           </div>
           <div>
@@ -140,6 +141,7 @@ export default function GamificationSettings() {
               value={settings.crystal_reward_assessment}
               onChange={handleChange}
               min="0"
+              className="glass"
             />
           </div>
           <div>
@@ -150,14 +152,15 @@ export default function GamificationSettings() {
               value={settings.crystal_reward_challenge}
               onChange={handleChange}
               min="0"
+              className="glass"
             />
           </div>
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="glass-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 gradient-text">
             <TrendingUp className="w-5 h-5" />
             Level Thresholds
           </CardTitle>
@@ -172,6 +175,7 @@ export default function GamificationSettings() {
               value={settings.level_threshold_1}
               onChange={handleChange}
               min="0"
+              className="glass"
             />
           </div>
           <div>
@@ -182,6 +186,7 @@ export default function GamificationSettings() {
               value={settings.level_threshold_2}
               onChange={handleChange}
               min="0"
+              className="glass"
             />
           </div>
           <div>
@@ -192,13 +197,14 @@ export default function GamificationSettings() {
               value={settings.level_threshold_3}
               onChange={handleChange}
               min="0"
+              className="glass"
             />
           </div>
         </CardContent>
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={handleSaveSettings} disabled={isSaving}>
+        <Button onClick={handleSaveSettings} disabled={isSaving} className="clay-button">
           {isSaving ? (
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
           ) : (

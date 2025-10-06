@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import ResponsiveTable from "@/components/ui/ResponsiveTable";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -267,7 +268,7 @@ export default function ProvidersManagement() {
                 </DialogTrigger>
                 <DialogContent className="glass-card border-white/10 max-w-lg">
                   <DialogHeader>
-                    <DialogTitle>Connect a new provider</DialogTitle>
+                    <DialogTitle className="gradient-text">Connect a new provider</DialogTitle>
                     <DialogDescription>
                       API credentials are encrypted at rest using your Supabase database key.
                     </DialogDescription>
@@ -280,6 +281,7 @@ export default function ProvidersManagement() {
                         placeholder="e.g. Primary OpenAI workspace"
                         value={newProvider.name}
                         onChange={(event) => setNewProvider((prev) => ({ ...prev, name: event.target.value }))}
+                        className="glass"
                       />
                     </div>
                     <div>
@@ -288,7 +290,7 @@ export default function ProvidersManagement() {
                         value={newProvider.type}
                         onValueChange={(value) => setNewProvider((prev) => ({ ...prev, type: value }))}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="glass">
                           <SelectValue placeholder="Select provider" />
                         </SelectTrigger>
                         <SelectContent>
@@ -308,6 +310,7 @@ export default function ProvidersManagement() {
                         placeholder="sk-..."
                         value={newProvider.api_key}
                         onChange={(event) => setNewProvider((prev) => ({ ...prev, api_key: event.target.value }))}
+                        className="glass"
                       />
                     </div>
                     <div>
@@ -317,6 +320,7 @@ export default function ProvidersManagement() {
                         placeholder={getDefaultApiBase(newProvider.type) || "https://"}
                         value={newProvider.api_base}
                         onChange={(event) => setNewProvider((prev) => ({ ...prev, api_base: event.target.value }))}
+                        className="glass"
                       />
                     </div>
                     <div>
@@ -326,6 +330,7 @@ export default function ProvidersManagement() {
                         placeholder="us-east-1"
                         value={newProvider.region}
                         onChange={(event) => setNewProvider((prev) => ({ ...prev, region: event.target.value }))}
+                        className="glass"
                       />
                     </div>
                     <div className="rounded-lg border border-dashed border-white/20 bg-muted/40 p-3 text-xs text-muted-foreground flex items-start gap-2">
@@ -350,7 +355,7 @@ export default function ProvidersManagement() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <ResponsiveTable>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -411,7 +416,7 @@ export default function ProvidersManagement() {
                   )}
                 </TableBody>
               </Table>
-            </div>
+            </ResponsiveTable>
           )}
         </CardContent>
       </Card>
@@ -422,7 +427,7 @@ export default function ProvidersManagement() {
           <CardDescription>Models available from connected providers</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <ResponsiveTable>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -467,7 +472,7 @@ export default function ProvidersManagement() {
                 )}
               </TableBody>
             </Table>
-          </div>
+          </ResponsiveTable>
         </CardContent>
       </Card>
 
@@ -477,7 +482,7 @@ export default function ProvidersManagement() {
           <CardDescription>Voices fetched from connected TTS providers</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <ResponsiveTable>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -514,7 +519,7 @@ export default function ProvidersManagement() {
                 )}
               </TableBody>
             </Table>
-          </div>
+          </ResponsiveTable>
         </CardContent>
       </Card>
     </div>

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import ResponsiveTable from "@/components/ui/ResponsiveTable";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -19,14 +20,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Settings, 
-  Brain, 
-  Users, 
-  BarChart, 
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Settings,
+  Brain,
+  Users,
+  BarChart,
   Clock,
   CheckCircle,
   AlertCircle,
@@ -319,7 +320,7 @@ export default function AIAssessmentManagement() {
         title: "AI Test initiated",
         description: "Testing AI configuration...",
       });
-      
+
       // Simulate AI response
       setTimeout(() => {
         toast({
@@ -494,7 +495,7 @@ export default function AIAssessmentManagement() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>AI Configurations</CardTitle>
+                  <CardTitle className="gradient-text">AI Configurations</CardTitle>
                   <CardDescription>
                     Manage AI settings for assessments and analysis
                   </CardDescription>
@@ -594,7 +595,7 @@ export default function AIAssessmentManagement() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              <ResponsiveTable>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -637,7 +638,7 @@ export default function AIAssessmentManagement() {
                     ))}
                   </TableBody>
                 </Table>
-              </div>
+              </ResponsiveTable>
             </CardContent>
           </Card>
         </TabsContent>
@@ -648,7 +649,7 @@ export default function AIAssessmentManagement() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Assessments & Quizzes</CardTitle>
+                  <CardTitle className="gradient-text">Assessments & Quizzes</CardTitle>
                   <CardDescription>
                     Manage AI-powered assessments and quizzes
                   </CardDescription>
@@ -754,7 +755,7 @@ export default function AIAssessmentManagement() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              <ResponsiveTable>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -807,7 +808,7 @@ export default function AIAssessmentManagement() {
                     ))}
                   </TableBody>
                 </Table>
-              </div>
+              </ResponsiveTable>
             </CardContent>
           </Card>
         </TabsContent>
@@ -816,13 +817,13 @@ export default function AIAssessmentManagement() {
         <TabsContent value="attempts" className="space-y-4">
           <Card className="glass-card">
             <CardHeader>
-              <CardTitle>Recent Assessment Attempts</CardTitle>
+              <CardTitle className="gradient-text">Recent Assessment Attempts</CardTitle>
               <CardDescription>
                 Monitor user attempts and AI processing status
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              <ResponsiveTable>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -893,7 +894,7 @@ export default function AIAssessmentManagement() {
                     ))}
                   </TableBody>
                 </Table>
-              </div>
+              </ResponsiveTable>
             </CardContent>
           </Card>
         </TabsContent>
@@ -902,13 +903,13 @@ export default function AIAssessmentManagement() {
         <TabsContent value="usage" className="space-y-4">
           <Card className="glass-card">
             <CardHeader>
-              <CardTitle>AI Usage Analytics</CardTitle>
+              <CardTitle className="gradient-text">AI Usage Analytics</CardTitle>
               <CardDescription>
                 Monitor AI usage, costs, and performance
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              <ResponsiveTable>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -945,7 +946,7 @@ export default function AIAssessmentManagement() {
                     ))}
                   </TableBody>
                 </Table>
-              </div>
+              </ResponsiveTable>
             </CardContent>
           </Card>
         </TabsContent>
@@ -954,7 +955,7 @@ export default function AIAssessmentManagement() {
         <TabsContent value="test" className="space-y-4">
           <Card className="glass-card">
             <CardHeader>
-              <CardTitle>AI Configuration Testing</CardTitle>
+              <CardTitle className="gradient-text">AI Configuration Testing</CardTitle>
               <CardDescription>
                 Test AI configurations with sample data
               </CardDescription>

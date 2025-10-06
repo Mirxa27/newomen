@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import ResponsiveTable from "@/components/ui/ResponsiveTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -168,14 +169,14 @@ export default function ContentManagement() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              <ResponsiveTable>
                 <Table>
                   <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>Type</TableHead><TableHead>Questions</TableHead><TableHead>Visibility</TableHead><TableHead>Created</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {assessments.map((assessment) => (
                       <TableRow key={assessment.id}>
                         <TableCell className="font-medium">{assessment.title}</TableCell>
-                        <TableCell>{assessment.assessment_type}</TableCell>
+                        <TableCell>{assessment.category}</TableCell>
                         <TableCell>{Array.isArray(assessment.questions) ? assessment.questions.length : 0}</TableCell>
                         <TableCell><Badge variant={assessment.is_public ? "default" : "secondary"}>{assessment.is_public ? "Public" : "Members Only"}</Badge></TableCell>
                         <TableCell>{assessment.created_at ? new Date(assessment.created_at).toLocaleDateString() : "-"}</TableCell>
@@ -191,7 +192,7 @@ export default function ContentManagement() {
                     {assessments.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No assessments found.</TableCell></TableRow>}
                   </TableBody>
                 </Table>
-              </div>
+              </ResponsiveTable>
             </CardContent>
           </Card>
         </TabsContent>
@@ -208,7 +209,7 @@ export default function ContentManagement() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              <ResponsiveTable>
                 <Table>
                   <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>Category</TableHead><TableHead>Duration</TableHead><TableHead>Created</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
                   <TableBody>
@@ -229,7 +230,7 @@ export default function ContentManagement() {
                     {resources.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No wellness resources found.</TableCell></TableRow>}
                   </TableBody>
                 </Table>
-              </div>
+              </ResponsiveTable>
             </CardContent>
           </Card>
         </TabsContent>
@@ -249,7 +250,7 @@ export default function ContentManagement() {
                   <Button onClick={addAffirmation} disabled={isSubmitting} className="clay-button"><Plus className="w-4 h-4 mr-2" />Add Affirmation</Button>
                 </div>
               </div>
-              <div className="overflow-x-auto">
+              <ResponsiveTable>
                 <Table>
                   <TableHeader><TableRow><TableHead>Content</TableHead><TableHead>Category</TableHead><TableHead>Tone</TableHead><TableHead>Updated</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                   <TableBody>
@@ -265,7 +266,7 @@ export default function ContentManagement() {
                     {affirmations.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No affirmations found.</TableCell></TableRow>}
                   </TableBody>
                 </Table>
-              </div>
+              </ResponsiveTable>
             </CardContent>
           </Card>
         </TabsContent>

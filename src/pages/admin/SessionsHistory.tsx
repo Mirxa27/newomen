@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import ResponsiveTable from "@/components/ui/ResponsiveTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,11 +78,11 @@ export default function SessionsHistory() {
 
   const downloadTranscript = () => {
     if (!selectedSession || conversationMessages.length === 0) return;
-    
-    const transcript = conversationMessages.map(msg => 
+
+    const transcript = conversationMessages.map(msg =>
       `[${new Date(msg.ts).toLocaleString()}] ${msg.sender === 'user' ? 'User' : 'AI'}: ${msg.text_content || '[Audio message]'}`
     ).join('\n\n');
-    
+
     const blob = new Blob([transcript], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -120,9 +121,9 @@ export default function SessionsHistory() {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="glass-card">
         <CardHeader>
-          <CardTitle>Session History</CardTitle>
+          <CardTitle className="gradient-text">Session History</CardTitle>
           <CardDescription>
             Review past conversations, transcripts, and analytics
           </CardDescription>
@@ -135,7 +136,7 @@ export default function SessionsHistory() {
                 placeholder="Search by user..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 glass"
               />
             </div>
           </div>
@@ -145,7 +146,7 @@ export default function SessionsHistory() {
               No sessions found
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <ResponsiveTable>
               <Table>
                 <TableHeader>
                 <TableRow>
@@ -165,9 +166,9 @@ export default function SessionsHistory() {
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         {session.user_profiles?.avatar_url ? (
-                          <img 
-                            src={session.user_profiles.avatar_url} 
-                            alt="Avatar" 
+                          <img
+                            src={session.user_profiles.avatar_url}
+                            alt="Avatar"
                             className="w-6 h-6 rounded-full"
                           />
                         ) : (
@@ -208,8 +209,8 @@ export default function SessionsHistory() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         onClick={() => viewConversation(session)}
                       >
@@ -220,16 +221,16 @@ export default function SessionsHistory() {
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </ResponsiveTable>
           )}
         </CardContent>
       </Card>
 
       {/* Conversation Viewer Dialog */}
       <Dialog open={viewingConversation} onOpenChange={setViewingConversation}>
-        <DialogContent className="max-w-4xl max-h-[80vh]">
+        <DialogContent className="max-w-4xl max-h-[80vh] glass-card">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 gradient-text">
               <MessageSquare className="w-5 h-5" />
               Conversation Transcript
             </DialogTitle>
@@ -242,9 +243,9 @@ export default function SessionsHistory() {
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   {selectedSession?.user_profiles?.avatar_url ? (
-                    <img 
-                      src={selectedSession.user_profiles.avatar_url} 
-                      alt="Avatar" 
+                    <img
+                      src={selectedSession.user_profiles.avatar_url}
+                      alt="Avatar"
                       className="w-8 h-8 rounded-full"
                     />
                   ) : (
@@ -276,7 +277,7 @@ export default function SessionsHistory() {
                 Download
               </Button>
             </div>
-            
+
             <ScrollArea className="h-[400px] border rounded-lg p-4">
               {conversationMessages.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
@@ -287,8 +288,8 @@ export default function SessionsHistory() {
                   {conversationMessages.map((message, index) => (
                     <div key={index} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[80%] p-3 rounded-lg ${
-                        message.sender === 'user' 
-                          ? 'bg-primary text-primary-foreground' 
+                        message.sender === 'user'
+                          ? 'bg-primary text-primary-foreground'
                           : 'bg-muted'
                       }`}>
                         <div className="text-sm font-medium mb-1">

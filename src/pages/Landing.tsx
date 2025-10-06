@@ -12,30 +12,29 @@ const Landing = () => {
             <Sparkles className="w-5 h-5 text-accent" />
             <span className="text-sm font-medium">AI-Powered Personal Growth</span>
           </div>
-          
-          <h1 className="text-6xl md:text-8xl font-bold leading-tight">
-            Transform Your Life with{" "}
-            <span className="gradient-text">Newomen</span>
+
+          <h1 className="hero-title gradient-text font-bold leading-tight">
+            Transform Your Life with <span className="gradient-text">Newomen</span>
           </h1>
-          
+
           <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto">
-            Your emotionally intelligent AI companion for personal growth, 
+            Your emotionally intelligent AI companion for personal growth,
             meaningful connections, and lasting transformation
           </p>
-          
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
             <Link to="/auth">
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 className="clay-button text-lg px-12 py-6 animate-pulse-glow bg-gradient-to-r from-primary to-accent hover:opacity-90"
               >
                 Start Your Journey
               </Button>
             </Link>
             <Link to="/about">
-              <Button 
-                size="lg" 
-                variant="outline" 
+              <Button
+                size="lg"
+                variant="outline"
                 className="glass text-lg px-12 py-6 border-2 border-white/20 hover:bg-white/10"
               >
                 Learn More
@@ -51,10 +50,10 @@ const Landing = () => {
           <h2 className="text-5xl font-bold text-center mb-16">
             Why Choose <span className="gradient-text">Newomen</span>
           </h2>
-          
+
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <div 
+              <div
                 key={index}
                 className="glass-card space-y-4 hover:scale-105 transition-all duration-300"
               >
@@ -78,10 +77,10 @@ const Landing = () => {
           <p className="text-center text-muted-foreground text-xl mb-16">
             Start free and upgrade as you grow
           </p>
-          
+
           <div className="grid md:grid-cols-3 gap-8">
             {pricingTiers.map((tier, index) => (
-              <div 
+              <div
                 key={index}
                 className={`glass-card space-y-6 ${tier.featured ? 'ring-2 ring-primary glow-primary' : ''}`}
               >
@@ -92,7 +91,7 @@ const Landing = () => {
                   </div>
                   <p className="text-muted-foreground">{tier.description}</p>
                 </div>
-                
+
                 <ul className="space-y-3">
                   {tier.features.map((feature, i) => (
                     <li key={i} className="flex items-start gap-2">
@@ -101,9 +100,9 @@ const Landing = () => {
                     </li>
                   ))}
                 </ul>
-                
+
                 <Link to="/auth" className="w-full">
-                  <Button 
+                  <Button
                     className={`w-full ${tier.featured ? 'clay-button bg-gradient-to-r from-primary to-accent' : 'glass'}`}
                     size="lg"
                   >
@@ -126,8 +125,8 @@ const Landing = () => {
             Join thousands of people who are already on their journey to personal growth
           </p>
           <Link to="/auth">
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               className="clay-button text-lg px-12 py-6 animate-pulse-glow bg-gradient-to-r from-primary to-accent"
             >
               Get Started Free

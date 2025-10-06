@@ -218,6 +218,20 @@
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
   }
+
+  /* Hero title - responsive clamp for Landing hero */
+  .hero-title {
+    /* Scales from mobile to large desktop smoothly */
+    font-size: clamp(2rem, 6.5vw, 4.5rem);
+    line-height: 1.04;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  /* Small utility: consistent responsive horizontal padding */
+  .responsive-padding {
+    padding-inline: clamp(1rem, 2.5vw, 2rem);
+  }
 }
 
 /* Mobile-specific media queries */
@@ -409,5 +423,213 @@
 
   .footer-spacing {
     padding-bottom: calc(3rem + env(safe-area-inset-bottom, 0px) + 0.5rem);
+  }
+}
+
+/* ===== RESPONSIVE TABLE SYSTEM ===== */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+.table-responsive {
+  @apply overflow-x-auto -mx-4 sm:mx-0;
+}
+
+.table-responsive table {
+  @apply min-w-full;
+}
+
+/* Mobile table cell optimization */
+@media (max-width: 640px) {
+  .table-mobile-compact td {
+    @apply py-2 px-3 text-sm;
+  }
+
+  .table-mobile-compact th {
+    @apply py-2 px-3 text-xs font-semibold;
+  }
+}
+
+/* ===== TOUCH TARGET SYSTEM ===== */
+.touch-min {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.touch-comfort {
+  min-width: 48px;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.touch-large {
+  min-width: 56px;
+  min-height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile-specific touch targets */
+@media (max-width: 640px) {
+  .touch-mobile {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0.75rem;
+  }
+
+  /* Remove minimum size on desktop for better layout */
+  .touch-mobile-only {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+@media (min-width: 641px) {
+  .touch-mobile-only {
+    min-width: auto;
+    min-height: auto;
+  }
+}
+
+/* ===== SCROLLABLE DIALOG CONTENT ===== */
+.dialog-scrollable {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+@media (max-width: 640px) {
+  .dialog-scrollable {
+    max-height: 85vh;
+  }
+}
+
+/* Sticky dialog footer */
+.dialog-footer-sticky {
+  position: sticky;
+  bottom: 0;
+  background: hsl(var(--background));
+  padding-top: 1rem;
+  border-top: 1px solid hsl(var(--border));
+  margin-top: 1rem;
+}
+
+/* ===== MOBILE TOUCH TARGET ENFORCEMENT ===== */
+/* Ensure all small buttons meet minimum touch target on mobile */
+@media (max-width: 768px) {
+  button[data-size="sm"],
+  button.inline-flex.items-center.justify-center,
+  [role="button"][class*="size-sm"] {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0.625rem;
+  }
+
+  /* Icon-only buttons in tables */
+  table button[data-size="sm"],
+  table button.inline-flex {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+
+  /* Ensure icon buttons have adequate padding */
+  button svg {
+    pointer-events: none;
+  }
+}
+
+/* ===== RESPONSIVE FORM GRIDS ===== */
+/* Ensure all form grids are mobile-friendly */
+@media (max-width: 640px) {
+  /* Convert 2-column grids to single column on mobile */
+  .grid-cols-2,
+  [class*="grid-cols-2"] {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+
+  /* Dialog forms specifically */
+  [role="dialog"] .grid-cols-2,
+  [role="dialog"] [class*="grid-cols-2"] {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+}
+
+/* ===== DIALOG CONTENT OPTIMIZATION ===== */
+/* Ensure all dialogs are scrollable and mobile-friendly */
+@media (max-width: 640px) {
+  [role="dialog"] {
+    max-height: 95vh !important;
+    margin: 0.5rem;
+  }
+
+  [role="dialog"] > div {
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  /* Add padding to dialog content */
+  [role="dialog"] .space-y-4 {
+    padding-bottom: 1rem;
+  }
+}
+
+/* Break long words in dialogs and forms */
+[role="dialog"] p,
+[role="dialog"] label,
+form p,
+form label {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+/* ===== ASSESSMENT MOBILE OPTIMIZATION ===== */
+/* Optimize assessment questions and options for mobile */
+@media (max-width: 640px) {
+  /* Assessment question text */
+  h3[class*="text-lg"] {
+    word-break: break-word;
+    overflow-wrap: break-word;
+    -webkit-hyphens: auto;
+    hyphens: auto;
+  }
+
+  /* Radio option containers - ensure comfortable touch targets */
+  [role="radiogroup"] > div {
+    min-height: 48px !important;
+    padding: 0.875rem !important;
+  }
+
+  /* Radio button labels */
+  [role="radiogroup"] label {
+    word-break: break-word;
+    overflow-wrap: break-word;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  /* Ensure radio buttons themselves are touchable */
+  [role="radio"] {
+    min-width: 20px;
+    min-height: 20px;
+  }
+}
+
+/* Assessment card optimization */
+@media (max-width: 768px) {
+  /* Ensure assessment cards don't overflow */
+  .space-y-6 > div {
+    overflow-x: hidden;
+  }
+
+  /* Button groups in assessments */
+  .flex.gap-3 > button {
+    min-height: 48px;
+    font-size: 1rem;
   }
 }

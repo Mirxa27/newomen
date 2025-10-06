@@ -12,37 +12,118 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.4"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       achievements: {
         Row: {
           badge_url: string | null
+          category: string | null
           created_at: string | null
           crystal_reward: number | null
           description: string | null
           id: string
+          is_active: boolean | null
+          is_hidden: boolean | null
           title: string
-          unlock_criteria: Json | null
+          unlock_criteria: Json
+          updated_at: string
         }
         Insert: {
           badge_url?: string | null
+          category?: string | null
           created_at?: string | null
           crystal_reward?: number | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
+          is_hidden?: boolean | null
           title: string
-          unlock_criteria?: Json | null
+          unlock_criteria: Json
+          updated_at?: string
         }
         Update: {
           badge_url?: string | null
+          category?: string | null
           created_at?: string | null
           crystal_reward?: number | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
+          is_hidden?: boolean | null
           title?: string
-          unlock_criteria?: Json | null
+          unlock_criteria?: Json
+          updated_at?: string
         }
         Relationships: []
+      }
+      affirmations: {
+        Row: {
+          category: string
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          tags: string[] | null
+          tone: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          content: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          tags?: string[] | null
+          tone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          tags?: string[] | null
+          tone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affirmations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       agents: {
         Row: {
@@ -102,28 +183,732 @@ export type Database = {
           },
         ]
       }
+      ai_assessment_configs: {
+        Row: {
+          ai_model: string
+          ai_provider: string
+          created_at: string
+          description: string | null
+          evaluation_criteria: Json | null
+          id: string
+          is_active: boolean | null
+          max_tokens: number | null
+          name: string
+          system_prompt: string | null
+          temperature: number | null
+          updated_at: string
+          user_prompt_template: string | null
+        }
+        Insert: {
+          ai_model: string
+          ai_provider: string
+          created_at?: string
+          description?: string | null
+          evaluation_criteria?: Json | null
+          id?: string
+          is_active?: boolean | null
+          max_tokens?: number | null
+          name: string
+          system_prompt?: string | null
+          temperature?: number | null
+          updated_at?: string
+          user_prompt_template?: string | null
+        }
+        Update: {
+          ai_model?: string
+          ai_provider?: string
+          created_at?: string
+          description?: string | null
+          evaluation_criteria?: Json | null
+          id?: string
+          is_active?: boolean | null
+          max_tokens?: number | null
+          name?: string
+          system_prompt?: string | null
+          temperature?: number | null
+          updated_at?: string
+          user_prompt_template?: string | null
+        }
+        Relationships: []
+      }
+      ai_behaviors: {
+        Row: {
+          communication_style: string | null
+          created_at: string | null
+          description: string | null
+          emotional_tone: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          personality_traits: Json | null
+          response_length: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          communication_style?: string | null
+          created_at?: string | null
+          description?: string | null
+          emotional_tone?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          personality_traits?: Json | null
+          response_length?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          communication_style?: string | null
+          created_at?: string | null
+          description?: string | null
+          emotional_tone?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          personality_traits?: Json | null
+          response_length?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      ai_configurations: {
+        Row: {
+          api_base_url: string | null
+          api_key_encrypted: string | null
+          api_version: string | null
+          cost_per_1k_completion_tokens: number | null
+          cost_per_1k_prompt_tokens: number | null
+          created_at: string | null
+          created_by: string | null
+          custom_headers: Json | null
+          description: string | null
+          frequency_penalty: number | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          last_tested_at: string | null
+          max_requests_per_minute: number | null
+          max_tokens: number | null
+          max_tokens_per_minute: number | null
+          metadata: Json | null
+          model_name: string
+          name: string
+          presence_penalty: number | null
+          provider: string
+          provider_name: string | null
+          stop_sequences: string[] | null
+          system_prompt: string | null
+          tags: string[] | null
+          temperature: number | null
+          test_status: string | null
+          top_p: number | null
+          updated_at: string | null
+          user_prompt_template: string | null
+        }
+        Insert: {
+          api_base_url?: string | null
+          api_key_encrypted?: string | null
+          api_version?: string | null
+          cost_per_1k_completion_tokens?: number | null
+          cost_per_1k_prompt_tokens?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          custom_headers?: Json | null
+          description?: string | null
+          frequency_penalty?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          last_tested_at?: string | null
+          max_requests_per_minute?: number | null
+          max_tokens?: number | null
+          max_tokens_per_minute?: number | null
+          metadata?: Json | null
+          model_name: string
+          name: string
+          presence_penalty?: number | null
+          provider: string
+          provider_name?: string | null
+          stop_sequences?: string[] | null
+          system_prompt?: string | null
+          tags?: string[] | null
+          temperature?: number | null
+          test_status?: string | null
+          top_p?: number | null
+          updated_at?: string | null
+          user_prompt_template?: string | null
+        }
+        Update: {
+          api_base_url?: string | null
+          api_key_encrypted?: string | null
+          api_version?: string | null
+          cost_per_1k_completion_tokens?: number | null
+          cost_per_1k_prompt_tokens?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          custom_headers?: Json | null
+          description?: string | null
+          frequency_penalty?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          last_tested_at?: string | null
+          max_requests_per_minute?: number | null
+          max_tokens?: number | null
+          max_tokens_per_minute?: number | null
+          metadata?: Json | null
+          model_name?: string
+          name?: string
+          presence_penalty?: number | null
+          provider?: string
+          provider_name?: string | null
+          stop_sequences?: string[] | null
+          system_prompt?: string | null
+          tags?: string[] | null
+          temperature?: number | null
+          test_status?: string | null
+          top_p?: number | null
+          updated_at?: string | null
+          user_prompt_template?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_configurations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_model_configs: {
+        Row: {
+          behavior_id: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          is_primary: boolean | null
+          model_id: string | null
+          priority: number | null
+          provider_id: string | null
+          updated_at: string | null
+          use_case_id: string | null
+        }
+        Insert: {
+          behavior_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_primary?: boolean | null
+          model_id?: string | null
+          priority?: number | null
+          provider_id?: string | null
+          updated_at?: string | null
+          use_case_id?: string | null
+        }
+        Update: {
+          behavior_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_primary?: boolean | null
+          model_id?: string | null
+          priority?: number | null
+          provider_id?: string | null
+          updated_at?: string | null
+          use_case_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_model_configs_behavior_id_fkey"
+            columns: ["behavior_id"]
+            isOneToOne: false
+            referencedRelation: "ai_behaviors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_model_configs_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_model_configs_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_model_configs_use_case_id_fkey"
+            columns: ["use_case_id"]
+            isOneToOne: false
+            referencedRelation: "ai_use_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_processing_queue: {
+        Row: {
+          attempt_id: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          max_retries: number | null
+          priority: number | null
+          processing_completed_at: string | null
+          processing_started_at: string | null
+          processing_type: string
+          retry_count: number | null
+          status: string | null
+        }
+        Insert: {
+          attempt_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          max_retries?: number | null
+          priority?: number | null
+          processing_completed_at?: string | null
+          processing_started_at?: string | null
+          processing_type: string
+          retry_count?: number | null
+          status?: string | null
+        }
+        Update: {
+          attempt_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          max_retries?: number | null
+          priority?: number | null
+          processing_completed_at?: string | null
+          processing_started_at?: string | null
+          processing_type?: string
+          retry_count?: number | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_processing_queue_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_attempts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_rate_limits: {
+        Row: {
+          created_at: string | null
+          id: string
+          max_requests: number | null
+          provider_name: string
+          requests_count: number | null
+          updated_at: string | null
+          user_id: string | null
+          window_duration_minutes: number | null
+          window_start: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          max_requests?: number | null
+          provider_name: string
+          requests_count?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          window_duration_minutes?: number | null
+          window_start?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          max_requests?: number | null
+          provider_name?: string
+          requests_count?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          window_duration_minutes?: number | null
+          window_start?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_rate_limits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_service_configs: {
+        Row: {
+          ai_configuration_id: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          is_fallback: boolean | null
+          max_tokens_override: number | null
+          priority: number | null
+          service_id: string | null
+          service_name: string | null
+          service_type: string
+          system_prompt_override: string | null
+          temperature_override: number | null
+          updated_at: string | null
+          user_prompt_template_override: string | null
+        }
+        Insert: {
+          ai_configuration_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_fallback?: boolean | null
+          max_tokens_override?: number | null
+          priority?: number | null
+          service_id?: string | null
+          service_name?: string | null
+          service_type: string
+          system_prompt_override?: string | null
+          temperature_override?: number | null
+          updated_at?: string | null
+          user_prompt_template_override?: string | null
+        }
+        Update: {
+          ai_configuration_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_fallback?: boolean | null
+          max_tokens_override?: number | null
+          priority?: number | null
+          service_id?: string | null
+          service_name?: string | null
+          service_type?: string
+          system_prompt_override?: string | null
+          temperature_override?: number | null
+          updated_at?: string | null
+          user_prompt_template_override?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_service_configs_ai_configuration_id_fkey"
+            columns: ["ai_configuration_id"]
+            isOneToOne: false
+            referencedRelation: "ai_configurations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_usage_logs: {
+        Row: {
+          ai_config_id: string | null
+          assessment_id: string | null
+          attempt_id: string | null
+          cost_usd: number | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          model_name: string
+          processing_time_ms: number | null
+          provider_name: string
+          success: boolean
+          tokens_used: number | null
+          user_id: string | null
+        }
+        Insert: {
+          ai_config_id?: string | null
+          assessment_id?: string | null
+          attempt_id?: string | null
+          cost_usd?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          model_name: string
+          processing_time_ms?: number | null
+          provider_name: string
+          success: boolean
+          tokens_used?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          ai_config_id?: string | null
+          assessment_id?: string | null
+          attempt_id?: string | null
+          cost_usd?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          model_name?: string
+          processing_time_ms?: number | null
+          provider_name?: string
+          success?: boolean
+          tokens_used?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_logs_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments_enhanced"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_usage_logs_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_usage_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_use_cases: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      api_configurations: {
+        Row: {
+          client_id: string
+          client_secret: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          last_tested: string | null
+          mode: string | null
+          service: string
+          test_status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          client_secret: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_tested?: string | null
+          mode?: string | null
+          service: string
+          test_status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          client_secret?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_tested?: string | null
+          mode?: string | null
+          service?: string
+          test_status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      api_integrations: {
+        Row: {
+          client_id: string | null
+          client_secret: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          last_tested: string | null
+          mode: string | null
+          service: string
+          test_status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          client_secret?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_tested?: string | null
+          mode?: string | null
+          service: string
+          test_status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          client_secret?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_tested?: string | null
+          mode?: string | null
+          service?: string
+          test_status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      assessment_attempts: {
+        Row: {
+          ai_analysis: Json | null
+          ai_explanation: string | null
+          ai_feedback: string | null
+          ai_processing_error: string | null
+          ai_score: number | null
+          assessment_id: string | null
+          attempt_number: number
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          is_ai_processed: boolean | null
+          raw_responses: Json
+          started_at: string | null
+          status: string | null
+          time_spent_minutes: number | null
+          user_id: string | null
+        }
+        Insert: {
+          ai_analysis?: Json | null
+          ai_explanation?: string | null
+          ai_feedback?: string | null
+          ai_processing_error?: string | null
+          ai_score?: number | null
+          assessment_id?: string | null
+          attempt_number: number
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          is_ai_processed?: boolean | null
+          raw_responses: Json
+          started_at?: string | null
+          status?: string | null
+          time_spent_minutes?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          ai_analysis?: Json | null
+          ai_explanation?: string | null
+          ai_feedback?: string | null
+          ai_processing_error?: string | null
+          ai_score?: number | null
+          assessment_id?: string | null
+          attempt_number?: number
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          is_ai_processed?: boolean | null
+          raw_responses?: Json
+          started_at?: string | null
+          status?: string | null
+          time_spent_minutes?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_attempts_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments_enhanced"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_attempts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assessment_categories: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
       assessment_results: {
         Row: {
           answers: Json
           assessment_id: string | null
+          completed_at: string
           created_at: string | null
           id: string
+          outcome: string | null
           score: Json | null
           user_id: string | null
         }
         Insert: {
           answers: Json
           assessment_id?: string | null
+          completed_at?: string
           created_at?: string | null
           id?: string
+          outcome?: string | null
           score?: Json | null
           user_id?: string | null
         }
         Update: {
           answers?: Json
           assessment_id?: string | null
+          completed_at?: string
           created_at?: string | null
           id?: string
+          outcome?: string | null
           score?: Json | null
           user_id?: string | null
         }
@@ -146,103 +931,534 @@ export type Database = {
       }
       assessments: {
         Row: {
-          id: string
-          title: string
-          description: string | null
-          assessment_type: string
-          category: string
-          difficulty_level: string | null
-          estimated_duration_minutes: number | null
-          max_attempts: number | null
-          passing_score: number | null
-          is_ai_powered: boolean | null
-          ai_configuration_id: string | null
-          questions: Json
-          scoring_rubric: Json | null
-          is_public: boolean | null
-          is_active: boolean | null
+          category: string | null
           created_at: string | null
-          updated_at: string | null
           created_by: string | null
+          description: string | null
+          duration: string | null
+          id: string
+          is_public: boolean | null
+          outcome_descriptions: Json | null
+          questions: Json
+          scoring_logic: Json | null
+          status: string | null
+          title: string
+          type: string
+          updated_at: string
         }
         Insert: {
-          id?: string
-          title: string
-          description?: string | null
-          assessment_type: string
-          category: string
-          difficulty_level?: string | null
-          estimated_duration_minutes?: number | null
-          max_attempts?: number | null
-          passing_score?: number | null
-          is_ai_powered?: boolean | null
-          ai_configuration_id?: string | null
-          questions: Json
-          scoring_rubric?: Json | null
-          is_public?: boolean | null
-          is_active?: boolean | null
+          category?: string | null
           created_at?: string | null
-          updated_at?: string | null
           created_by?: string | null
+          description?: string | null
+          duration?: string | null
+          id?: string
+          is_public?: boolean | null
+          outcome_descriptions?: Json | null
+          questions: Json
+          scoring_logic?: Json | null
+          status?: string | null
+          title: string
+          type: string
+          updated_at?: string
         }
         Update: {
-          id?: string
-          title?: string
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
           description?: string | null
-          assessment_type?: string
-          category?: string
+          duration?: string | null
+          id?: string
+          is_public?: boolean | null
+          outcome_descriptions?: Json | null
+          questions?: Json
+          scoring_logic?: Json | null
+          status?: string | null
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      assessments_enhanced: {
+        Row: {
+          ai_config_id: string | null
+          category: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          difficulty_level: string | null
+          id: string
+          is_active: boolean | null
+          is_public: boolean | null
+          max_attempts: number | null
+          passing_score: number | null
+          questions: Json
+          scoring_rubric: Json | null
+          time_limit_minutes: number | null
+          title: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          ai_config_id?: string | null
+          category: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
           difficulty_level?: string | null
-          estimated_duration_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_public?: boolean | null
           max_attempts?: number | null
           passing_score?: number | null
-          is_ai_powered?: boolean | null
-          ai_configuration_id?: string | null
+          questions: Json
+          scoring_rubric?: Json | null
+          time_limit_minutes?: number | null
+          title: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          ai_config_id?: string | null
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          difficulty_level?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_public?: boolean | null
+          max_attempts?: number | null
+          passing_score?: number | null
           questions?: Json
           scoring_rubric?: Json | null
-          is_public?: boolean | null
-          is_active?: boolean | null
-          created_at?: string | null
+          time_limit_minutes?: number | null
+          title?: string
+          type?: string
           updated_at?: string | null
-          created_by?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "assessments_ai_configuration_id_fkey"
-            columns: ["ai_configuration_id"]
-            isOneToOne: false
-            referencedRelation: "ai_configurations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "assessments_created_by_fkey"
+            foreignKeyName: "assessments_enhanced_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "user_profiles"
             referencedColumns: ["id"]
-          }
+          },
         ]
+      }
+      challenge_participants: {
+        Row: {
+          challenge_id: string | null
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          joined_at: string | null
+          partner_id: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          challenge_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          joined_at?: string | null
+          partner_id?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          challenge_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          joined_at?: string | null
+          partner_id?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_participants_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "assessments_enhanced"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_participants_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      challenge_templates: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          questions: Json
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          questions: Json
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          questions?: Json
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      challenge_types: {
+        Row: {
+          ai_config_id: string | null
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          template_data: Json | null
+        }
+        Insert: {
+          ai_config_id?: string | null
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          template_data?: Json | null
+        }
+        Update: {
+          ai_config_id?: string | null
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          template_data?: Json | null
+        }
+        Relationships: []
+      }
+      community_announcement_reads: {
+        Row: {
+          announcement_id: string | null
+          id: string
+          read_at: string
+          user_id: string | null
+        }
+        Insert: {
+          announcement_id?: string | null
+          id?: string
+          read_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          announcement_id?: string | null
+          id?: string
+          read_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_announcement_reads_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "community_announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_announcements: {
+        Row: {
+          announcement_type: string
+          content: string
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          priority: string | null
+          scheduled_at: string | null
+          target_audience: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          announcement_type: string
+          content: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          priority?: string | null
+          scheduled_at?: string | null
+          target_audience?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          announcement_type?: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          priority?: string | null
+          scheduled_at?: string | null
+          target_audience?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      community_assessment_announcements: {
+        Row: {
+          assessment_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          is_active: boolean | null
+          reward_crystals: number | null
+          special_instructions: string | null
+          start_date: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assessment_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          reward_crystals?: number | null
+          special_instructions?: string | null
+          start_date: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assessment_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          reward_crystals?: number | null
+          special_instructions?: string | null
+          start_date?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_assessment_announcements_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_challenge_announcements: {
+        Row: {
+          challenge_id: string | null
+          challenge_type: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          instructions: string | null
+          is_active: boolean | null
+          reward_crystals: number | null
+          start_date: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          challenge_id?: string | null
+          challenge_type: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          instructions?: string | null
+          is_active?: boolean | null
+          reward_crystals?: number | null
+          start_date: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          challenge_id?: string | null
+          challenge_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          instructions?: string | null
+          is_active?: boolean | null
+          reward_crystals?: number | null
+          start_date?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      community_chat_messages: {
+        Row: {
+          created_at: string
+          edited_at: string | null
+          id: string
+          is_edited: boolean | null
+          message: string
+          message_type: string | null
+          metadata: Json | null
+          room_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          is_edited?: boolean | null
+          message: string
+          message_type?: string | null
+          metadata?: Json | null
+          room_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          is_edited?: boolean | null
+          message?: string
+          message_type?: string | null
+          metadata?: Json | null
+          room_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_chat_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "community_chat_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_chat_rooms: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          room_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          room_type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          room_type?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       community_connections: {
         Row: {
           created_at: string | null
           id: string
+          message: string | null
           receiver_id: string | null
           requester_id: string | null
           status: string | null
+          updated_at: string
         }
         Insert: {
           created_at?: string | null
           id?: string
+          message?: string | null
           receiver_id?: string | null
           requester_id?: string | null
           status?: string | null
+          updated_at?: string
         }
         Update: {
           created_at?: string | null
           id?: string
+          message?: string | null
           receiver_id?: string | null
           requester_id?: string | null
           status?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -261,39 +1477,167 @@ export type Database = {
           },
         ]
       }
+      community_quiz_announcements: {
+        Row: {
+          correct_answers: Json | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          is_active: boolean | null
+          questions: Json | null
+          quiz_id: string | null
+          reward_crystals: number | null
+          start_date: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          correct_answers?: Json | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          questions?: Json | null
+          quiz_id?: string | null
+          reward_crystals?: number | null
+          start_date: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          correct_answers?: Json | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          questions?: Json | null
+          quiz_id?: string | null
+          reward_crystals?: number | null
+          start_date?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      conversations: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          session_id: string | null
+          started_at: string
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          session_id?: string | null
+          started_at?: string
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          session_id?: string | null
+          started_at?: string
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      couples_challenge_responses: {
+        Row: {
+          challenge_id: string | null
+          id: string
+          question_index: number
+          response: string
+          submitted_at: string
+          user_id: string | null
+        }
+        Insert: {
+          challenge_id?: string | null
+          id?: string
+          question_index: number
+          response: string
+          submitted_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          challenge_id?: string | null
+          id?: string
+          question_index?: number
+          response?: string
+          submitted_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "couples_challenge_responses_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "couples_challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       couples_challenges: {
         Row: {
           ai_analysis: string | null
+          compatibility_score: number | null
           created_at: string | null
+          expires_at: string | null
           id: string
           initiator_id: string | null
           initiator_responses: Json | null
           partner_id: string | null
           partner_responses: Json | null
-          question_set: Json | null
+          question_set: Json
+          responses: Json | null
           status: string | null
+          unique_link: string | null
+          updated_at: string
         }
         Insert: {
           ai_analysis?: string | null
+          compatibility_score?: number | null
           created_at?: string | null
+          expires_at?: string | null
           id?: string
           initiator_id?: string | null
           initiator_responses?: Json | null
           partner_id?: string | null
           partner_responses?: Json | null
-          question_set?: Json | null
+          question_set: Json
+          responses?: Json | null
           status?: string | null
+          unique_link?: string | null
+          updated_at?: string
         }
         Update: {
           ai_analysis?: string | null
+          compatibility_score?: number | null
           created_at?: string | null
+          expires_at?: string | null
           id?: string
           initiator_id?: string | null
           initiator_responses?: Json | null
           partner_id?: string | null
           partner_responses?: Json | null
-          question_set?: Json | null
+          question_set?: Json
+          responses?: Json | null
           status?: string | null
+          unique_link?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -312,9 +1656,79 @@ export type Database = {
           },
         ]
       }
+      crystal_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          related_entity_id: string | null
+          related_entity_type: string | null
+          source: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          source: string
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          source?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      level_thresholds: {
+        Row: {
+          created_at: string
+          crystals_required: number
+          description: string | null
+          id: string
+          level: number
+          rewards: Json | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          crystals_required: number
+          description?: string | null
+          id?: string
+          level: number
+          rewards?: Json | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          crystals_required?: number
+          description?: string | null
+          id?: string
+          level?: number
+          rewards?: Json | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           audio_url: string | null
+          conversation_id: string | null
           emotion_data: Json | null
           id: string
           sender: string
@@ -324,6 +1738,7 @@ export type Database = {
         }
         Insert: {
           audio_url?: string | null
+          conversation_id?: string | null
           emotion_data?: Json | null
           id?: string
           sender: string
@@ -333,6 +1748,7 @@ export type Database = {
         }
         Update: {
           audio_url?: string | null
+          conversation_id?: string | null
           emotion_data?: Json | null
           id?: string
           sender?: string
@@ -341,6 +1757,13 @@ export type Database = {
           ts?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "messages_session_id_fkey"
             columns: ["session_id"]
@@ -397,6 +1820,349 @@ export type Database = {
           },
         ]
       }
+      newme_assessment_tracking: {
+        Row: {
+          assessment_name: string
+          completed_at: string | null
+          completion_status: string | null
+          follow_up_discussed: boolean | null
+          id: string
+          key_insights: string[] | null
+          metadata: Json | null
+          suggested_at: string | null
+          suggested_in_conversation_id: string | null
+          user_id: string
+        }
+        Insert: {
+          assessment_name: string
+          completed_at?: string | null
+          completion_status?: string | null
+          follow_up_discussed?: boolean | null
+          id?: string
+          key_insights?: string[] | null
+          metadata?: Json | null
+          suggested_at?: string | null
+          suggested_in_conversation_id?: string | null
+          user_id: string
+        }
+        Update: {
+          assessment_name?: string
+          completed_at?: string | null
+          completion_status?: string | null
+          follow_up_discussed?: boolean | null
+          id?: string
+          key_insights?: string[] | null
+          metadata?: Json | null
+          suggested_at?: string | null
+          suggested_in_conversation_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newme_assessment_tracking_suggested_in_conversation_id_fkey"
+            columns: ["suggested_in_conversation_id"]
+            isOneToOne: false
+            referencedRelation: "newme_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "newme_assessment_tracking_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      newme_conversations: {
+        Row: {
+          created_at: string | null
+          duration_seconds: number | null
+          emotional_tone: string | null
+          ended_at: string | null
+          id: string
+          key_insights: string[] | null
+          message_count: number | null
+          metadata: Json | null
+          started_at: string | null
+          suggested_assessments: string[] | null
+          summary: string | null
+          topics_discussed: string[] | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          duration_seconds?: number | null
+          emotional_tone?: string | null
+          ended_at?: string | null
+          id?: string
+          key_insights?: string[] | null
+          message_count?: number | null
+          metadata?: Json | null
+          started_at?: string | null
+          suggested_assessments?: string[] | null
+          summary?: string | null
+          topics_discussed?: string[] | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          duration_seconds?: number | null
+          emotional_tone?: string | null
+          ended_at?: string | null
+          id?: string
+          key_insights?: string[] | null
+          message_count?: number | null
+          metadata?: Json | null
+          started_at?: string | null
+          suggested_assessments?: string[] | null
+          summary?: string | null
+          topics_discussed?: string[] | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newme_conversations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      newme_emotional_snapshots: {
+        Row: {
+          conversation_id: string | null
+          coping_strategies: string[] | null
+          emotion_intensity: number | null
+          id: string
+          metadata: Json | null
+          notes: string | null
+          primary_emotion: string
+          snapshot_date: string | null
+          triggers: string[] | null
+          user_id: string
+        }
+        Insert: {
+          conversation_id?: string | null
+          coping_strategies?: string[] | null
+          emotion_intensity?: number | null
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          primary_emotion: string
+          snapshot_date?: string | null
+          triggers?: string[] | null
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string | null
+          coping_strategies?: string[] | null
+          emotion_intensity?: number | null
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          primary_emotion?: string
+          snapshot_date?: string | null
+          triggers?: string[] | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newme_emotional_snapshots_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "newme_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "newme_emotional_snapshots_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      newme_messages: {
+        Row: {
+          audio_duration_ms: number | null
+          content: string
+          conversation_id: string
+          emotion_detected: string | null
+          id: string
+          metadata: Json | null
+          role: string
+          sentiment_score: number | null
+          timestamp: string | null
+        }
+        Insert: {
+          audio_duration_ms?: number | null
+          content: string
+          conversation_id: string
+          emotion_detected?: string | null
+          id?: string
+          metadata?: Json | null
+          role: string
+          sentiment_score?: number | null
+          timestamp?: string | null
+        }
+        Update: {
+          audio_duration_ms?: number | null
+          content?: string
+          conversation_id?: string
+          emotion_detected?: string | null
+          id?: string
+          metadata?: Json | null
+          role?: string
+          sentiment_score?: number | null
+          timestamp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newme_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "newme_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      newme_user_memories: {
+        Row: {
+          context: string | null
+          created_at: string | null
+          first_mentioned_at: string | null
+          id: string
+          importance_score: number | null
+          is_active: boolean | null
+          last_referenced_at: string | null
+          memory_key: string
+          memory_type: string
+          memory_value: string
+          metadata: Json | null
+          reference_count: number | null
+          source_conversation_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          context?: string | null
+          created_at?: string | null
+          first_mentioned_at?: string | null
+          id?: string
+          importance_score?: number | null
+          is_active?: boolean | null
+          last_referenced_at?: string | null
+          memory_key: string
+          memory_type: string
+          memory_value: string
+          metadata?: Json | null
+          reference_count?: number | null
+          source_conversation_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          context?: string | null
+          created_at?: string | null
+          first_mentioned_at?: string | null
+          id?: string
+          importance_score?: number | null
+          is_active?: boolean | null
+          last_referenced_at?: string | null
+          memory_key?: string
+          memory_type?: string
+          memory_value?: string
+          metadata?: Json | null
+          reference_count?: number | null
+          source_conversation_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newme_user_memories_source_conversation_id_fkey"
+            columns: ["source_conversation_id"]
+            isOneToOne: false
+            referencedRelation: "newme_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "newme_user_memories_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prompt_templates: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          max_tokens: number | null
+          name: string
+          provider_id: string | null
+          system_prompt: string
+          temperature: number | null
+          updated_at: string | null
+          use_case_id: string | null
+          user_prompt_template: string | null
+          variables: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          max_tokens?: number | null
+          name: string
+          provider_id?: string | null
+          system_prompt: string
+          temperature?: number | null
+          updated_at?: string | null
+          use_case_id?: string | null
+          user_prompt_template?: string | null
+          variables?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          max_tokens?: number | null
+          name?: string
+          provider_id?: string | null
+          system_prompt?: string
+          temperature?: number | null
+          updated_at?: string | null
+          use_case_id?: string | null
+          user_prompt_template?: string | null
+          variables?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompt_templates_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prompt_templates_use_case_id_fkey"
+            columns: ["use_case_id"]
+            isOneToOne: false
+            referencedRelation: "ai_use_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prompts: {
         Row: {
           content: Json
@@ -427,35 +2193,94 @@ export type Database = {
         }
         Relationships: []
       }
+      provider_credentials: {
+        Row: {
+          created_at: string
+          encrypted_api_key: string
+          provider_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          encrypted_api_key: string
+          provider_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          encrypted_api_key?: string
+          provider_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_credentials_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: true
+            referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       providers: {
         Row: {
           api_base: string | null
+          api_key_encrypted: string | null
+          behavior_config: Json | null
           created_at: string | null
+          frequency_penalty: number | null
           id: string
           last_synced_at: string | null
+          max_tokens: number | null
           name: string
+          openai_compatible: boolean | null
+          presence_penalty: number | null
           region: string | null
           status: string | null
+          stop_sequences: string[] | null
+          system_instructions: string | null
+          temperature: number | null
+          top_p: number | null
           type: string
         }
         Insert: {
           api_base?: string | null
+          api_key_encrypted?: string | null
+          behavior_config?: Json | null
           created_at?: string | null
+          frequency_penalty?: number | null
           id?: string
           last_synced_at?: string | null
+          max_tokens?: number | null
           name: string
+          openai_compatible?: boolean | null
+          presence_penalty?: number | null
           region?: string | null
           status?: string | null
+          stop_sequences?: string[] | null
+          system_instructions?: string | null
+          temperature?: number | null
+          top_p?: number | null
           type: string
         }
         Update: {
           api_base?: string | null
+          api_key_encrypted?: string | null
+          behavior_config?: Json | null
           created_at?: string | null
+          frequency_penalty?: number | null
           id?: string
           last_synced_at?: string | null
+          max_tokens?: number | null
           name?: string
+          openai_compatible?: boolean | null
+          presence_penalty?: number | null
           region?: string | null
           status?: string | null
+          stop_sequences?: string[] | null
+          system_instructions?: string | null
+          temperature?: number | null
+          top_p?: number | null
           type?: string
         }
         Relationships: []
@@ -492,6 +2317,48 @@ export type Database = {
           },
         ]
       }
+      session_mutes: {
+        Row: {
+          id: string
+          is_active: boolean | null
+          muted_at: string | null
+          muted_by: string | null
+          reason: string | null
+          session_id: string | null
+        }
+        Insert: {
+          id?: string
+          is_active?: boolean | null
+          muted_at?: string | null
+          muted_by?: string | null
+          reason?: string | null
+          session_id?: string | null
+        }
+        Update: {
+          id?: string
+          is_active?: boolean | null
+          muted_at?: string | null
+          muted_by?: string | null
+          reason?: string | null
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_mutes_muted_by_fkey"
+            columns: ["muted_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_mutes_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sessions: {
         Row: {
           agent_id: string | null
@@ -499,6 +2366,7 @@ export type Database = {
           duration_seconds: number | null
           end_ts: string | null
           id: string
+          is_muted: boolean
           realtime_session_id: string | null
           start_ts: string | null
           status: string | null
@@ -511,6 +2379,7 @@ export type Database = {
           duration_seconds?: number | null
           end_ts?: string | null
           id?: string
+          is_muted?: boolean
           realtime_session_id?: string | null
           start_ts?: string | null
           status?: string | null
@@ -523,6 +2392,7 @@ export type Database = {
           duration_seconds?: number | null
           end_ts?: string | null
           id?: string
+          is_muted?: boolean
           realtime_session_id?: string | null
           start_ts?: string | null
           status?: string | null
@@ -546,32 +2416,94 @@ export type Database = {
           },
         ]
       }
+      subscription_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string | null
+          id: string
+          provider_response: Json | null
+          provider_transaction_id: string | null
+          status: string
+          subscription_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string | null
+          id?: string
+          provider_response?: Json | null
+          provider_transaction_id?: string | null
+          status: string
+          subscription_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string | null
+          id?: string
+          provider_response?: Json | null
+          provider_transaction_id?: string | null
+          status?: string
+          subscription_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_transactions_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
+          cancelled_at: string | null
           created_at: string | null
+          currency: string | null
           id: string
+          minutes_included: number
+          minutes_used: number | null
+          price: number | null
           provider: string | null
-          provider_subscription_id: string | null
+          provider_id: string | null
           renewal_date: string | null
           status: string | null
+          tier: string
+          updated_at: string
           user_id: string | null
         }
         Insert: {
+          cancelled_at?: string | null
           created_at?: string | null
+          currency?: string | null
           id?: string
+          minutes_included?: number
+          minutes_used?: number | null
+          price?: number | null
           provider?: string | null
-          provider_subscription_id?: string | null
+          provider_id?: string | null
           renewal_date?: string | null
           status?: string | null
+          tier?: string
+          updated_at?: string
           user_id?: string | null
         }
         Update: {
+          cancelled_at?: string | null
           created_at?: string | null
+          currency?: string | null
           id?: string
+          minutes_included?: number
+          minutes_used?: number | null
+          price?: number | null
           provider?: string | null
-          provider_subscription_id?: string | null
+          provider_id?: string | null
           renewal_date?: string | null
           status?: string | null
+          tier?: string
+          updated_at?: string
           user_id?: string | null
         }
         Relationships: [
@@ -589,18 +2521,21 @@ export type Database = {
           achievement_id: string | null
           earned_at: string | null
           id: string
+          progress_data: Json | null
           user_id: string | null
         }
         Insert: {
           achievement_id?: string | null
           earned_at?: string | null
           id?: string
+          progress_data?: Json | null
           user_id?: string | null
         }
         Update: {
           achievement_id?: string | null
           earned_at?: string | null
           id?: string
+          progress_data?: Json | null
           user_id?: string | null
         }
         Relationships: [
@@ -620,12 +2555,77 @@ export type Database = {
           },
         ]
       }
+      user_assessment_progress: {
+        Row: {
+          assessment_id: string | null
+          best_attempt_id: string | null
+          best_score: number | null
+          completion_date: string | null
+          created_at: string | null
+          id: string
+          is_completed: boolean | null
+          last_attempt_at: string | null
+          total_attempts: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          assessment_id?: string | null
+          best_attempt_id?: string | null
+          best_score?: number | null
+          completion_date?: string | null
+          created_at?: string | null
+          id?: string
+          is_completed?: boolean | null
+          last_attempt_at?: string | null
+          total_attempts?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          assessment_id?: string | null
+          best_attempt_id?: string | null
+          best_score?: number | null
+          completion_date?: string | null
+          created_at?: string | null
+          id?: string
+          is_completed?: boolean | null
+          last_attempt_at?: string | null
+          total_attempts?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_assessment_progress_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments_enhanced"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_assessment_progress_best_attempt_id_fkey"
+            columns: ["best_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_assessment_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_memory_profiles: {
         Row: {
           balance_wheel_scores: Json | null
           created_at: string | null
           emotional_state_history: Json | null
           id: string
+          narrative_identity_data: Json | null
           narrative_patterns: Json | null
           personality_type: string | null
           updated_at: string | null
@@ -636,6 +2636,7 @@ export type Database = {
           created_at?: string | null
           emotional_state_history?: Json | null
           id?: string
+          narrative_identity_data?: Json | null
           narrative_patterns?: Json | null
           personality_type?: string | null
           updated_at?: string | null
@@ -646,6 +2647,7 @@ export type Database = {
           created_at?: string | null
           emotional_state_history?: Json | null
           id?: string
+          narrative_identity_data?: Json | null
           narrative_patterns?: Json | null
           personality_type?: string | null
           updated_at?: string | null
@@ -673,6 +2675,7 @@ export type Database = {
           last_streak_date: string | null
           nickname: string | null
           remaining_minutes: number | null
+          role: string
           subscription_tier: string | null
           user_id: string | null
         }
@@ -687,6 +2690,7 @@ export type Database = {
           last_streak_date?: string | null
           nickname?: string | null
           remaining_minutes?: number | null
+          role?: string
           subscription_tier?: string | null
           user_id?: string | null
         }
@@ -701,8 +2705,68 @@ export type Database = {
           last_streak_date?: string | null
           nickname?: string | null
           remaining_minutes?: number | null
+          role?: string
           subscription_tier?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_resource_progress: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          last_accessed_at: string
+          progress_percentage: number | null
+          resource_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          last_accessed_at?: string
+          progress_percentage?: number | null
+          resource_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          last_accessed_at?: string
+          progress_percentage?: number | null
+          resource_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_resource_progress_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "wellness_resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
         }
         Relationships: []
       }
@@ -755,768 +2819,189 @@ export type Database = {
           audio_url: string | null
           category: string
           created_at: string | null
+          created_by: string | null
           description: string | null
+          download_url: string | null
           duration: number | null
           id: string
+          is_downloadable: boolean | null
+          is_premium: boolean | null
+          required_tier: string | null
+          status: string | null
+          tags: string[] | null
           title: string
+          transcript: string | null
+          updated_at: string
+          usage_count: number | null
         }
         Insert: {
           audio_url?: string | null
           category: string
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
+          download_url?: string | null
           duration?: number | null
           id?: string
+          is_downloadable?: boolean | null
+          is_premium?: boolean | null
+          required_tier?: string | null
+          status?: string | null
+          tags?: string[] | null
           title: string
+          transcript?: string | null
+          updated_at?: string
+          usage_count?: number | null
         }
         Update: {
           audio_url?: string | null
           category?: string
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
+          download_url?: string | null
           duration?: number | null
           id?: string
+          is_downloadable?: boolean | null
+          is_premium?: boolean | null
+          required_tier?: string | null
+          status?: string | null
+          tags?: string[] | null
           title?: string
+          transcript?: string | null
+          updated_at?: string
+          usage_count?: number | null
         }
         Relationships: []
-      }
-      community_chat_rooms: {
-        Row: {
-          id: string
-          name: string
-          description: string | null
-          room_type: string
-          is_active: boolean | null
-          created_at: string | null
-          created_by: string | null
-        }
-        Insert: {
-          id?: string
-          name: string
-          description?: string | null
-          room_type: string
-          is_active?: boolean | null
-          created_at?: string | null
-          created_by?: string | null
-        }
-        Update: {
-          id?: string
-          name?: string
-          description?: string | null
-          room_type?: string
-          is_active?: boolean | null
-          created_at?: string | null
-          created_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "community_chat_rooms_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      community_chat_messages: {
-        Row: {
-          id: string
-          room_id: string | null
-          user_id: string | null
-          message: string
-          message_type: string | null
-          metadata: Json | null
-          is_edited: boolean | null
-          edited_at: string | null
-          created_at: string | null
-        }
-        Insert: {
-          id?: string
-          room_id?: string | null
-          user_id?: string | null
-          message: string
-          message_type?: string | null
-          metadata?: Json | null
-          is_edited?: boolean | null
-          edited_at?: string | null
-          created_at?: string | null
-        }
-        Update: {
-          id?: string
-          room_id?: string | null
-          user_id?: string | null
-          message?: string
-          message_type?: string | null
-          metadata?: Json | null
-          is_edited?: boolean | null
-          edited_at?: string | null
-          created_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "community_chat_messages_room_id_fkey"
-            columns: ["room_id"]
-            isOneToOne: false
-            referencedRelation: "community_chat_rooms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "community_chat_messages_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      community_announcements: {
-        Row: {
-          id: string
-          title: string
-          content: string
-          announcement_type: string
-          priority: string | null
-          target_audience: string | null
-          is_active: boolean | null
-          scheduled_at: string | null
-          expires_at: string | null
-          created_at: string | null
-          created_by: string | null
-        }
-        Insert: {
-          id?: string
-          title: string
-          content: string
-          announcement_type: string
-          priority?: string | null
-          target_audience?: string | null
-          is_active?: boolean | null
-          scheduled_at?: string | null
-          expires_at?: string | null
-          created_at?: string | null
-          created_by?: string | null
-        }
-        Update: {
-          id?: string
-          title?: string
-          content?: string
-          announcement_type?: string
-          priority?: string | null
-          target_audience?: string | null
-          is_active?: boolean | null
-          scheduled_at?: string | null
-          expires_at?: string | null
-          created_at?: string | null
-          created_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "community_announcements_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      community_announcement_reads: {
-        Row: {
-          id: string
-          announcement_id: string | null
-          user_id: string | null
-          read_at: string | null
-        }
-        Insert: {
-          id?: string
-          announcement_id?: string | null
-          user_id?: string | null
-          read_at?: string | null
-        }
-        Update: {
-          id?: string
-          announcement_id?: string | null
-          user_id?: string | null
-          read_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "community_announcement_reads_announcement_id_fkey"
-            columns: ["announcement_id"]
-            isOneToOne: false
-            referencedRelation: "community_announcements"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "community_announcement_reads_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      session_mutes: {
-        Row: {
-          id: string
-          session_id: string | null
-          muted_by: string | null
-          muted_at: string | null
-          reason: string | null
-          is_active: boolean | null
-        }
-        Insert: {
-          id?: string
-          session_id?: string | null
-          muted_by?: string | null
-          muted_at?: string | null
-          reason?: string | null
-          is_active?: boolean | null
-        }
-        Update: {
-          id?: string
-          session_id?: string | null
-          muted_by?: string | null
-          muted_at?: string | null
-          reason?: string | null
-          is_active?: boolean | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "session_mutes_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "sessions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "session_mutes_muted_by_fkey"
-            columns: ["muted_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      ai_configurations: {
-        Row: {
-          id: string
-          name: string
-          description: string | null
-          provider: string
-          model_name: string
-          api_base_url: string | null
-          api_key_encrypted: string | null
-          temperature: number | null
-          max_tokens: number | null
-          top_p: number | null
-          frequency_penalty: number | null
-          presence_penalty: number | null
-          system_prompt: string | null
-          user_prompt_template: string | null
-          scoring_prompt_template: string | null
-          feedback_prompt_template: string | null
-          is_active: boolean | null
-          created_at: string | null
-          updated_at: string | null
-          created_by: string | null
-        }
-        Insert: {
-          id?: string
-          name: string
-          description?: string | null
-          provider: string
-          model_name: string
-          api_base_url?: string | null
-          api_key_encrypted?: string | null
-          temperature?: number | null
-          max_tokens?: number | null
-          top_p?: number | null
-          frequency_penalty?: number | null
-          presence_penalty?: number | null
-          system_prompt?: string | null
-          user_prompt_template?: string | null
-          scoring_prompt_template?: string | null
-          feedback_prompt_template?: string | null
-          is_active?: boolean | null
-          created_at?: string | null
-          updated_at?: string | null
-          created_by?: string | null
-        }
-        Update: {
-          id?: string
-          name?: string
-          description?: string | null
-          provider?: string
-          model_name?: string
-          api_base_url?: string | null
-          api_key_encrypted?: string | null
-          temperature?: number | null
-          max_tokens?: number | null
-          top_p?: number | null
-          frequency_penalty?: number | null
-          presence_penalty?: number | null
-          system_prompt?: string | null
-          user_prompt_template?: string | null
-          scoring_prompt_template?: string | null
-          feedback_prompt_template?: string | null
-          is_active?: boolean | null
-          created_at?: string | null
-          updated_at?: string | null
-          created_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ai_configurations_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      quizzes: {
-        Row: {
-          id: string
-          title: string
-          description: string | null
-          category: string
-          difficulty_level: string | null
-          time_limit_minutes: number | null
-          max_attempts: number | null
-          passing_score: number | null
-          is_ai_powered: boolean | null
-          ai_configuration_id: string | null
-          questions: Json
-          ai_grading_prompt: string | null
-          is_public: boolean | null
-          is_active: boolean | null
-          created_at: string | null
-          updated_at: string | null
-          created_by: string | null
-        }
-        Insert: {
-          id?: string
-          title: string
-          description?: string | null
-          category: string
-          difficulty_level?: string | null
-          time_limit_minutes?: number | null
-          max_attempts?: number | null
-          passing_score?: number | null
-          is_ai_powered?: boolean | null
-          ai_configuration_id?: string | null
-          questions: Json
-          ai_grading_prompt?: string | null
-          is_public?: boolean | null
-          is_active?: boolean | null
-          created_at?: string | null
-          updated_at?: string | null
-          created_by?: string | null
-        }
-        Update: {
-          id?: string
-          title?: string
-          description?: string | null
-          category?: string
-          difficulty_level?: string | null
-          time_limit_minutes?: number | null
-          max_attempts?: number | null
-          passing_score?: number | null
-          is_ai_powered?: boolean | null
-          ai_configuration_id?: string | null
-          questions?: Json
-          ai_grading_prompt?: string | null
-          is_public?: boolean | null
-          is_active?: boolean | null
-          created_at?: string | null
-          updated_at?: string | null
-          created_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "quizzes_ai_configuration_id_fkey"
-            columns: ["ai_configuration_id"]
-            isOneToOne: false
-            referencedRelation: "ai_configurations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quizzes_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      challenges: {
-        Row: {
-          id: string
-          title: string
-          description: string | null
-          challenge_type: string
-          category: string
-          difficulty_level: string | null
-          duration_days: number | null
-          max_participants: number | null
-          is_ai_powered: boolean | null
-          ai_configuration_id: string | null
-          instructions: string
-          success_criteria: Json | null
-          ai_evaluation_prompt: string | null
-          reward_crystals: number | null
-          is_public: boolean | null
-          is_active: boolean | null
-          start_date: string | null
-          end_date: string | null
-          created_at: string | null
-          updated_at: string | null
-          created_by: string | null
-        }
-        Insert: {
-          id?: string
-          title: string
-          description?: string | null
-          challenge_type: string
-          category: string
-          difficulty_level?: string | null
-          duration_days?: number | null
-          max_participants?: number | null
-          is_ai_powered?: boolean | null
-          ai_configuration_id?: string | null
-          instructions: string
-          success_criteria?: Json | null
-          ai_evaluation_prompt?: string | null
-          reward_crystals?: number | null
-          is_public?: boolean | null
-          is_active?: boolean | null
-          start_date?: string | null
-          end_date?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-          created_by?: string | null
-        }
-        Update: {
-          id?: string
-          title?: string
-          description?: string | null
-          challenge_type?: string
-          category?: string
-          difficulty_level?: string | null
-          duration_days?: number | null
-          max_participants?: number | null
-          is_ai_powered?: boolean | null
-          ai_configuration_id?: string | null
-          instructions?: string
-          success_criteria?: Json | null
-          ai_evaluation_prompt?: string | null
-          reward_crystals?: number | null
-          is_public?: boolean | null
-          is_active?: boolean | null
-          start_date?: string | null
-          end_date?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-          created_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "challenges_ai_configuration_id_fkey"
-            columns: ["ai_configuration_id"]
-            isOneToOne: false
-            referencedRelation: "ai_configurations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "challenges_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      quiz_results: {
-        Row: {
-          id: string
-          quiz_id: string | null
-          user_id: string | null
-          answers: Json
-          score: number | null
-          max_score: number | null
-          percentage_score: number | null
-          ai_feedback: string | null
-          ai_explanations: Json | null
-          detailed_grading: Json | null
-          time_taken_seconds: number | null
-          ai_model_used: string | null
-          attempt_number: number | null
-          is_passed: boolean | null
-          completed_at: string | null
-        }
-        Insert: {
-          id?: string
-          quiz_id?: string | null
-          user_id?: string | null
-          answers: Json
-          score?: number | null
-          max_score?: number | null
-          percentage_score?: number | null
-          ai_feedback?: string | null
-          ai_explanations?: Json | null
-          detailed_grading?: Json | null
-          time_taken_seconds?: number | null
-          ai_model_used?: string | null
-          attempt_number?: number | null
-          is_passed?: boolean | null
-          completed_at?: string | null
-        }
-        Update: {
-          id?: string
-          quiz_id?: string | null
-          user_id?: string | null
-          answers?: Json
-          score?: number | null
-          max_score?: number | null
-          percentage_score?: number | null
-          ai_feedback?: string | null
-          ai_explanations?: Json | null
-          detailed_grading?: Json | null
-          time_taken_seconds?: number | null
-          ai_model_used?: string | null
-          attempt_number?: number | null
-          is_passed?: boolean | null
-          completed_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "quiz_results_quiz_id_fkey"
-            columns: ["quiz_id"]
-            isOneToOne: false
-            referencedRelation: "quizzes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quiz_results_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      challenge_progress: {
-        Row: {
-          id: string
-          challenge_id: string | null
-          user_id: string | null
-          progress_data: Json | null
-          ai_coaching_messages: Json | null
-          current_streak: number | null
-          longest_streak: number | null
-          total_completions: number | null
-          ai_feedback_history: Json | null
-          ai_motivational_messages: Json | null
-          is_completed: boolean | null
-          completed_at: string | null
-          joined_at: string | null
-        }
-        Insert: {
-          id?: string
-          challenge_id?: string | null
-          user_id?: string | null
-          progress_data?: Json | null
-          ai_coaching_messages?: Json | null
-          current_streak?: number | null
-          longest_streak?: number | null
-          total_completions?: number | null
-          ai_feedback_history?: Json | null
-          ai_motivational_messages?: Json | null
-          is_completed?: boolean | null
-          completed_at?: string | null
-          joined_at?: string | null
-        }
-        Update: {
-          id?: string
-          challenge_id?: string | null
-          user_id?: string | null
-          progress_data?: Json | null
-          ai_coaching_messages?: Json | null
-          current_streak?: number | null
-          longest_streak?: number | null
-          total_completions?: number | null
-          ai_feedback_history?: Json | null
-          ai_motivational_messages?: Json | null
-          is_completed?: boolean | null
-          completed_at?: string | null
-          joined_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "challenge_progress_challenge_id_fkey"
-            columns: ["challenge_id"]
-            isOneToOne: false
-            referencedRelation: "challenges"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "challenge_progress_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      ai_usage_logs: {
-        Row: {
-          id: string
-          configuration_id: string | null
-          user_id: string | null
-          content_type: string | null
-          content_id: string | null
-          api_provider: string | null
-          model_name: string | null
-          prompt_tokens: number | null
-          completion_tokens: number | null
-          total_tokens: number | null
-          processing_time_ms: number | null
-          cost_usd: number | null
-          success: boolean | null
-          error_message: string | null
-          request_payload: Json | null
-          response_data: Json | null
-          created_at: string | null
-        }
-        Insert: {
-          id?: string
-          configuration_id?: string | null
-          user_id?: string | null
-          content_type?: string | null
-          content_id?: string | null
-          api_provider: string | null
-          model_name: string | null
-          prompt_tokens?: number | null
-          completion_tokens?: number | null
-          total_tokens?: number | null
-          processing_time_ms?: number | null
-          cost_usd?: number | null
-          success?: boolean | null
-          error_message?: string | null
-          request_payload?: Json | null
-          response_data?: Json | null
-          created_at?: string | null
-        }
-        Update: {
-          id?: string
-          configuration_id?: string | null
-          user_id?: string | null
-          content_type?: string | null
-          content_id?: string | null
-          api_provider?: string | null
-          model_name?: string | null
-          prompt_tokens?: number | null
-          completion_tokens?: number | null
-          total_tokens?: number | null
-          processing_time_ms?: number | null
-          cost_usd?: number | null
-          success?: boolean | null
-          error_message?: string | null
-          request_payload?: Json | null
-          response_data?: Json | null
-          created_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ai_usage_logs_configuration_id_fkey"
-            columns: ["configuration_id"]
-            isOneToOne: false
-            referencedRelation: "ai_configurations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ai_usage_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      user_assessment_stats: {
-        Row: {
-          id: string
-          user_id: string | null
-          total_assessments_completed: number | null
-          total_quizzes_completed: number | null
-          total_challenges_completed: number | null
-          average_assessment_score: number | null
-          average_quiz_score: number | null
-          current_streak: number | null
-          longest_streak: number | null
-          total_ai_interactions: number | null
-          favorite_categories: Json | null
-          strengths_by_category: Json | null
-          improvement_areas: Json | null
-          last_activity_date: string | null
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          user_id?: string | null
-          total_assessments_completed?: number | null
-          total_quizzes_completed?: number | null
-          total_challenges_completed?: number | null
-          average_assessment_score?: number | null
-          average_quiz_score?: number | null
-          current_streak?: number | null
-          longest_streak?: number | null
-          total_ai_interactions?: number | null
-          favorite_categories?: Json | null
-          strengths_by_category?: Json | null
-          improvement_areas?: Json | null
-          last_activity_date?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string | null
-          total_assessments_completed?: number | null
-          total_quizzes_completed?: number | null
-          total_challenges_completed?: number | null
-          average_assessment_score?: number | null
-          average_quiz_score?: number | null
-          current_streak?: number | null
-          longest_streak?: number | null
-          total_ai_interactions?: number | null
-          favorite_categories?: Json | null
-          strengths_by_category?: Json | null
-          improvement_areas?: Json | null
-          last_activity_date?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_assessment_stats_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          }
-        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      _create_admin_policy_if_table_exists: {
+        Args: { for_ops: string; polname: string; tbl: unknown }
+        Returns: undefined
+      }
+      ai_content_builder: {
+        Args: {
+          p_content_type: string
+          p_length?: string
+          p_style?: string
+          p_topic: string
+        }
+        Returns: Json
+      }
+      award_crystals: {
+        Args: {
+          p_amount: number
+          p_description?: string
+          p_related_entity_id?: string
+          p_related_entity_type?: string
+          p_source: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      check_achievements: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
+      check_ai_rate_limit: {
+        Args: {
+          p_max_requests?: number
+          p_provider_name: string
+          p_user_id: string
+          p_window_minutes?: number
+        }
+        Returns: boolean
+      }
+      generate_challenge_link: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_ai_config_for_service: {
+        Args: { p_service_id?: string; p_service_type: string }
+        Returns: {
+          api_base_url: string
+          api_version: string
+          config_id: string
+          config_name: string
+          cost_per_1k_input_tokens: number
+          cost_per_1k_output_tokens: number
+          custom_headers: Json
+          frequency_penalty: number
+          is_default: boolean
+          max_tokens: number
+          model_name: string
+          presence_penalty: number
+          provider: string
+          provider_name: string
+          system_prompt: string
+          temperature: number
+          top_p: number
+          user_prompt_template: string
+        }[]
+      }
+      get_newme_user_context: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      get_unread_announcements_count: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      increment_ai_rate_limit: {
+        Args: {
+          p_max_requests?: number
+          p_provider_name: string
+          p_user_id: string
+          p_window_minutes?: number
+        }
+        Returns: undefined
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      mark_announcement_read: {
+        Args: { p_announcement_id: string }
+        Returns: undefined
+      }
+      paypal_capture_order: {
+        Args: { p_order_id: string }
+        Returns: Json
+      }
+      paypal_create_order: {
+        Args: { p_amount: number; p_currency?: string; p_description?: string }
+        Returns: Json
+      }
+      promote_user_to_admin: {
+        Args: { p_email: string }
+        Returns: undefined
+      }
+      provider_discovery: {
+        Args: { p_service_type?: string }
+        Returns: Json
+      }
+      realtime_token: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      update_subscription_minutes: {
+        Args: { p_minutes_used: number; p_user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1642,7 +3127,12 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  public: {
+  graphql_public: {
     Enums: {},
+  },
+  public: {
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const

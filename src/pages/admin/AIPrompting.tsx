@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import ResponsiveTable from "@/components/ui/ResponsiveTable";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -224,7 +225,7 @@ export default function AIPrompting() {
       ...prev,
       content: {
         ...prev.content,
-        examples: prev.content.examples.map((ex, i) => 
+        examples: prev.content.examples.map((ex, i) =>
           i === index ? { ...ex, [field]: value } : ex
         )
       }
@@ -401,15 +402,16 @@ export default function AIPrompting() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
+            <ResponsiveTable>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
               <TableBody>
                 {prompts.map((prompt) => (
                   <TableRow key={prompt.id}>
@@ -446,6 +448,7 @@ export default function AIPrompting() {
                 ))}
               </TableBody>
             </Table>
+            </ResponsiveTable>
           </CardContent>
         </Card>
 
@@ -460,15 +463,16 @@ export default function AIPrompting() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
+            <ResponsiveTable>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
               <TableBody>
                 {agents.map((agent) => (
                   <TableRow key={agent.id}>
@@ -490,6 +494,7 @@ export default function AIPrompting() {
                 ))}
               </TableBody>
             </Table>
+            </ResponsiveTable>
           </CardContent>
         </Card>
       </div>

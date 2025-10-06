@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Upload, Loader2, Image, Trash2 } from 'lucide-react';
+import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
 
 interface Asset {
   id: string;
@@ -20,6 +21,8 @@ export default function BrandingAssetManagement() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [assetToDelete, setAssetToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     loadAssets();
@@ -89,14 +92,21 @@ export default function BrandingAssetManagement() {
   };
 
   const handleDelete = async (assetName: string) => {
-    if (!confirm(`Are you sure you want to delete ${assetName}?`)) return;
+    setAssetToDelete(assetName);
+    setDialogOpen(true);
+  };
+
+  const performDelete = async () => {
+    setDialogOpen(false);
+    if (!assetToDelete) return;
 
     try {
-      const { error } = await supabase.storage.from('branding-assets').remove([assetName]);
+      const { error } = await supabase.storage.from('branding-assets').remove([assetToDelete]);
 
       if (error) throw error;
 
       toast.success('Asset deleted successfully!');
+      setAssetToDelete(null);
       loadAssets();
     } catch (error) {
       console.error('Error deleting asset:', error);
@@ -114,22 +124,22 @@ export default function BrandingAssetManagement() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Branding & Asset Management</h1>
+      <h1 className="text-3xl font-bold gradient-text">Branding & Asset Management</h1>
       <p className="text-muted-foreground">
         Upload and manage logos, images, and other branding assets.
       </p>
 
-      <Card>
+      <Card className="glass-card">
         <CardHeader>
-          <CardTitle>Upload New Asset</CardTitle>
+          <CardTitle className="gradient-text">Upload New Asset</CardTitle>
           <CardDescription>Add new images or files to your branding assets.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
             <Label htmlFor="asset-file">Select File</Label>
-            <Input id="asset-file" type="file" onChange={handleFileChange} />
+            <Input id="asset-file" type="file" onChange={handleFileChange} className="glass" />
           </div>
-          <Button onClick={handleUpload} disabled={uploading || !file}>
+          <Button onClick={handleUpload} disabled={uploading || !file} className="clay-button">
             {uploading ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : (
@@ -140,9 +150,9 @@ export default function BrandingAssetManagement() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="glass-card">
         <CardHeader>
-          <CardTitle>Existing Assets</CardTitle>
+          <CardTitle className="gradient-text">Existing Assets</CardTitle>
           <CardDescription>Manage your uploaded branding assets.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -181,6 +191,13 @@ export default function BrandingAssetManagement() {
           )}
         </CardContent>
       </Card>
+      <ConfirmationDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onConfirm={performDelete}
+        title="Delete branding asset"
+        description={`Are you sure you want to delete '${assetToDelete}'?`}
+      />
     </div>
   );
 }

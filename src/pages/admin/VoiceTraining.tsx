@@ -84,9 +84,9 @@ const VoiceTraining: React.FC = () => {
         Record audio samples to train and improve the AI's voice recognition and synthesis.
       </p>
 
-      <Card>
+      <Card className="glass-card">
         <CardHeader>
-          <CardTitle>Record New Voice Sample</CardTitle>
+          <CardTitle className="gradient-text">Record New Voice Sample</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center space-y-4">
           <div className="w-full h-24 bg-gray-100 rounded-lg overflow-hidden">

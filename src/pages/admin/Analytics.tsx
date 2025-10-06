@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ResponsiveTable from "@/components/ui/ResponsiveTable";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { Users, MessageSquare, TrendingUp, DollarSign, Activity, Trophy, Clock, User, Calendar, BarChart3, PieChart, LineChart } from "lucide-react";
@@ -285,7 +286,7 @@ export default function Analytics() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            <ResponsiveTable>
               <Table>
                 <TableHeader>
                 <TableRow>
@@ -325,7 +326,7 @@ export default function Analytics() {
                 ))}
               </TableBody>
             </Table>
-            </div>
+            </ResponsiveTable>
           </CardContent>
         </Card>
 
@@ -340,7 +341,7 @@ export default function Analytics() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            <ResponsiveTable>
               <Table>
                 <TableHeader>
                 <TableRow>
@@ -380,7 +381,7 @@ export default function Analytics() {
                 ))}
               </TableBody>
             </Table>
-            </div>
+            </ResponsiveTable>
           </CardContent>
         </Card>
       </div>

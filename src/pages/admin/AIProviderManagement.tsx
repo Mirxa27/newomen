@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import ResponsiveTable from "@/components/ui/ResponsiveTable";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,14 +19,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { 
-  RefreshCw, 
-  Plus, 
-  Loader2, 
-  Search, 
-  Settings, 
-  Brain, 
-  MessageSquare, 
+import {
+  RefreshCw,
+  Plus,
+  Loader2,
+  Search,
+  Settings,
+  Brain,
+  MessageSquare,
   Target,
   Heart,
   Shield,
@@ -36,6 +37,7 @@ import {
   TestTube
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 
 interface Provider {
   id: string;
@@ -120,6 +122,8 @@ export default function AIProviderManagement() {
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [behaviorDialogOpen, setBehaviorDialogOpen] = useState(false);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ type: string; id: string } | null>(null);
 
   // Form states
   const [newProvider, setNewProvider] = useState({
@@ -416,12 +420,43 @@ export default function AIProviderManagement() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!itemToDelete) return;
+    const { type, id } = itemToDelete;
+
+    try {
+      let error;
+      if (type === 'provider') {
+        ({ error } = await supabase.from("providers").delete().eq("id", id));
+      } else if (type === 'template') {
+        ({ error } = await supabase.from("prompt_templates").delete().eq("id", id));
+      } else if (type === 'behavior') {
+        ({ error } = await supabase.from("ai_behaviors").delete().eq("id", id));
+      } else if (type === 'config') {
+        ({ error } = await supabase.from("ai_model_configs").delete().eq("id", id));
+      }
+      if (error) throw error;
+      toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} deleted successfully!`);
+      loadData();
+    } catch (error) {
+      console.error(`Error deleting ${type}:`, error);
+      toast.error(`Failed to delete ${type}.`);
+    } finally {
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
+    }
+  };
+
   const filteredProviders = providers.filter(provider =>
     provider.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredTemplates = promptTemplates.filter(template =>
     template.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredBehaviors = behaviors.filter(behavior =>
+    behavior.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredConfigs = modelConfigs.filter(config =>
@@ -445,10 +480,10 @@ export default function AIProviderManagement() {
               placeholder="Search..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-64"
+              className="pl-10 w-64 glass"
             />
           </div>
-          <Button onClick={loadData} disabled={loading}>
+          <Button onClick={loadData} disabled={loading} className="glass">
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
@@ -456,7 +491,7 @@ export default function AIProviderManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-4 glass">
           <TabsTrigger value="providers" className="flex items-center gap-2">
             <Settings className="w-4 h-4" />
             Providers
@@ -477,25 +512,25 @@ export default function AIProviderManagement() {
 
         {/* Providers Tab */}
         <TabsContent value="providers" className="space-y-4">
-          <Card>
+          <Card className="glass-card">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>AI Providers</CardTitle>
+                  <CardTitle className="gradient-text">AI Providers</CardTitle>
                   <CardDescription>
                     Manage OpenAI-compatible AI providers and their configurations
                   </CardDescription>
                 </div>
                 <Dialog open={providerDialogOpen} onOpenChange={setProviderDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button>
+                    <Button className="clay-button">
                       <Plus className="w-4 h-4 mr-2" />
                       Add Provider
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
+                  <DialogContent className="max-w-2xl glass-card">
                     <DialogHeader>
-                      <DialogTitle>Add AI Provider</DialogTitle>
+                      <DialogTitle className="gradient-text">Add AI Provider</DialogTitle>
                       <DialogDescription>
                         Configure a new AI provider with OpenAI compatibility
                       </DialogDescription>
@@ -509,12 +544,13 @@ export default function AIProviderManagement() {
                             value={newProvider.name}
                             onChange={(e) => setNewProvider({...newProvider, name: e.target.value})}
                             placeholder="e.g., OpenAI GPT-4"
+                            className="glass"
                           />
                         </div>
                         <div>
                           <Label htmlFor="type">Provider Type</Label>
                           <Select value={newProvider.type} onValueChange={(value) => setNewProvider({...newProvider, type: value})}>
-                            <SelectTrigger>
+                            <SelectTrigger className="glass">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -533,6 +569,7 @@ export default function AIProviderManagement() {
                           value={newProvider.api_base}
                           onChange={(e) => setNewProvider({...newProvider, api_base: e.target.value})}
                           placeholder="https://api.openai.com/v1"
+                          className="glass"
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
@@ -543,6 +580,7 @@ export default function AIProviderManagement() {
                             type="number"
                             value={newProvider.max_tokens}
                             onChange={(e) => setNewProvider({...newProvider, max_tokens: parseInt(e.target.value)})}
+                            className="glass"
                           />
                         </div>
                         <div>
@@ -555,6 +593,7 @@ export default function AIProviderManagement() {
                             max="2"
                             value={newProvider.temperature}
                             onChange={(e) => setNewProvider({...newProvider, temperature: parseFloat(e.target.value)})}
+                            className="glass"
                           />
                         </div>
                       </div>
@@ -566,6 +605,7 @@ export default function AIProviderManagement() {
                           onChange={(e) => setNewProvider({...newProvider, system_instructions: e.target.value})}
                           placeholder="Default system instructions for this provider..."
                           rows={3}
+                          className="glass"
                         />
                       </div>
                       <div className="flex items-center space-x-2">
@@ -577,10 +617,10 @@ export default function AIProviderManagement() {
                         <Label htmlFor="openai_compatible">OpenAI Compatible</Label>
                       </div>
                       <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setProviderDialogOpen(false)}>
+                        <Button variant="outline" onClick={() => setProviderDialogOpen(false)} className="glass">
                           Cancel
                         </Button>
-                        <Button onClick={addProvider}>
+                        <Button onClick={addProvider} className="clay-button">
                           <Save className="w-4 h-4 mr-2" />
                           Add Provider
                         </Button>
@@ -591,7 +631,7 @@ export default function AIProviderManagement() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              <ResponsiveTable>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -631,11 +671,14 @@ export default function AIProviderManagement() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="glass">
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="glass">
                               <TestTube className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="glass" onClick={() => { setItemToDelete({ type: 'provider', id: provider.id }); setDeleteDialogOpen(true); }}>
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -643,32 +686,32 @@ export default function AIProviderManagement() {
                     ))}
                   </TableBody>
                 </Table>
-              </div>
+              </ResponsiveTable>
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* Templates Tab */}
         <TabsContent value="templates" className="space-y-4">
-          <Card>
+          <Card className="glass-card">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Prompt Templates</CardTitle>
+                  <CardTitle className="gradient-text">Prompt Templates</CardTitle>
                   <CardDescription>
                     Manage AI prompt templates for different use cases
                   </CardDescription>
                 </div>
                 <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button>
+                    <Button className="clay-button">
                       <Plus className="w-4 h-4 mr-2" />
                       Add Template
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-4xl">
+                  <DialogContent className="max-w-4xl glass-card">
                     <DialogHeader>
-                      <DialogTitle>Add Prompt Template</DialogTitle>
+                      <DialogTitle className="gradient-text">Add Prompt Template</DialogTitle>
                       <DialogDescription>
                         Create a new prompt template for specific use cases
                       </DialogDescription>
@@ -682,12 +725,13 @@ export default function AIProviderManagement() {
                             value={newTemplate.name}
                             onChange={(e) => setNewTemplate({...newTemplate, name: e.target.value})}
                             placeholder="e.g., Assessment Results Analysis"
+                            className="glass"
                           />
                         </div>
                         <div>
                           <Label htmlFor="use_case">Use Case</Label>
                           <Select value={newTemplate.use_case_id} onValueChange={(value) => setNewTemplate({...newTemplate, use_case_id: value})}>
-                            <SelectTrigger>
+                            <SelectTrigger className="glass">
                               <SelectValue placeholder="Select use case" />
                             </SelectTrigger>
                             <SelectContent>
@@ -708,6 +752,7 @@ export default function AIProviderManagement() {
                           onChange={(e) => setNewTemplate({...newTemplate, system_prompt: e.target.value})}
                           placeholder="Define the AI's role and behavior..."
                           rows={4}
+                          className="glass"
                         />
                       </div>
                       <div>
@@ -718,6 +763,7 @@ export default function AIProviderManagement() {
                           onChange={(e) => setNewTemplate({...newTemplate, user_prompt_template: e.target.value})}
                           placeholder="Template for user prompts with variables like {user_name}, {assessment_type}..."
                           rows={3}
+                          className="glass"
                         />
                       </div>
                       <div className="grid grid-cols-3 gap-4">
@@ -731,6 +777,7 @@ export default function AIProviderManagement() {
                             max="2"
                             value={newTemplate.temperature}
                             onChange={(e) => setNewTemplate({...newTemplate, temperature: parseFloat(e.target.value)})}
+                            className="glass"
                           />
                         </div>
                         <div>
@@ -740,6 +787,7 @@ export default function AIProviderManagement() {
                             type="number"
                             value={newTemplate.max_tokens}
                             onChange={(e) => setNewTemplate({...newTemplate, max_tokens: parseInt(e.target.value)})}
+                            className="glass"
                           />
                         </div>
                         <div className="flex items-center space-x-2 pt-6">
@@ -752,10 +800,10 @@ export default function AIProviderManagement() {
                         </div>
                       </div>
                       <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setTemplateDialogOpen(false)}>
+                        <Button variant="outline" onClick={() => setTemplateDialogOpen(false)} className="glass">
                           Cancel
                         </Button>
-                        <Button onClick={addTemplate}>
+                        <Button onClick={addTemplate} className="clay-button">
                           <Save className="w-4 h-4 mr-2" />
                           Add Template
                         </Button>
@@ -766,7 +814,7 @@ export default function AIProviderManagement() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              <ResponsiveTable>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -800,11 +848,14 @@ export default function AIProviderManagement() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="glass">
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="glass">
                               <TestTube className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="glass" onClick={() => { setItemToDelete({ type: 'template', id: template.id }); setDeleteDialogOpen(true); }}>
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -812,32 +863,32 @@ export default function AIProviderManagement() {
                     ))}
                   </TableBody>
                 </Table>
-              </div>
+              </ResponsiveTable>
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* Behaviors Tab */}
         <TabsContent value="behaviors" className="space-y-4">
-          <Card>
+          <Card className="glass-card">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>AI Behaviors</CardTitle>
+                  <CardTitle className="gradient-text">AI Behaviors</CardTitle>
                   <CardDescription>
                     Define AI personality traits and communication styles
                   </CardDescription>
                 </div>
                 <Dialog open={behaviorDialogOpen} onOpenChange={setBehaviorDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button>
+                    <Button className="clay-button">
                       <Plus className="w-4 h-4 mr-2" />
                       Add Behavior
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
+                  <DialogContent className="max-w-2xl glass-card">
                     <DialogHeader>
-                      <DialogTitle>Add AI Behavior</DialogTitle>
+                      <DialogTitle className="gradient-text">Add AI Behavior</DialogTitle>
                       <DialogDescription>
                         Create a new AI behavior profile
                       </DialogDescription>
@@ -850,6 +901,7 @@ export default function AIProviderManagement() {
                           value={newBehavior.name}
                           onChange={(e) => setNewBehavior({...newBehavior, name: e.target.value})}
                           placeholder="e.g., Supportive Companion"
+                          className="glass"
                         />
                       </div>
                       <div>
@@ -860,13 +912,14 @@ export default function AIProviderManagement() {
                           onChange={(e) => setNewBehavior({...newBehavior, description: e.target.value})}
                           placeholder="Describe this behavior profile..."
                           rows={2}
+                          className="glass"
                         />
                       </div>
                       <div className="grid grid-cols-3 gap-4">
                         <div>
                           <Label htmlFor="communication_style">Communication Style</Label>
                           <Select value={newBehavior.communication_style} onValueChange={(value) => setNewBehavior({...newBehavior, communication_style: value})}>
-                            <SelectTrigger>
+                            <SelectTrigger className="glass">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -880,7 +933,7 @@ export default function AIProviderManagement() {
                         <div>
                           <Label htmlFor="response_length">Response Length</Label>
                           <Select value={newBehavior.response_length} onValueChange={(value) => setNewBehavior({...newBehavior, response_length: value})}>
-                            <SelectTrigger>
+                            <SelectTrigger className="glass">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -893,7 +946,7 @@ export default function AIProviderManagement() {
                         <div>
                           <Label htmlFor="emotional_tone">Emotional Tone</Label>
                           <Select value={newBehavior.emotional_tone} onValueChange={(value) => setNewBehavior({...newBehavior, emotional_tone: value})}>
-                            <SelectTrigger>
+                            <SelectTrigger className="glass">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -906,10 +959,10 @@ export default function AIProviderManagement() {
                         </div>
                       </div>
                       <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setBehaviorDialogOpen(false)}>
+                        <Button variant="outline" onClick={() => setBehaviorDialogOpen(false)} className="glass">
                           Cancel
                         </Button>
-                        <Button onClick={addBehavior}>
+                        <Button onClick={addBehavior} className="clay-button">
                           <Save className="w-4 h-4 mr-2" />
                           Add Behavior
                         </Button>
@@ -920,7 +973,7 @@ export default function AIProviderManagement() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              <ResponsiveTable>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -933,7 +986,7 @@ export default function AIProviderManagement() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {behaviors.map((behavior) => (
+                    {filteredBehaviors.map((behavior) => (
                       <TableRow key={behavior.id}>
                         <TableCell className="font-medium">{behavior.name}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
@@ -950,10 +1003,10 @@ export default function AIProviderManagement() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="glass">
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="glass" onClick={() => { setItemToDelete({ type: 'behavior', id: behavior.id }); setDeleteDialogOpen(true); }}>
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
@@ -962,32 +1015,32 @@ export default function AIProviderManagement() {
                     ))}
                   </TableBody>
                 </Table>
-              </div>
+              </ResponsiveTable>
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* Configurations Tab */}
         <TabsContent value="configs" className="space-y-4">
-          <Card>
+          <Card className="glass-card">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>AI Model Configurations</CardTitle>
+                  <CardTitle className="gradient-text">AI Model Configurations</CardTitle>
                   <CardDescription>
                     Configure which AI models to use for different use cases
                   </CardDescription>
                 </div>
                 <Dialog open={configDialogOpen} onOpenChange={setConfigDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button>
+                    <Button className="clay-button">
                       <Plus className="w-4 h-4 mr-2" />
                       Add Configuration
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
+                  <DialogContent className="max-w-2xl glass-card">
                     <DialogHeader>
-                      <DialogTitle>Add AI Model Configuration</DialogTitle>
+                      <DialogTitle className="gradient-text">Add AI Model Configuration</DialogTitle>
                       <DialogDescription>
                         Configure which AI model to use for a specific use case
                       </DialogDescription>
@@ -997,7 +1050,7 @@ export default function AIProviderManagement() {
                         <div>
                           <Label htmlFor="config_provider">Provider</Label>
                           <Select value={newConfig.provider_id} onValueChange={(value) => setNewConfig({...newConfig, provider_id: value})}>
-                            <SelectTrigger>
+                            <SelectTrigger className="glass">
                               <SelectValue placeholder="Select provider" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1012,7 +1065,7 @@ export default function AIProviderManagement() {
                         <div>
                           <Label htmlFor="config_use_case">Use Case</Label>
                           <Select value={newConfig.use_case_id} onValueChange={(value) => setNewConfig({...newConfig, use_case_id: value})}>
-                            <SelectTrigger>
+                            <SelectTrigger className="glass">
                               <SelectValue placeholder="Select use case" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1029,7 +1082,7 @@ export default function AIProviderManagement() {
                         <div>
                           <Label htmlFor="config_behavior">Behavior (Optional)</Label>
                           <Select value={newConfig.behavior_id} onValueChange={(value) => setNewConfig({...newConfig, behavior_id: value})}>
-                            <SelectTrigger>
+                            <SelectTrigger className="glass">
                               <SelectValue placeholder="Select behavior" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1048,6 +1101,7 @@ export default function AIProviderManagement() {
                             type="number"
                             value={newConfig.priority}
                             onChange={(e) => setNewConfig({...newConfig, priority: parseInt(e.target.value)})}
+                            className="glass"
                           />
                         </div>
                       </div>
@@ -1060,10 +1114,10 @@ export default function AIProviderManagement() {
                         <Label htmlFor="is_primary">Primary Configuration</Label>
                       </div>
                       <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setConfigDialogOpen(false)}>
+                        <Button variant="outline" onClick={() => setConfigDialogOpen(false)} className="glass">
                           Cancel
                         </Button>
-                        <Button onClick={addConfig}>
+                        <Button onClick={addConfig} className="clay-button">
                           <Save className="w-4 h-4 mr-2" />
                           Add Configuration
                         </Button>
@@ -1074,7 +1128,7 @@ export default function AIProviderManagement() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              <ResponsiveTable>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1116,11 +1170,14 @@ export default function AIProviderManagement() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="glass">
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="glass">
                               <TestTube className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="glass" onClick={() => { setItemToDelete({ type: 'config', id: config.id }); setDeleteDialogOpen(true); }}>
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -1128,11 +1185,19 @@ export default function AIProviderManagement() {
                     ))}
                   </TableBody>
                 </Table>
-              </div>
+              </ResponsiveTable>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      <ConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDelete}
+        title={`Delete ${itemToDelete?.type}?`}
+        description="Are you sure you want to delete this item? This action cannot be undone."
+      />
     </div>
   );
 }

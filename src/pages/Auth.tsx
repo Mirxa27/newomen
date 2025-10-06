@@ -51,8 +51,8 @@ const AuthPage = () => {
             {isSignUp ? 'Join Newomen' : 'Welcome Back'}
           </CardTitle>
           <CardDescription className="text-center">
-            {isSignUp 
-              ? 'Start your journey of self-discovery today.' 
+            {isSignUp
+              ? 'Start your journey of self-discovery today.'
               : 'Sign in to continue your transformation.'}
           </CardDescription>
         </CardHeader>
@@ -64,7 +64,9 @@ const AuthPage = () => {
                 <Input
                   id="email"
                   type="email"
+                  autoComplete="email"
                   placeholder="you@example.com"
+                  className="glass"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -75,14 +77,20 @@ const AuthPage = () => {
                 <Input
                   id="password"
                   type="password"
+                  autoComplete="current-password"
                   placeholder="••••••••"
+                  className="glass"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
               </div>
             </div>
-            {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+            {error && (
+              <p className="mt-4 text-sm text-red-600" role="alert" aria-live="assertive">
+                {error}
+              </p>
+            )}
             <Button type="submit" className="w-full mt-6 clay-button" disabled={loading}>
               {loading ? 'Processing...' : isSignUp ? 'Sign Up' : 'Sign In'}
             </Button>

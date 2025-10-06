@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, Settings, Users, BarChart, Activity, FileText, Zap, Database, Bot, Brain } from "lucide-react";
-import AIConfiguration from "./admin/AIConfiguration";
+import AIConfigurationManager from "./admin/AIConfigurationManager";
 import SessionsLive from "./admin/SessionsLive";
 import SessionsHistory from "./admin/SessionsHistory";
 import UserManagement from "./admin/UserManagement";
@@ -197,7 +197,7 @@ export default function Admin() {
           </TabsContent>
 
           <TabsContent value="ai-config">
-            <AIConfiguration />
+            <AIConfigurationManager />
           </TabsContent>
 
           <TabsContent value="ai-prompting">
