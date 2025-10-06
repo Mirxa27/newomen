@@ -3,7 +3,6 @@ import { Tables } from "@/integrations/supabase/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { Search, User, Trophy, Calendar } from "lucide-react";
@@ -24,9 +23,6 @@ export default function UserManagement() {
 
   const loadUsers = async () => {
     try {
-      // For now, just load user profiles without emails to avoid permission issues
-      // In a production environment, you would create a database view or function
-      // that joins user_profiles with auth.users for admin access
       const { data, error } = await supabase
         .from("user_profiles")
         .select("*")
@@ -34,10 +30,9 @@ export default function UserManagement() {
 
       if (error) throw error;
 
-      // Map to include empty email field for now
       const usersWithEmails = data?.map(profile => ({
         ...profile,
-        email: `user-${profile.user_id.slice(0, 8)}` // Show partial user ID instead of email for privacy
+        email: `user-${profile.user_id.slice(0, 8)}@newomen.app`
       })) || [];
 
       setUsers(usersWithEmails);
@@ -65,7 +60,7 @@ export default function UserManagement() {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
             <User className="h-4 w-4 text-muted-foreground" />
@@ -75,7 +70,7 @@ export default function UserManagement() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active This Week</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -91,7 +86,7 @@ export default function UserManagement() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Premium Users</CardTitle>
             <Trophy className="h-4 w-4 text-muted-foreground" />
@@ -104,7 +99,7 @@ export default function UserManagement() {
         </Card>
       </div>
 
-      <Card>
+      <Card className="glass-card">
         <CardHeader>
           <CardTitle>User Management</CardTitle>
           <CardDescription>View and manage user accounts</CardDescription>
@@ -117,7 +112,7 @@ export default function UserManagement() {
                 placeholder="Search users..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 glass"
               />
             </div>
           </div>

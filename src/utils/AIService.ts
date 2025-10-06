@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { NEWME_SYSTEM_PROMPT, NEWME_GREETING_TEMPLATES } from "@/config/newme-system-prompt";
 import type {
   AssessmentAnswers,
   QuizAnswers,
@@ -97,6 +98,20 @@ export class AIService {
           frequency_penalty: 0.0,
           presence_penalty: 0.0,
           system_prompt: 'You are an expert psychologist and assessment evaluator. Provide detailed, constructive feedback.'
+        });
+
+        // NewMe Voice Agent Configuration
+        this.configurations.set('newme-voice-agent', {
+          id: 'newme-voice-agent',
+          name: 'NewMe Voice Agent',
+          provider: 'openai',
+          model_name: 'gpt-4-turbo-preview',
+          temperature: 0.8,
+          max_tokens: 2000,
+          top_p: 0.95,
+          frequency_penalty: 0.3,
+          presence_penalty: 0.6,
+          system_prompt: NEWME_SYSTEM_PROMPT
         });
 
         this.configurations.set('default-quiz', {
@@ -727,6 +742,149 @@ export class AIService {
 
   getConfiguration(id: string): AIConfiguration | null {
     return this.configurations.get(id) || null;
+  }
+
+  /**
+   * NewMe Voice Agent - Generate conversational response
+   */
+  async generateNewMeResponse(
+    userMessage: string,
+    userId: string,
+    conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [],
+    userContext?: {
+      nickname?: string;
+      lastConversationDate?: string;
+      lastConversationTopic?: string;
+      completedAssessments?: string[];
+      emotionalPatterns?: string[];
+      preferences?: Record<string, string | number | boolean>;
+    }
+  ): Promise<AIResponse> {
+    const startTime = Date.now();
+
+    try {
+      const config = this.configurations.get('newme-voice-agent');
+      if (!config) {
+        throw new Error('NewMe Voice Agent configuration not found');
+      }
+
+      // Check rate limiting
+      if (!this.checkRateLimit(userId)) {
+        throw new Error('Rate limit exceeded. Please wait before continuing the conversation.');
+      }
+
+      // Build context-aware prompt
+      let contextPrompt = '';
+      if (userContext) {
+        contextPrompt = `\n\n### CURRENT USER CONTEXT:\n`;
+        if (userContext.nickname) {
+          contextPrompt += `- User's preferred nickname: ${userContext.nickname}\n`;
+        }
+        if (userContext.lastConversationDate) {
+          contextPrompt += `- Last conversation: ${userContext.lastConversationDate}\n`;
+        }
+        if (userContext.lastConversationTopic) {
+          contextPrompt += `- Last topic discussed: ${userContext.lastConversationTopic}\n`;
+        }
+        if (userContext.completedAssessments && userContext.completedAssessments.length > 0) {
+          contextPrompt += `- Completed assessments: ${userContext.completedAssessments.join(', ')}\n`;
+        }
+        if (userContext.emotionalPatterns && userContext.emotionalPatterns.length > 0) {
+          contextPrompt += `- Emotional patterns observed: ${userContext.emotionalPatterns.join(', ')}\n`;
+        }
+      }
+
+      // Build conversation messages as a string prompt
+      let fullPrompt = config.system_prompt + contextPrompt + '\n\n';
+      
+      // Add conversation history
+      if (conversationHistory.length > 0) {
+        fullPrompt += '### CONVERSATION HISTORY:\n';
+        conversationHistory.forEach(msg => {
+          fullPrompt += `${msg.role.toUpperCase()}: ${msg.content}\n`;
+        });
+        fullPrompt += '\n';
+      }
+      
+      // Add current user message
+      fullPrompt += `### CURRENT USER MESSAGE:\nUSER: ${userMessage}\n\n`;
+      fullPrompt += 'Respond as NewMe, staying fully in character:';
+
+      const response = await this.callAIProvider(config, fullPrompt);
+
+      if (!response.success) {
+        throw new Error(response.error || 'AI processing failed');
+      }
+
+      // Log usage
+      try {
+        await this.logAIUsage(
+          config,
+          userId,
+          'voice_conversation',
+          'newme-voice-agent',
+          response.usage?.prompt_tokens || 0,
+          response.usage?.completion_tokens || 0,
+          response.cost_usd || 0,
+          true,
+          undefined
+        );
+      } catch (logError) {
+        console.warn('Failed to log AI usage:', logError);
+      }
+
+      return {
+        success: true,
+        content: response.content,
+        usage: response.usage,
+        cost_usd: response.cost_usd,
+        processing_time_ms: Date.now() - startTime
+      };
+
+    } catch (error) {
+      console.error('Error generating NewMe response:', error);
+
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        processing_time_ms: Date.now() - startTime
+      };
+    }
+  }
+
+  /**
+   * Get NewMe greeting based on user context
+   */
+  getNewMeGreeting(userContext?: {
+    isFirstTime?: boolean;
+    nickname?: string;
+    lastConversationTopic?: string;
+    daysSinceLastConversation?: number;
+  }): string {
+    
+    if (userContext?.isFirstTime) {
+      const templates = NEWME_GREETING_TEMPLATES.firstTime;
+      return templates[Math.floor(Math.random() * templates.length)];
+    }
+
+    if (userContext?.daysSinceLastConversation && userContext.daysSinceLastConversation > 7) {
+      const templates = NEWME_GREETING_TEMPLATES.afterLongBreak;
+      let greeting = templates[Math.floor(Math.random() * templates.length)];
+      if (userContext.nickname) {
+        greeting = greeting.replace('[nickname]', userContext.nickname);
+      }
+      if (userContext.lastConversationTopic) {
+        greeting = greeting.replace('[last topic]', userContext.lastConversationTopic);
+      }
+      return greeting;
+    }
+
+    const templates = NEWME_GREETING_TEMPLATES.returning;
+    let greeting = templates[Math.floor(Math.random() * templates.length)];
+    if (userContext?.nickname) {
+      greeting = greeting.replace('[nickname]', userContext.nickname);
+    }
+    return greeting;
   }
 }
 

@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, Bot, MessageSquare, Settings, Save, X } from "lucide-react";
+import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 
 interface PromptExample {
   input: string;
@@ -38,6 +39,7 @@ interface Agent {
   name: string;
   prompt_id: string | null;
   status: string | null;
+  created_at: string | null;
 }
 
 const normalizePromptContent = (content: Tables<"prompts">["content"]): PromptContent => {
@@ -88,6 +90,7 @@ const normalizeAgent = (row: Tables<"agents">): Agent => ({
   name: row.name,
   prompt_id: row.prompt_id ?? null,
   status: row.status ?? null,
+  created_at: row.created_at ?? null,
 });
 
 export default function AIPrompting() {
@@ -105,6 +108,8 @@ export default function AIPrompting() {
       examples: []
     }
   });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [promptToDelete, setPromptToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -183,12 +188,13 @@ export default function AIPrompting() {
     }
   };
 
-  const deletePrompt = async (id: string) => {
+  const handleDeletePrompt = async () => {
+    if (!promptToDelete) return;
     try {
       const { error } = await supabase
         .from("prompts")
         .delete()
-        .eq("id", id);
+        .eq("id", promptToDelete);
 
       if (error) throw error;
 
@@ -197,6 +203,9 @@ export default function AIPrompting() {
     } catch (error) {
       console.error("Error deleting prompt:", error);
       toast.error("Failed to delete prompt");
+    } finally {
+      setDeleteDialogOpen(false);
+      setPromptToDelete(null);
     }
   };
 
@@ -244,19 +253,19 @@ export default function AIPrompting() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">AI Prompting & Guides</h1>
+          <h1 className="text-3xl font-bold gradient-text">AI Prompting & Guides</h1>
           <p className="text-muted-foreground">
             Manage AI agent prompts, instructions, and conversation guides
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="clay-button">
               <Plus className="w-4 h-4 mr-2" />
               New Prompt
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto glass-card">
             <DialogHeader>
               <DialogTitle>Create New AI Prompt</DialogTitle>
               <DialogDescription>
@@ -271,6 +280,7 @@ export default function AIPrompting() {
                   value={newPrompt.name}
                   onChange={(e) => setNewPrompt(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="e.g., Empathetic Counselor, Life Coach, Wellness Guide"
+                  className="glass"
                 />
               </div>
 
@@ -285,6 +295,7 @@ export default function AIPrompting() {
                   }))}
                   placeholder="Define the AI's core identity and role..."
                   rows={4}
+                  className="glass"
                 />
               </div>
 
@@ -299,6 +310,7 @@ export default function AIPrompting() {
                   }))}
                   placeholder="Specific instructions for how the AI should behave..."
                   rows={4}
+                  className="glass"
                 />
               </div>
 
@@ -313,19 +325,20 @@ export default function AIPrompting() {
                   }))}
                   placeholder="Describe the AI's personality, tone, and communication style..."
                   rows={3}
+                  className="glass"
                 />
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <Label>Example Conversations</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={addExample}>
+                  <Button type="button" variant="outline" size="sm" onClick={addExample} className="glass">
                     <Plus className="w-4 h-4 mr-1" />
                     Add Example
                   </Button>
                 </div>
                 {newPrompt.content.examples.map((example, index) => (
-                  <div key={index} className="p-4 border rounded-lg space-y-2">
+                  <div key={index} className="p-4 border rounded-lg space-y-2 glass-card">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">Example {index + 1}</span>
                       <Button
@@ -333,6 +346,7 @@ export default function AIPrompting() {
                         variant="ghost"
                         size="sm"
                         onClick={() => removeExample(index)}
+                        className="glass"
                       >
                         <X className="w-4 h-4" />
                       </Button>
@@ -344,6 +358,7 @@ export default function AIPrompting() {
                           value={example.input}
                           onChange={(e) => updateExample(index, "input", e.target.value)}
                           placeholder="User says..."
+                          className="glass"
                         />
                       </div>
                       <div>
@@ -352,6 +367,7 @@ export default function AIPrompting() {
                           value={example.output}
                           onChange={(e) => updateExample(index, "output", e.target.value)}
                           placeholder="AI responds..."
+                          className="glass"
                         />
                       </div>
                     </div>
@@ -360,10 +376,10 @@ export default function AIPrompting() {
               </div>
 
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="glass">
                   Cancel
                 </Button>
-                <Button onClick={createPrompt}>
+                <Button onClick={createPrompt} className="clay-button">
                   <Save className="w-4 h-4 mr-2" />
                   Create Prompt
                 </Button>
@@ -374,7 +390,7 @@ export default function AIPrompting() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
+        <Card className="glass-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MessageSquare className="w-5 h-5" />
@@ -404,7 +420,7 @@ export default function AIPrompting() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {new Date(prompt.created_at).toLocaleDateString()}
+                      {prompt.created_at ? new Date(prompt.created_at).toLocaleDateString() : 'N/A'}
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
@@ -412,13 +428,15 @@ export default function AIPrompting() {
                           variant="ghost"
                           size="sm"
                           onClick={() => setEditingPrompt(prompt)}
+                          className="glass"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => deletePrompt(prompt.id)}
+                          onClick={() => { setPromptToDelete(prompt.id); setDeleteDialogOpen(true); }}
+                          className="glass"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -431,7 +449,7 @@ export default function AIPrompting() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Bot className="w-5 h-5" />
@@ -461,10 +479,10 @@ export default function AIPrompting() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {new Date(agent.created_at).toLocaleDateString()}
+                      {agent.created_at ? new Date(agent.created_at).toLocaleDateString() : 'N/A'}
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" className="glass">
                         <Settings className="w-4 h-4" />
                       </Button>
                     </TableCell>
@@ -479,7 +497,7 @@ export default function AIPrompting() {
       {/* Edit Prompt Dialog */}
       {editingPrompt && (
         <Dialog open={!!editingPrompt} onOpenChange={() => setEditingPrompt(null)}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto glass-card">
             <DialogHeader>
               <DialogTitle>Edit AI Prompt</DialogTitle>
               <DialogDescription>
@@ -493,6 +511,7 @@ export default function AIPrompting() {
                   id="edit-name"
                   value={editingPrompt.name}
                   onChange={(e) => setEditingPrompt(prev => prev ? { ...prev, name: e.target.value } : null)}
+                  className="glass"
                 />
               </div>
 
@@ -506,6 +525,7 @@ export default function AIPrompting() {
                     content: { ...prev.content, system: e.target.value }
                   }) : null)}
                   rows={4}
+                  className="glass"
                 />
               </div>
 
@@ -519,6 +539,7 @@ export default function AIPrompting() {
                     content: { ...prev.content, instructions: e.target.value }
                   }) : null)}
                   rows={4}
+                  className="glass"
                 />
               </div>
 
@@ -532,14 +553,15 @@ export default function AIPrompting() {
                     content: { ...prev.content, personality: e.target.value }
                   }) : null)}
                   rows={3}
+                  className="glass"
                 />
               </div>
 
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setEditingPrompt(null)}>
+                <Button variant="outline" onClick={() => setEditingPrompt(null)} className="glass">
                   Cancel
                 </Button>
-                <Button onClick={updatePrompt}>
+                <Button onClick={updatePrompt} className="clay-button">
                   <Save className="w-4 h-4 mr-2" />
                   Update Prompt
                 </Button>
@@ -548,6 +570,14 @@ export default function AIPrompting() {
           </DialogContent>
         </Dialog>
       )}
+
+      <ConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeletePrompt}
+        title="Delete AI Prompt?"
+        description="Are you sure you want to delete this AI prompt? This action cannot be undone."
+      />
     </div>
   );
 }

@@ -39,6 +39,7 @@ import {
   Zap
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 
 interface AIAssessmentConfig {
   id: string;
@@ -129,6 +130,10 @@ export default function AIAssessmentManagement() {
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [assessmentDialogOpen, setAssessmentDialogOpen] = useState(false);
   const [testDialogOpen, setTestDialogOpen] = useState(false);
+  const [deleteConfigDialogOpen, setDeleteConfigDialogOpen] = useState(false);
+  const [deleteAssessmentDialogOpen, setDeleteAssessmentDialogOpen] = useState(false);
+  const [configToDelete, setConfigToDelete] = useState<string | null>(null);
+  const [assessmentToDelete, setAssessmentToDelete] = useState<string | null>(null);
 
   // Form states
   const [newConfig, setNewConfig] = useState({
@@ -332,6 +337,38 @@ export default function AIAssessmentManagement() {
     }
   };
 
+  const handleDeleteConfig = async () => {
+    if (!configToDelete) return;
+    try {
+      const { error } = await supabase.from("ai_assessment_configs").delete().eq("id", configToDelete);
+      if (error) throw error;
+      toast({ title: "Configuration deleted", description: "AI configuration removed successfully." });
+      loadData();
+    } catch (error) {
+      console.error("Error deleting config:", error);
+      toast({ title: "Error", description: "Failed to delete configuration.", variant: "destructive" });
+    } finally {
+      setDeleteConfigDialogOpen(false);
+      setConfigToDelete(null);
+    }
+  };
+
+  const handleDeleteAssessment = async () => {
+    if (!assessmentToDelete) return;
+    try {
+      const { error } = await supabase.from("assessments_enhanced").delete().eq("id", assessmentToDelete);
+      if (error) throw error;
+      toast({ title: "Assessment deleted", description: "Assessment removed successfully." });
+      loadData();
+    } catch (error) {
+      console.error("Error deleting assessment:", error);
+      toast({ title: "Error", description: "Failed to delete assessment.", variant: "destructive" });
+    } finally {
+      setDeleteAssessmentDialogOpen(false);
+      setAssessmentToDelete(null);
+    }
+  };
+
   const filteredConfigs = configs.filter(config =>
     config.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -365,10 +402,10 @@ export default function AIAssessmentManagement() {
               placeholder="Search..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-64"
+              className="pl-10 w-64 glass"
             />
           </div>
-          <Button onClick={loadData} disabled={loading}>
+          <Button onClick={loadData} disabled={loading} className="glass">
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
@@ -377,7 +414,7 @@ export default function AIAssessmentManagement() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+        <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Configs</CardTitle>
             <Settings className="h-4 w-4 text-muted-foreground" />
@@ -389,7 +426,7 @@ export default function AIAssessmentManagement() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Assessments</CardTitle>
             <Brain className="h-4 w-4 text-muted-foreground" />
@@ -401,7 +438,7 @@ export default function AIAssessmentManagement() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">AI Usage Cost</CardTitle>
             <BarChart className="h-4 w-4 text-muted-foreground" />
@@ -413,7 +450,7 @@ export default function AIAssessmentManagement() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
@@ -428,7 +465,7 @@ export default function AIAssessmentManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-5 glass">
           <TabsTrigger value="configs" className="flex items-center gap-2">
             <Settings className="w-4 h-4" />
             Configs
@@ -453,7 +490,7 @@ export default function AIAssessmentManagement() {
 
         {/* AI Configurations Tab */}
         <TabsContent value="configs" className="space-y-4">
-          <Card>
+          <Card className="glass-card">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -464,12 +501,12 @@ export default function AIAssessmentManagement() {
                 </div>
                 <Dialog open={configDialogOpen} onOpenChange={setConfigDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button>
+                    <Button className="clay-button">
                       <Plus className="w-4 h-4 mr-2" />
                       Add Configuration
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-4xl">
+                  <DialogContent className="max-w-4xl glass-card">
                     <DialogHeader>
                       <DialogTitle>Add AI Configuration</DialogTitle>
                       <DialogDescription>
@@ -485,6 +522,7 @@ export default function AIAssessmentManagement() {
                             value={newConfig.name}
                             onChange={(e) => setNewConfig({...newConfig, name: e.target.value})}
                             placeholder="e.g., Personality Assessment AI"
+                            className="glass"
                           />
                         </div>
                         <div>
@@ -494,6 +532,7 @@ export default function AIAssessmentManagement() {
                             value={newConfig.description}
                             onChange={(e) => setNewConfig({...newConfig, description: e.target.value})}
                             placeholder="Brief description of this configuration"
+                            className="glass"
                           />
                         </div>
                       </div>
@@ -505,6 +544,7 @@ export default function AIAssessmentManagement() {
                           onChange={(e) => setNewConfig({...newConfig, system_prompt: e.target.value})}
                           placeholder="Define the AI's role and behavior for assessment analysis..."
                           rows={6}
+                          className="glass"
                         />
                       </div>
                       <div className="grid grid-cols-3 gap-4">
@@ -518,6 +558,7 @@ export default function AIAssessmentManagement() {
                             max="2"
                             value={newConfig.temperature}
                             onChange={(e) => setNewConfig({...newConfig, temperature: parseFloat(e.target.value)})}
+                            className="glass"
                           />
                         </div>
                         <div>
@@ -527,6 +568,7 @@ export default function AIAssessmentManagement() {
                             type="number"
                             value={newConfig.max_tokens}
                             onChange={(e) => setNewConfig({...newConfig, max_tokens: parseInt(e.target.value)})}
+                            className="glass"
                           />
                         </div>
                         <div className="flex items-center space-x-2 pt-6">
@@ -539,10 +581,10 @@ export default function AIAssessmentManagement() {
                         </div>
                       </div>
                       <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setConfigDialogOpen(false)}>
+                        <Button variant="outline" onClick={() => setConfigDialogOpen(false)} className="glass">
                           Cancel
                         </Button>
-                        <Button onClick={addConfig}>
+                        <Button onClick={addConfig} className="clay-button">
                           Add Configuration
                         </Button>
                       </div>
@@ -580,11 +622,14 @@ export default function AIAssessmentManagement() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="glass">
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="glass">
                               <TestTube className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="glass" onClick={() => { setConfigToDelete(config.id); setDeleteConfigDialogOpen(true); }}>
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -599,7 +644,7 @@ export default function AIAssessmentManagement() {
 
         {/* Assessments Tab */}
         <TabsContent value="assessments" className="space-y-4">
-          <Card>
+          <Card className="glass-card">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -610,12 +655,12 @@ export default function AIAssessmentManagement() {
                 </div>
                 <Dialog open={assessmentDialogOpen} onOpenChange={setAssessmentDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button>
+                    <Button className="clay-button">
                       <Plus className="w-4 h-4 mr-2" />
                       Add Assessment
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-4xl">
+                  <DialogContent className="max-w-4xl glass-card">
                     <DialogHeader>
                       <DialogTitle>Add Assessment</DialogTitle>
                       <DialogDescription>
@@ -631,12 +676,13 @@ export default function AIAssessmentManagement() {
                             value={newAssessment.title}
                             onChange={(e) => setNewAssessment({...newAssessment, title: e.target.value})}
                             placeholder="e.g., Emotional Intelligence Assessment"
+                            className="glass"
                           />
                         </div>
                         <div>
                           <Label htmlFor="assessment_type">Type</Label>
                           <Select value={newAssessment.type} onValueChange={(value) => setNewAssessment({...newAssessment, type: value})}>
-                            <SelectTrigger>
+                            <SelectTrigger className="glass">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -655,13 +701,14 @@ export default function AIAssessmentManagement() {
                           onChange={(e) => setNewAssessment({...newAssessment, description: e.target.value})}
                           placeholder="Describe what this assessment measures..."
                           rows={3}
+                          className="glass"
                         />
                       </div>
                       <div className="grid grid-cols-3 gap-4">
                         <div>
                           <Label htmlFor="difficulty">Difficulty</Label>
                           <Select value={newAssessment.difficulty_level} onValueChange={(value) => setNewAssessment({...newAssessment, difficulty_level: value})}>
-                            <SelectTrigger>
+                            <SelectTrigger className="glass">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -679,6 +726,7 @@ export default function AIAssessmentManagement() {
                             type="number"
                             value={newAssessment.time_limit_minutes}
                             onChange={(e) => setNewAssessment({...newAssessment, time_limit_minutes: parseInt(e.target.value)})}
+                            className="glass"
                           />
                         </div>
                         <div>
@@ -688,14 +736,15 @@ export default function AIAssessmentManagement() {
                             type="number"
                             value={newAssessment.max_attempts}
                             onChange={(e) => setNewAssessment({...newAssessment, max_attempts: parseInt(e.target.value)})}
+                            className="glass"
                           />
                         </div>
                       </div>
                       <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setAssessmentDialogOpen(false)}>
+                        <Button variant="outline" onClick={() => setAssessmentDialogOpen(false)} className="glass">
                           Cancel
                         </Button>
-                        <Button onClick={addAssessment}>
+                        <Button onClick={addAssessment} className="clay-button">
                           Add Assessment
                         </Button>
                       </div>
@@ -743,11 +792,14 @@ export default function AIAssessmentManagement() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="glass">
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="glass">
                               <TestTube className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="glass" onClick={() => { setAssessmentToDelete(assessment.id); setDeleteAssessmentDialogOpen(true); }}>
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -762,7 +814,7 @@ export default function AIAssessmentManagement() {
 
         {/* Attempts Tab */}
         <TabsContent value="attempts" className="space-y-4">
-          <Card>
+          <Card className="glass-card">
             <CardHeader>
               <CardTitle>Recent Assessment Attempts</CardTitle>
               <CardDescription>
@@ -848,7 +900,7 @@ export default function AIAssessmentManagement() {
 
         {/* Usage Tab */}
         <TabsContent value="usage" className="space-y-4">
-          <Card>
+          <Card className="glass-card">
             <CardHeader>
               <CardTitle>AI Usage Analytics</CardTitle>
               <CardDescription>
@@ -900,7 +952,7 @@ export default function AIAssessmentManagement() {
 
         {/* Test Tab */}
         <TabsContent value="test" className="space-y-4">
-          <Card>
+          <Card className="glass-card">
             <CardHeader>
               <CardTitle>AI Configuration Testing</CardTitle>
               <CardDescription>
@@ -912,7 +964,7 @@ export default function AIAssessmentManagement() {
                 <div>
                   <Label htmlFor="test_config">Select Configuration</Label>
                   <Select value={testConfig.config_id} onValueChange={(value) => setTestConfig({...testConfig, config_id: value})}>
-                    <SelectTrigger>
+                    <SelectTrigger className="glass">
                       <SelectValue placeholder="Choose a configuration" />
                     </SelectTrigger>
                     <SelectContent>
@@ -931,6 +983,7 @@ export default function AIAssessmentManagement() {
                     value={testConfig.test_prompt}
                     onChange={(e) => setTestConfig({...testConfig, test_prompt: e.target.value})}
                     placeholder="Enter a test prompt..."
+                    className="glass"
                   />
                 </div>
               </div>
@@ -948,10 +1001,11 @@ export default function AIAssessmentManagement() {
                   }}
                   placeholder='{"question1": "response1", "question2": "response2"}'
                   rows={4}
+                  className="glass"
                 />
               </div>
               <div className="flex justify-end">
-                <Button onClick={testAIConfig} disabled={!testConfig.config_id || !testConfig.test_prompt}>
+                <Button onClick={testAIConfig} disabled={!testConfig.config_id || !testConfig.test_prompt} className="clay-button">
                   <TestTube className="w-4 h-4 mr-2" />
                   Test Configuration
                 </Button>
@@ -960,6 +1014,22 @@ export default function AIAssessmentManagement() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <ConfirmationDialog
+        open={deleteConfigDialogOpen}
+        onOpenChange={setDeleteConfigDialogOpen}
+        onConfirm={handleDeleteConfig}
+        title="Delete AI Configuration?"
+        description="Are you sure you want to delete this AI configuration? This action cannot be undone."
+      />
+
+      <ConfirmationDialog
+        open={deleteAssessmentDialogOpen}
+        onOpenChange={setDeleteAssessmentDialogOpen}
+        onConfirm={handleDeleteAssessment}
+        title="Delete Assessment?"
+        description="Are you sure you want to delete this assessment? This action cannot be undone."
+      />
     </div>
   );
 }

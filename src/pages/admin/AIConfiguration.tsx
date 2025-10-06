@@ -11,7 +11,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Settings, Plus, Edit, Trash2, TestTube, Activity, DollarSign, Zap } from "lucide-react";
+import { Settings, Plus, Edit, Trash2, TestTube, Activity, DollarSign, Zap, Save, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 
 export interface AIConfiguration {
   id: string;
@@ -52,196 +54,14 @@ export interface CreateAIConfigurationData {
   is_active: boolean;
 }
 
-class AIService {
-  private configurations: AIConfiguration[] = [];
-
-  // Initialize with some default configurations for demo purposes
-  constructor() {
-    this.configurations = [
-      {
-        id: '1',
-        name: 'GPT-4 Assessment Model',
-        description: 'High-quality model for generating assessments and detailed feedback',
-        provider: 'openai',
-        model_name: 'gpt-4',
-        api_base_url: 'https://api.openai.com',
-        temperature: 0.7,
-        max_tokens: 2000,
-        top_p: 1.0,
-        frequency_penalty: 0.0,
-        presence_penalty: 0.0,
-        system_prompt: 'You are an expert educational assessment creator. Generate high-quality, engaging assessments that test understanding and promote learning.',
-        user_prompt_template: 'Create an assessment for the topic: {topic}. Include {question_count} questions of varying difficulty levels.',
-        scoring_prompt_template: 'Score this response on a scale of 1-10 and provide detailed feedback: {response}',
-        feedback_prompt_template: 'Provide constructive feedback for this response: {response}. Focus on areas for improvement and positive reinforcement.',
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      {
-        id: '2',
-        name: 'Claude-3 Quiz Generator',
-        description: 'Anthropic Claude model optimized for quiz generation',
-        provider: 'anthropic',
-        model_name: 'claude-3-sonnet-20240229',
-        api_base_url: 'https://api.anthropic.com',
-        temperature: 0.5,
-        max_tokens: 1500,
-        top_p: 1.0,
-        frequency_penalty: 0.0,
-        presence_penalty: 0.0,
-        system_prompt: 'You are a quiz creation specialist. Generate engaging, educational quizzes that test knowledge effectively.',
-        user_prompt_template: 'Generate a quiz about {topic} with {question_count} multiple choice questions.',
-        scoring_prompt_template: 'Evaluate this quiz response and provide a score with explanation: {response}',
-        feedback_prompt_template: 'Give helpful feedback on this quiz attempt: {response}',
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ];
-  }
-
-  getConfigurations(): AIConfiguration[] {
-    return [...this.configurations];
-  }
-
-  getConfiguration(id: string): AIConfiguration | null {
-    return this.configurations.find(config => config.id === id) || null;
-  }
-
-  async createConfiguration(data: CreateAIConfigurationData): Promise<boolean> {
-    try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      const newConfig: AIConfiguration = {
-        ...data,
-        id: Date.now().toString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      this.configurations.push(newConfig);
-      return true;
-    } catch (error) {
-      console.error('Error creating configuration:', error);
-      return false;
-    }
-  }
-
-  async updateConfiguration(id: string, data: Partial<CreateAIConfigurationData>): Promise<boolean> {
-    try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      const index = this.configurations.findIndex(config => config.id === id);
-      if (index === -1) return false;
-
-      this.configurations[index] = {
-        ...this.configurations[index],
-        ...data,
-        updated_at: new Date().toISOString()
-      };
-
-      return true;
-    } catch (error) {
-      console.error('Error updating configuration:', error);
-      return false;
-    }
-  }
-
-  async deleteConfiguration(id: string): Promise<boolean> {
-    try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      const index = this.configurations.findIndex(config => config.id === id);
-      if (index === -1) return false;
-
-      this.configurations.splice(index, 1);
-      return true;
-    } catch (error) {
-      console.error('Error deleting configuration:', error);
-      return false;
-    }
-  }
-
-  async testConfiguration(config: AIConfiguration, testPrompt: string): Promise<{
-    success: boolean;
-    response?: string;
-    usage?: {
-      prompt_tokens: number;
-      completion_tokens: number;
-      total_tokens: number;
-    };
-    processing_time_ms?: number;
-    error?: string;
-  }> {
-    try {
-      // Simulate API call delay
-      const startTime = Date.now();
-      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-      const endTime = Date.now();
-
-      // Simulate different responses based on provider
-      const responses = {
-        openai: "Hello! I'm an AI assistant powered by OpenAI's technology. I'm here to help you with various tasks including generating assessments, providing feedback, and answering questions. How can I assist you today?",
-        anthropic: "Greetings! I'm Claude, an AI assistant created by Anthropic. I'm designed to be helpful, harmless, and honest. I can help you create educational content, assessments, and provide detailed feedback on various topics.",
-        google: "Hi there! I'm powered by Google's AI technology. I'm here to help you with educational content creation, assessments, and providing insightful feedback. What would you like to work on?",
-        azure: "Hello! I'm an AI assistant running on Microsoft Azure's OpenAI service. I can help you create engaging educational content and assessments. How may I help you today?"
-      };
-
-      return {
-        success: true,
-        response: responses[config.provider] || responses.openai,
-        usage: {
-          prompt_tokens: Math.floor(Math.random() * 50) + 20,
-          completion_tokens: Math.floor(Math.random() * 100) + 50,
-          total_tokens: Math.floor(Math.random() * 150) + 70
-        },
-        processing_time_ms: endTime - startTime
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Test failed'
-      };
-    }
-  }
-
-  getActiveConfiguration(): AIConfiguration | null {
-    return this.configurations.find(config => config.is_active) || null;
-  }
-
-  async setActiveConfiguration(id: string): Promise<boolean> {
-    try {
-      // Deactivate all configurations
-      this.configurations.forEach(config => {
-        config.is_active = false;
-      });
-
-      // Activate the selected configuration
-      const config = this.configurations.find(c => c.id === id);
-      if (config) {
-        config.is_active = true;
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Error setting active configuration:', error);
-      return false;
-    }
-  }
-}
-
-export const aiService = new AIService();
-
-export default function AIConfiguration() {
+export default function AIConfigurationPage() {
   const [configurations, setConfigurations] = useState<AIConfiguration[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingConfig, setEditingConfig] = useState<AIConfiguration | null>(null);
   const [testResults, setTestResults] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [configToDelete, setConfigToDelete] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -267,8 +87,12 @@ export default function AIConfiguration() {
 
   const loadConfigurations = async () => {
     try {
-      const configs = aiService.getConfigurations();
-      setConfigurations(configs);
+      const { data, error } = await supabase
+        .from("ai_configurations")
+        .select("*")
+        .order("name");
+      if (error) throw error;
+      setConfigurations(data || []);
     } catch (error) {
       console.error("Error loading configurations:", error);
       toast.error("Failed to load AI configurations");
@@ -299,15 +123,12 @@ export default function AIConfiguration() {
 
   const handleCreate = async () => {
     try {
-      const success = await aiService.createConfiguration(formData);
-      if (success) {
-        toast.success("AI configuration created successfully!");
-        setShowCreateDialog(false);
-        resetForm();
-        loadConfigurations();
-      } else {
-        toast.error("Failed to create AI configuration");
-      }
+      const { error } = await supabase.from("ai_configurations").insert(formData);
+      if (error) throw error;
+      toast.success("AI configuration created successfully!");
+      setShowCreateDialog(false);
+      resetForm();
+      loadConfigurations();
     } catch (error) {
       console.error("Error creating configuration:", error);
       toast.error("Failed to create AI configuration");
@@ -316,35 +137,32 @@ export default function AIConfiguration() {
 
   const handleUpdate = async () => {
     if (!editingConfig) return;
-
     try {
-      const success = await aiService.updateConfiguration(editingConfig.id, formData);
-      if (success) {
-        toast.success("AI configuration updated successfully!");
-        setEditingConfig(null);
-        resetForm();
-        loadConfigurations();
-      } else {
-        toast.error("Failed to update AI configuration");
-      }
+      const { error } = await supabase.from("ai_configurations").update(formData).eq("id", editingConfig.id);
+      if (error) throw error;
+      toast.success("AI configuration updated successfully!");
+      setEditingConfig(null);
+      resetForm();
+      loadConfigurations();
     } catch (error) {
       console.error("Error updating configuration:", error);
       toast.error("Failed to update AI configuration");
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async () => {
+    if (!configToDelete) return;
     try {
-      const success = await aiService.deleteConfiguration(id);
-      if (success) {
-        toast.success("AI configuration deleted successfully!");
-        loadConfigurations();
-      } else {
-        toast.error("Failed to delete AI configuration");
-      }
+      const { error } = await supabase.from("ai_configurations").delete().eq("id", configToDelete);
+      if (error) throw error;
+      toast.success("AI configuration deleted successfully!");
+      loadConfigurations();
     } catch (error) {
       console.error("Error deleting configuration:", error);
       toast.error("Failed to delete AI configuration");
+    } finally {
+      setDeleteDialogOpen(false);
+      setConfigToDelete(null);
     }
   };
 
@@ -356,10 +174,7 @@ export default function AIConfiguration() {
   const testConfiguration = async (config: AIConfiguration) => {
     try {
       setTestResults({ testing: true, configId: config.id });
-
-      // Simple test prompt
       const testPrompt = "Hello! Please respond with a brief introduction of yourself.";
-
       const response = await fetch('/api/test-ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -373,9 +188,7 @@ export default function AIConfiguration() {
       });
 
       if (!response.ok) throw new Error('Test failed');
-
       const result = await response.json();
-
       setTestResults({
         testing: false,
         configId: config.id,
@@ -384,7 +197,6 @@ export default function AIConfiguration() {
         usage: result.usage,
         time: result.processing_time_ms
       });
-
       toast.success("AI configuration test successful!");
     } catch (error) {
       console.error("Error testing configuration:", error);
@@ -410,19 +222,19 @@ export default function AIConfiguration() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">AI Configuration Management</h1>
+          <h1 className="text-3xl font-bold gradient-text">AI Configuration Management</h1>
           <p className="text-muted-foreground">
             Configure AI models and prompts for assessments, quizzes, and challenges
           </p>
         </div>
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="clay-button">
               <Plus className="w-4 h-4 mr-2" />
               Add Configuration
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto glass-card">
             <DialogHeader>
               <DialogTitle>Create AI Configuration</DialogTitle>
               <DialogDescription>
@@ -438,6 +250,7 @@ export default function AIConfiguration() {
                     value={formData.name}
                     onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                     placeholder="e.g., GPT-4 Assessment Model"
+                    className="glass"
                   />
                 </div>
                 <div className="space-y-2">
@@ -446,7 +259,7 @@ export default function AIConfiguration() {
                     value={formData.provider}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, provider: value as AIConfiguration["provider"] }))}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="glass">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -467,6 +280,7 @@ export default function AIConfiguration() {
                     value={formData.model_name}
                     onChange={(e) => setFormData(prev => ({ ...prev, model_name: e.target.value }))}
                     placeholder="e.g., gpt-4, claude-3-sonnet-20240229"
+                    className="glass"
                   />
                 </div>
                 <div className="space-y-2">
@@ -476,6 +290,7 @@ export default function AIConfiguration() {
                     value={formData.api_base_url}
                     onChange={(e) => setFormData(prev => ({ ...prev, api_base_url: e.target.value }))}
                     placeholder="e.g., https://api.openai.com"
+                    className="glass"
                   />
                 </div>
               </div>
@@ -487,6 +302,7 @@ export default function AIConfiguration() {
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="Describe the purpose and use case of this configuration"
+                  className="glass"
                 />
               </div>
 
@@ -501,6 +317,7 @@ export default function AIConfiguration() {
                     step="0.1"
                     value={formData.temperature}
                     onChange={(e) => setFormData(prev => ({ ...prev, temperature: parseFloat(e.target.value) }))}
+                    className="glass"
                   />
                 </div>
                 <div className="space-y-2">
@@ -513,6 +330,7 @@ export default function AIConfiguration() {
                     step="100"
                     value={formData.max_tokens}
                     onChange={(e) => setFormData(prev => ({ ...prev, max_tokens: parseInt(e.target.value) }))}
+                    className="glass"
                   />
                 </div>
               </div>
@@ -525,14 +343,15 @@ export default function AIConfiguration() {
                   onChange={(e) => setFormData(prev => ({ ...prev, system_prompt: e.target.value }))}
                   placeholder="Define the AI's role and behavior"
                   rows={3}
+                  className="glass"
                 />
               </div>
 
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+                <Button variant="outline" onClick={() => setShowCreateDialog(false)} className="glass">
                   Cancel
                 </Button>
-                <Button onClick={handleCreate}>
+                <Button onClick={handleCreate} className="clay-button">
                   Create Configuration
                 </Button>
               </div>
@@ -542,7 +361,7 @@ export default function AIConfiguration() {
       </div>
 
       <Tabs defaultValue="configurations" className="space-y-4">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-3 glass">
           <TabsTrigger value="configurations">
             <Settings className="w-4 h-4 mr-2" />
             AI Configurations
@@ -558,7 +377,7 @@ export default function AIConfiguration() {
         </TabsList>
 
         <TabsContent value="configurations" className="space-y-4">
-          <Card>
+          <Card className="glass-card">
             <CardHeader>
               <CardTitle>AI Model Configurations</CardTitle>
               <CardDescription>
@@ -612,6 +431,7 @@ export default function AIConfiguration() {
                               size="sm"
                               onClick={() => testConfiguration(config)}
                               disabled={testResults?.testing && testResults?.configId === config.id}
+                              className="glass"
                             >
                               <TestTube className="w-4 h-4" />
                             </Button>
@@ -619,13 +439,15 @@ export default function AIConfiguration() {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleEdit(config)}
+                              className="glass"
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleDelete(config.id)}
+                              onClick={() => { setConfigToDelete(config.id); setDeleteDialogOpen(true); }}
+                              className="glass"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -641,7 +463,7 @@ export default function AIConfiguration() {
         </TabsContent>
 
         <TabsContent value="monitoring" className="space-y-4">
-          <Card>
+          <Card className="glass-card">
             <CardHeader>
               <CardTitle>AI Usage Monitoring</CardTitle>
               <CardDescription>
@@ -659,7 +481,7 @@ export default function AIConfiguration() {
         </TabsContent>
 
         <TabsContent value="costs" className="space-y-4">
-          <Card>
+          <Card className="glass-card">
             <CardHeader>
               <CardTitle>Cost Analysis</CardTitle>
               <CardDescription>
@@ -679,7 +501,7 @@ export default function AIConfiguration() {
 
       {/* Edit Configuration Dialog */}
       <Dialog open={!!editingConfig} onOpenChange={() => setEditingConfig(null)}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto glass-card">
           <DialogHeader>
             <DialogTitle>Edit AI Configuration</DialogTitle>
             <DialogDescription>
@@ -694,6 +516,7 @@ export default function AIConfiguration() {
                   id="edit_name"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  className="glass"
                 />
               </div>
               <div className="space-y-2">
@@ -702,7 +525,7 @@ export default function AIConfiguration() {
                   value={formData.provider}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, provider: value as AIConfiguration["provider"] }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="glass">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -722,6 +545,7 @@ export default function AIConfiguration() {
                   id="edit_model_name"
                   value={formData.model_name}
                   onChange={(e) => setFormData(prev => ({ ...prev, model_name: e.target.value }))}
+                  className="glass"
                 />
               </div>
               <div className="space-y-2">
@@ -730,6 +554,7 @@ export default function AIConfiguration() {
                   id="edit_api_base_url"
                   value={formData.api_base_url}
                   onChange={(e) => setFormData(prev => ({ ...prev, api_base_url: e.target.value }))}
+                  className="glass"
                 />
               </div>
             </div>
@@ -745,6 +570,7 @@ export default function AIConfiguration() {
                   step="0.1"
                   value={formData.temperature}
                   onChange={(e) => setFormData(prev => ({ ...prev, temperature: parseFloat(e.target.value) }))}
+                  className="glass"
                 />
               </div>
               <div className="space-y-2">
@@ -757,6 +583,7 @@ export default function AIConfiguration() {
                   step="100"
                   value={formData.max_tokens}
                   onChange={(e) => setFormData(prev => ({ ...prev, max_tokens: parseInt(e.target.value) }))}
+                  className="glass"
                 />
               </div>
             </div>
@@ -768,14 +595,16 @@ export default function AIConfiguration() {
                 value={formData.system_prompt}
                 onChange={(e) => setFormData(prev => ({ ...prev, system_prompt: e.target.value }))}
                 rows={3}
+                className="glass"
               />
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setEditingConfig(null)}>
+              <Button variant="outline" onClick={() => setEditingConfig(null)} className="glass">
                 Cancel
               </Button>
-              <Button onClick={handleUpdate}>
+              <Button onClick={handleUpdate} className="clay-button">
+                <Save className="w-4 h-4 mr-2" />
                 Update Configuration
               </Button>
             </div>
@@ -785,7 +614,7 @@ export default function AIConfiguration() {
 
       {/* Test Results Display */}
       {testResults && (
-        <Card>
+        <Card className="glass-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TestTube className="w-5 h-5" />
@@ -811,7 +640,7 @@ export default function AIConfiguration() {
                     Tokens: {testResults.usage.prompt_tokens} prompt + {testResults.usage.completion_tokens} completion = {testResults.usage.total_tokens} total
                   </div>
                 )}
-                <div className="bg-muted p-3 rounded-lg">
+                <div className="glass p-3 rounded-lg">
                   <p className="text-sm">{testResults.response}</p>
                 </div>
               </div>
@@ -824,6 +653,14 @@ export default function AIConfiguration() {
           </CardContent>
         </Card>
       )}
+
+      <ConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDelete}
+        title="Delete AI Configuration?"
+        description="Are you sure you want to delete this AI configuration? This action cannot be undone."
+      />
     </div>
   );
 }
