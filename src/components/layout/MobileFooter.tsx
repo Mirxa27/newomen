@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Sparkles, Users, User, MessageCircle, Shield, Brain } from "lucide-react";
+import { Home, Sparkles, Users, User, MessageCircle, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 
@@ -16,7 +16,6 @@ export default function MobileFooter() {
 
   const navItems = [
     { to: "/dashboard", label: "Home", icon: Home },
-    { to: "/ai-assessments", label: "AI Tests", icon: Brain },
     { to: "/narrative-exploration", label: "Explore", icon: Sparkles },
     { to: "/chat", label: "Chat", icon: MessageCircle },
     { to: "/community", label: "Connect", icon: Users },
@@ -24,13 +23,13 @@ export default function MobileFooter() {
   ];
 
   if (isAdmin) {
-    navItems.splice(4, 0, { to: "/admin", label: "Admin", icon: Shield });
+    navItems.push({ to: "/admin", label: "Admin", icon: Shield });
   }
 
   return (
-    // Only show on mobile screens (hidden on md and larger)
+    // Mobile footer navigation bar
     <nav className="nav-responsive md:hidden">
-      <div className="flex items-center justify-around gap-1 h-full">
+      <div className="flex items-center justify-around h-full px-2">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.to);
@@ -39,20 +38,22 @@ export default function MobileFooter() {
             <Link
               key={item.to}
               to={item.to}
-              className={`flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-xl transition-all duration-300 min-w-0 flex-1 max-w-[80px] touch-target-comfort touch-optimized ${
+              className={`flex flex-col items-center justify-center gap-1.5 py-2 px-3 rounded-2xl transition-all duration-300 min-w-[60px] touch-optimized ${
                 active
-                  ? "clay-button bg-gradient-to-br from-primary/20 to-accent/20 text-primary scale-102"
-                  : "text-muted-foreground hover:text-foreground hover:scale-102"
+                  ? "text-primary scale-105"
+                  : "text-muted-foreground/70 hover:text-foreground/90 active:scale-95"
               }`}
             >
-              <Icon
-                className={`h-5 w-5 transition-all flex-shrink-0 ${
-                  active ? "stroke-[2.5]" : "stroke-[2]"
-                }`}
-              />
+              <div className={`relative ${active ? 'animate-pulse-glow' : ''}`}>
+                <Icon
+                  className={`h-6 w-6 transition-all ${
+                    active ? "stroke-[2.5] drop-shadow-[0_0_8px_rgba(155,135,245,0.6)]" : "stroke-[2]"
+                  }`}
+                />
+              </div>
               <span
-                className={`text-responsive-xs font-medium transition-all text-center leading-tight truncate w-full ${
-                  active ? "opacity-100" : "opacity-70"
+                className={`text-[10px] font-medium transition-all text-center leading-tight ${
+                  active ? "opacity-100 font-semibold" : "opacity-70"
                 }`}
               >
                 {item.label}

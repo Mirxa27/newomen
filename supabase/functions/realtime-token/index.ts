@@ -90,10 +90,22 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+
+    console.log('Environment check:', {
+      hasOpenAiKey: !!OPENAI_API_KEY,
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseKey,
+    });
+
     if (!OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY is not set');
+      console.error('OPENAI_API_KEY is not set in environment variables');
+      throw new Error('OPENAI_API_KEY is not configured. Please set it in Supabase Edge Function secrets.');
     }
     if (!supabaseUrl || !supabaseKey) {
+      console.error('Supabase environment variables missing:', {
+        hasUrl: !!supabaseUrl,
+        hasKey: !!supabaseKey
+      });
       throw new Error('Supabase environment variables are not set');
     }
 
