@@ -218,35 +218,55 @@ export default function AIProviderManagement() {
   }, [loadData]);
 
   const addProvider = async () => {
-    if (!newProvider.name.trim() || !newProvider.api_base.trim()) {
+    const name = newProvider.name.trim();
+    const apiBase = newProvider.api_base.trim();
+    const apiKey = newProvider.api_key.trim();
+
+    if (!name || !apiBase || !apiKey) {
       toast({
         title: "Missing details",
-        description: "Provider name and API base are required",
+        description: "Provider name, API base, and API key are required",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const { error } = await supabase.from("providers").insert({
-        name: newProvider.name,
-        type: newProvider.type,
-        api_base: newProvider.api_base,
-        region: newProvider.region || null,
-        openai_compatible: newProvider.openai_compatible,
-        max_tokens: newProvider.max_tokens,
-        temperature: newProvider.temperature,
-        top_p: newProvider.top_p,
-        frequency_penalty: newProvider.frequency_penalty,
-        presence_penalty: newProvider.presence_penalty,
-        system_instructions: newProvider.system_instructions || null
+      const { data: insertedProvider, error: insertError } = await supabase
+        .from("providers")
+        .insert({
+          name,
+          type: newProvider.type,
+          api_base: apiBase,
+          region: newProvider.region || null,
+          openai_compatible: newProvider.openai_compatible,
+          max_tokens: newProvider.max_tokens,
+          temperature: newProvider.temperature,
+          top_p: newProvider.top_p,
+          frequency_penalty: newProvider.frequency_penalty,
+          presence_penalty: newProvider.presence_penalty,
+          system_instructions: newProvider.system_instructions || null
+        })
+        .select("id")
+        .single();
+
+      if (insertError || !insertedProvider) {
+        throw insertError ?? new Error("Failed to create provider record");
+      }
+
+      const { error: keyError } = await supabase.rpc("store_provider_api_key", {
+        p_provider_id: insertedProvider.id,
+        p_api_key: apiKey,
       });
 
-      if (error) throw error;
+      if (keyError) {
+        await supabase.from("providers").delete().eq("id", insertedProvider.id);
+        throw keyError;
+      }
 
       toast({
         title: "Provider added successfully",
-        description: `${newProvider.name} has been added`,
+        description: `${name} has been added and secured`,
       });
 
       setNewProvider({
@@ -561,6 +581,17 @@ export default function AIProviderManagement() {
                             </SelectContent>
                           </Select>
                         </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="api_key">API Key</Label>
+                        <Input
+                          id="api_key"
+                          type="password"
+                          value={newProvider.api_key}
+                          onChange={(e) => setNewProvider({...newProvider, api_key: e.target.value})}
+                          placeholder="sk-..."
+                          className="glass"
+                        />
                       </div>
                       <div>
                         <Label htmlFor="api_base">API Base URL</Label>
