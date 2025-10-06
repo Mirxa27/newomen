@@ -2,11 +2,12 @@
 import React, { useRef, useEffect } from 'react';
 
 interface WaveformProps {
-  audioLevel: number; // A value between 0 and 1
+  isActive: boolean;
 }
 
-const Waveform: React.FC<WaveformProps> = ({ audioLevel }) => {
+const Waveform: React.FC<WaveformProps> = ({ isActive }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animationFrameRef = useRef<number>();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -15,37 +16,74 @@ const Waveform: React.FC<WaveformProps> = ({ audioLevel }) => {
     const context = canvas.getContext('2d');
     if (!context) return;
 
-    const { width, height } = canvas;
-    const middle = height / 2;
-
-    // Resize canvas to fit container
     const parent = canvas.parentElement;
-    if (parent) {
-        canvas.width = parent.clientWidth;
-        canvas.height = parent.clientHeight;
-    }
+    if (!parent) return;
 
-    context.clearRect(0, 0, width, height);
-    context.fillStyle = 'rgb(156 163 175)'; // gray-400
+    // Set canvas size to match parent
+    const resizeCanvas = () => {
+      canvas.width = parent.clientWidth;
+      canvas.height = parent.clientHeight;
+    };
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
 
-    const barWidth = 3;
-    const gap = 2;
-    const numBars = Math.floor(width / (barWidth + gap));
+    let time = 0;
+    const animate = () => {
+      const { width, height } = canvas;
+      const middle = height / 2;
 
-    for (let i = 0; i < numBars; i++) {
-        // Create a subtle random wave effect even with no audio
-        const quietWave = (Math.sin(i * 0.2 + Date.now() * 0.005) + 1) / 2;
-        const barHeight = (height * 0.05) + (height * 0.95 * audioLevel * quietWave);
+      context.clearRect(0, 0, width, height);
+
+      // Gradient for active state
+      if (isActive) {
+        const gradient = context.createLinearGradient(0, 0, width, 0);
+        gradient.addColorStop(0, 'rgba(168, 85, 247, 0.8)'); // purple-500
+        gradient.addColorStop(0.5, 'rgba(236, 72, 153, 0.8)'); // pink-500
+        gradient.addColorStop(1, 'rgba(168, 85, 247, 0.8)');
+        context.fillStyle = gradient;
+      } else {
+        context.fillStyle = 'rgba(156, 163, 175, 0.3)'; // gray-400
+      }
+
+      const barWidth = 4;
+      const gap = 2;
+      const numBars = Math.floor(width / (barWidth + gap));
+
+      for (let i = 0; i < numBars; i++) {
+        // Create wave effect
+        const baseWave = Math.sin(i * 0.15 + time * 0.05) + 1;
+        const secondaryWave = Math.sin(i * 0.08 - time * 0.03) + 1;
+        const audioLevel = isActive ? 0.7 : 0.1;
+        
+        const normalizedHeight = (baseWave + secondaryWave) / 4;
+        const barHeight = (height * 0.1) + (height * audioLevel * normalizedHeight);
 
         const x = i * (barWidth + gap);
         const y = middle - barHeight / 2;
 
         context.fillRect(x, y, barWidth, barHeight);
-    }
+      }
 
-  }, [audioLevel]);
+      time += 1;
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
 
-  return <canvas ref={canvasRef} className="w-full h-full" />;
+    animate();
+
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [isActive]);
+
+  return (
+    <div className="h-16 sm:h-20 md:h-24 w-full bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+      <canvas ref={canvasRef} className="w-full h-full" />
+    </div>
+  );
 };
 
 export { Waveform };
+

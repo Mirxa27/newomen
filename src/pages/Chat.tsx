@@ -183,88 +183,132 @@ const Chat = () => {
 
   if (!isConnected && !isConnecting) {
     return (
-      <div className="min-h-screen flex items-center justify-center space-responsive-md">
-        <div className="card-responsive max-w-2xl w-full space-y-6">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 sm:p-6">
+        <div className="w-full max-w-2xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <Button 
             variant="ghost" 
             onClick={() => navigate('/dashboard')}
-            className="mb-4 btn-responsive"
+            className="mb-4 gap-2 hover:gap-3 transition-all"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm sm:text-base">Back to Dashboard</span>
           </Button>
 
           <div className="text-center space-y-4">
-            <h1 className="heading-responsive gradient-text">Talk with NewMe</h1>
-            <p className="text-responsive-lg text-muted-foreground">
-              Your empathetic AI companion for personal growth
+            <div className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 mb-4 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full shadow-lg">
+              <svg className="w-10 h-10 sm:w-12 sm:h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
+            </div>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600">
+              Talk with NewMe
+            </h1>
+            <p className="text-base sm:text-lg text-muted-foreground max-w-md mx-auto">
+              Your empathetic AI companion for personal growth and transformation
             </p>
           </div>
 
-          <div className="card-responsive space-y-3">
-            <h3 className="font-semibold text-responsive-base">What to expect:</h3>
-            <ul className="space-y-2 text-responsive-sm text-muted-foreground">
-              <li>• Real-time voice conversation</li>
-              <li>• Empathetic and supportive guidance</li>
-              <li>• Switch between voice and text anytime</li>
-              <li>• Your conversation is private and secure</li>
-            </ul>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6 sm:p-8 space-y-6">
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg sm:text-xl flex items-center gap-2">
+                <span className="text-2xl">✨</span>
+                What to expect:
+              </h3>
+              <div className="grid gap-3 sm:gap-4">
+                {[
+                  { icon: '🎙️', text: 'Real-time voice conversation' },
+                  { icon: '💚', text: 'Empathetic and supportive guidance' },
+                  { icon: '🔄', text: 'Switch between voice and text anytime' },
+                  { icon: '🔒', text: 'Private and secure conversations' },
+                ].map((item, index) => (
+                  <div 
+                    key={index}
+                    className="flex items-start gap-3 p-3 sm:p-4 rounded-lg bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <span className="text-2xl flex-shrink-0">{item.icon}</span>
+                    <span className="text-sm sm:text-base text-muted-foreground pt-1">{item.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Button 
+              onClick={startConversation}
+              disabled={isConnecting}
+              className="w-full h-14 sm:h-16 text-base sm:text-lg font-semibold bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+              size="lg"
+            >
+              {isConnecting ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                  Start Conversation
+                </>
+              )}
+            </Button>
           </div>
 
-          <Button 
-            onClick={startConversation}
-            disabled={isConnecting}
-            className="w-full py-8 text-responsive-xl glow-effect btn-responsive"
-            size="lg"
-          >
-            {isConnecting ? "Connecting..." : "🎙️ Start Conversation"}
-          </Button>
+          <p className="text-center text-xs sm:text-sm text-muted-foreground">
+            By starting, you agree to our terms and privacy policy
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="chat-responsive">
+    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="chat-header-responsive">
-        <div className="flex items-center justify-between">
-          <h2 className="heading-responsive">Conversation with NewMe</h2>
+      <div className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-3 sm:p-4">
+        <div className="flex items-center justify-between max-w-7xl mx-auto">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-base sm:text-lg font-semibold">NewMe Chat</h2>
+              <p className="text-xs text-muted-foreground hidden sm:block">AI Companion</p>
+            </div>
+          </div>
           <Button
             variant="ghost"
             onClick={() => navigate('/dashboard')}
-            className="btn-responsive flex items-center gap-2"
+            className="gap-2 hover:gap-3 transition-all"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Dashboard</span>
+            <span className="hidden sm:inline text-sm">Dashboard</span>
           </Button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0 max-w-7xl mx-auto w-full">
         {/* Chat Area */}
-        <div className="flex-1 flex flex-col min-h-0">
-          <div className="chat-content-responsive">
-            <TranscriptPane
-              messages={messages}
-              partialTranscript={partialTranscript}
-            />
-          </div>
+        <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-gray-800 lg:border-r border-gray-200 dark:border-gray-700">
+          {/* Messages */}
+          <TranscriptPane
+            messages={messages}
+            partialTranscript={partialTranscript}
+          />
 
-          {/* Mobile Session Info */}
-          <div className="tablet-up:hidden space-responsive-sm border-t">
-            <SessionHUD
-              duration={duration}
-              isConnected={isConnected}
-              isSpeaking={isSpeaking}
-            />
+          {/* Waveform */}
+          <div className="flex-shrink-0 p-3 sm:p-4">
+            <Waveform isActive={isConnected && isSpeaking} />
           </div>
-
-          <Waveform isActive={isConnected && isSpeaking} />
 
           {/* Composer */}
-          <div className="chat-footer-responsive">
+          <div className="flex-shrink-0 p-3 sm:p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
             <Composer
               onSendText={handleSendText}
               onEndSession={endConversation}
@@ -275,15 +319,22 @@ const Chat = () => {
           </div>
         </div>
 
-        {/* Desktop Sidebar */}
-        <div className="desktop-up:block desktop-up:w-80 border-l">
-          <div className="space-responsive-md h-full">
-            <SessionHUD
-              duration={duration}
-              isConnected={isConnected}
-              isSpeaking={isSpeaking}
-            />
-          </div>
+        {/* Sidebar - Desktop */}
+        <div className="hidden lg:block w-80 xl:w-96 flex-shrink-0 bg-white dark:bg-gray-800 p-4 overflow-y-auto">
+          <SessionHUD
+            duration={duration}
+            isConnected={isConnected}
+            isSpeaking={isSpeaking}
+          />
+        </div>
+
+        {/* Bottom HUD - Mobile */}
+        <div className="lg:hidden flex-shrink-0 p-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+          <SessionHUD
+            duration={duration}
+            isConnected={isConnected}
+            isSpeaking={isSpeaking}
+          />
         </div>
       </div>
     </div>

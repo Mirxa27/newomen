@@ -56,6 +56,7 @@ const path = require('path');
   });
 
   const page = await browser.newPage();
+  const wait = (ms) => new Promise((res) => setTimeout(res, ms));
 
   // collect console messages per page
   page._logs = [];
@@ -85,7 +86,7 @@ const path = require('path');
       try {
         const resp = await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
         // allow client-side rendering and animations
-        await page.waitForTimeout(700);
+        await wait(700);
         const safeBase = fileBase.replace(/[^a-z0-9\-]/gi, '').toLowerCase() || 'page';
         const filename = `${safeBase}--${w}.png`;
         const filepath = path.join(OUT_DIR, filename);
@@ -103,13 +104,13 @@ const path = require('path');
     try {
       const authUrl = DEV_URL.replace(/\/$/, '') + '/auth';
       await page.goto(authUrl, { waitUntil: 'networkidle2', timeout: 20000 });
-      await page.waitForTimeout(400);
+      await wait(400);
 
       // Try to click "Sign In" toggle if present (form defaults to Sign Up)
       const signInButton = await page.$x("//button[contains(., 'Sign In')]");
       if (signInButton && signInButton.length > 0) {
         await signInButton[0].click();
-        await page.waitForTimeout(300);
+        await wait(300);
       }
 
       // Fill credentials
@@ -129,7 +130,7 @@ const path = require('path');
           page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 }).catch(() => null),
           submit.click(),
         ]);
-        await page.waitForTimeout(800);
+        await wait(800);
         console.log('Login attempted');
         return true;
       } else {
