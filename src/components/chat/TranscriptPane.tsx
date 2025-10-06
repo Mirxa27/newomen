@@ -1,22 +1,26 @@
 // src/components/chat/TranscriptPane.tsx
 import React, { useEffect, useRef } from 'react';
 
-type Transcript = {
-  id: string;
-  text: string;
-  isFinal: boolean;
-};
-
-interface TranscriptPaneProps {
-  transcripts: Transcript[];
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
 }
 
-const TranscriptPane: React.FC<TranscriptPaneProps> = ({ transcripts }) => {
+interface TranscriptPaneProps {
+  messages?: Message[];
+  partialTranscript?: string;
+}
+
+const TranscriptPane: React.FC<TranscriptPaneProps> = ({ 
+  messages = [], 
+  partialTranscript = '' 
+}) => {
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [transcripts]);
+  }, [messages, partialTranscript]);
 
   return (
     <div
@@ -24,15 +28,29 @@ const TranscriptPane: React.FC<TranscriptPaneProps> = ({ transcripts }) => {
       aria-live="polite"
       aria-atomic="false"
     >
-      {transcripts.map((transcript, index) => (
-        <p
-          key={transcript.id}
-          className={`mb-2 ${transcript.isFinal ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}`}
-          {...(!transcript.isFinal && { 'aria-live': 'polite' })}
+      {messages.map((message, index) => (
+        <div
+          key={`${message.timestamp.getTime()}-${index}`}
+          className={`mb-4 ${
+            message.role === 'user' 
+              ? 'text-blue-600 dark:text-blue-400' 
+              : 'text-gray-900 dark:text-gray-100'
+          }`}
         >
-          {transcript.text}
-        </p>
+          <div className="font-semibold mb-1">
+            {message.role === 'user' ? 'You' : 'NewMe'}
+          </div>
+          <p className="whitespace-pre-wrap">{message.content}</p>
+        </div>
       ))}
+      
+      {partialTranscript && (
+        <div className="mb-4 text-gray-500 dark:text-gray-400" aria-live="polite">
+          <div className="font-semibold mb-1">NewMe (speaking...)</div>
+          <p className="whitespace-pre-wrap italic">{partialTranscript}</p>
+        </div>
+      )}
+      
       <div ref={endOfMessagesRef} />
     </div>
   );
