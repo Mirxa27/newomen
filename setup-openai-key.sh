@@ -1,64 +1,28 @@
 #!/bin/bash
-
-# Setup script for configuring Supabase Edge Function secrets
-# This script helps you set the OPENAI_API_KEY required for NewMe chat
-
-echo "🔐 Supabase Edge Function Secrets Setup"
-echo "========================================"
+echo "🔑 Setting up OpenAI API Key for Supabase Edge Functions"
+echo ""
+echo "This script will set the OPENAI_API_KEY secret in your Supabase project."
+echo "You can get your API key from: https://platform.openai.com/api-keys"
 echo ""
 
-# Check if user has Supabase CLI
-if ! command -v supabase &> /dev/null; then
-    echo "⚠️  Supabase CLI not found. Installing via npx..."
+read -p "Enter your OpenAI API key (starts with sk-): " OPENAI_KEY
+
+if [[ -z "$OPENAI_KEY" ]]; then
+  echo "❌ API key cannot be empty. Aborting."
+  exit 1
 fi
 
-echo "📝 This script will help you set the OPENAI_API_KEY for the realtime-token function."
-echo ""
-echo "You need an OpenAI API key that has access to the Realtime API."
-echo "If you don't have one, get it from: https://platform.openai.com/api-keys"
-echo ""
-
-# Prompt for API key
-read -sp "Enter your OpenAI API Key (starts with sk-): " OPENAI_KEY
-echo ""
-
-if [ -z "$OPENAI_KEY" ]; then
-    echo "❌ No API key provided. Exiting."
-    exit 1
-fi
-
-if [[ ! $OPENAI_KEY == sk-* ]]; then
-    echo "⚠️  Warning: API key doesn't start with 'sk-'. Are you sure this is correct?"
-    read -p "Continue anyway? (y/N): " confirm
-    if [[ ! $confirm =~ ^[Yy]$ ]]; then
-        echo "❌ Cancelled."
-        exit 1
-    fi
+if [[ ! "$OPENAI_KEY" == sk-* ]]; then
+  echo "⚠️ Warning: API key does not start with 'sk-'. Make sure it's correct."
 fi
 
 echo ""
-echo "🔄 Setting OPENAI_API_KEY secret in Supabase..."
-
-# Set the secret
+echo "Setting secret in Supabase..."
 npx supabase secrets set OPENAI_API_KEY="$OPENAI_KEY"
 
 if [ $? -eq 0 ]; then
-    echo "✅ Secret set successfully!"
-    echo ""
-    echo "📋 Verifying secrets..."
-    npx supabase secrets list
-    echo ""
-    echo "✅ Setup complete!"
-    echo ""
-    echo "Next steps:"
-    echo "1. Test the NewMe chat functionality"
-    echo "2. Check Supabase logs if you encounter issues:"
-    echo "   https://supabase.com/dashboard/project/fkikaozubngmzcrnhkqe/logs/edge-functions"
-    echo ""
+  echo "✅ Secret OPENAI_API_KEY set successfully!"
+  echo "Please wait a minute for the secret to be available to the function, then try the chat again."
 else
-    echo "❌ Failed to set secret. Please check your Supabase connection and try again."
-    echo ""
-    echo "You can also set it manually via the Supabase Dashboard:"
-    echo "https://supabase.com/dashboard/project/fkikaozubngmzcrnhkqe/settings/functions"
-    exit 1
+  echo "❌ Failed to set secret. Please check your Supabase CLI login and project link."
 fi
