@@ -76,9 +76,9 @@ export default function ProvidersManagement() {
       if (modelsData.error) throw modelsData.error;
       if (voicesData.error) throw voicesData.error;
 
-      setProviders(providersData.data || []);
-      setModels(modelsData.data || []);
-      setVoices(voicesData.data || []);
+      setProviders((providersData.data as any[]) || []);
+      setModels((modelsData.data as any[]) || []);
+      setVoices((voicesData.data as any[]) || []);
     } catch (error) {
       console.error("Error loading providers:", error);
       toast({

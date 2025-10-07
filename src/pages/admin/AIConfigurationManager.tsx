@@ -113,7 +113,7 @@ const AIConfigurationManager = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setConfigurations(data || []);
+      setConfigurations((data as any[]) || []);
     } catch (error) {
       console.error('Error loading configurations:', error);
       toast({

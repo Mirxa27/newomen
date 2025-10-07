@@ -24,7 +24,7 @@ export class AssessmentServiceOptimized {
   async getAssessments(filters?: AssessmentFilters): Promise<Assessment[]> {
     try {
       // Use Supabase's query builder directly and let TypeScript infer the type
-      let query = supabase
+      let query: any = supabase
         .from(this.assessmentsTable)
         .select("id, title, type, category, description, status, is_public, created_at, updated_at, questions, scoring_logic, outcome_descriptions");
 

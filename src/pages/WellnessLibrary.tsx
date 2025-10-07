@@ -42,7 +42,7 @@ export default function WellnessLibrary() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setResources(data || []);
+      setResources((data as Resource[]) || []);
     } catch (error) {
       console.error("Error loading resources:", error);
       toast.error("Failed to load wellness resources.");

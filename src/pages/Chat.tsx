@@ -12,7 +12,7 @@ import { Composer } from "@/components/chat/Composer";
 import { Waveform } from "@/components/chat/Waveform";
 import { NEWME_SYSTEM_PROMPT } from "@/config/newme-system-prompt";
 import { newMeMemoryService } from "@/services/NewMeMemoryService";
-import { aiService } from "@/utils/AIService";
+import { generateNewMeResponse, getNewMeGreeting } from "@/services/ai/newme/newmeService";
 import type { NewMeUserContext } from "@/types/newme-memory-types";
 
 interface Message {
@@ -230,7 +230,7 @@ const Chat = () => {
         try {
           const [context, greeting] = await Promise.all([
             newMeMemoryService.getUserContext(user.id),
-            aiService.getNewMeGreeting(user.id),
+            getNewMeGreeting(user.id),
           ]);
 
           sessionContext = buildSessionContext(context);

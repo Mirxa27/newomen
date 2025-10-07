@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ArrowLeft, Brain, Clock, Target, Trophy, BookOpen, Star, TrendingUp, Award } from "lucide-react";
-import { aiService } from "@/utils/AIService";
+import { aiService } from "@/services/ai/aiService";
 
 interface Assessment {
   id: string;

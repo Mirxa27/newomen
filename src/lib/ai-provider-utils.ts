@@ -62,7 +62,7 @@ export async function getAIProviderForUseCase(useCaseId: string): Promise<AIProv
       return null;
     }
 
-    return data?.provider as AIProviderConfig;
+    return data?.provider as any;
   } catch (error) {
     console.error("Error in getAIProviderForUseCase:", error);
     return null;
@@ -97,7 +97,7 @@ export async function getPromptTemplate(useCaseId: string, providerId?: string):
       return null;
     }
 
-    return data as PromptTemplate;
+    return data as any;
   } catch (error) {
     console.error("Error in getPromptTemplate:", error);
     return null;
@@ -176,8 +176,8 @@ export async function getAIConfiguration(useCaseId: string): Promise<{
       return null;
     }
 
-    const provider = data?.provider as AIProviderConfig;
-    const behavior = data?.behavior as AIBehavior;
+    const provider = data?.provider as any;
+    const behavior = data?.behavior as any;
 
     // Get the prompt template
     const template = await getPromptTemplate(useCaseId, provider?.id);

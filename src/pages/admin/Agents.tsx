@@ -129,7 +129,7 @@ export default function Agents() {
       if (modelsRes.error) throw modelsRes.error;
       if (voicesRes.error) throw voicesRes.error;
 
-      setAgents((agentsRes.data as AgentRow[]) ?? []);
+      setAgents((agentsRes.data as any[]) ?? []);
       setPrompts((promptsRes.data as PromptSummary[]) ?? []);
       setModels((modelsRes.data as ModelSummary[]) ?? []);
       setVoices((voicesRes.data as VoiceSummary[]) ?? []);

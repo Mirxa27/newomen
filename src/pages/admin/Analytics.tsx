@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import ResponsiveTable from "@/components/ui/ResponsiveTable";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ResponsiveTable from "@/components/ui/ResponsiveTable";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { Users, MessageSquare, TrendingUp, DollarSign, Activity, Trophy, Clock, User, Calendar, BarChart3, PieChart, LineChart } from "lucide-react";
@@ -83,7 +83,7 @@ export default function Analytics() {
       const userRows = (usersData.data ?? []) as Array<Pick<UserProfileRow, "id" | "crystal_balance" | "created_at">>;
       const sessionRows = (sessionsData.data ?? []) as Array<Pick<SessionRow, "user_id" | "duration_seconds" | "cost_usd" | "start_ts" | "status">>;
       const recentUserRows = (recentUsersData.data ?? []) as Array<Pick<UserProfileRow, "id" | "nickname" | "email" | "subscription_tier" | "created_at">>;
-      const recentSessionRows = (recentSessionsData.data ?? []) as SessionWithRelations[];
+      const recentSessionRows = (recentSessionsData.data as any[]) ?? [];
 
       const totalUsers = userRows.length;
       const totalSessions = sessionRows.length;
