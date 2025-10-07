@@ -19,7 +19,7 @@ const CHALLENGE_CATEGORIES = ["connection", "intimacy", "communication", "play"]
 
 type Affirmation = Tables<"affirmations">;
 type ChallengeTemplate = Tables<"challenge_templates">;
-type Assessment = Tables<"assessments"> & { questions: unknown[] };
+type Assessment = Tables<"assessments_enhanced"> & { questions: unknown[] };
 type WellnessResource = Tables<"wellness_resources">;
 
 type NewAffirmationState = { content: string; category: (typeof AFFIRMATION_CATEGORIES)[number]; tone: string; };
@@ -44,7 +44,7 @@ export default function ContentManagement() {
     setLoading(true);
     try {
       const [assessmentsData, resourcesData, affirmationsData, challengesData] = await Promise.all([
-        supabase.from("assessments").select("*").order("created_at", { ascending: false }),
+        supabase.from("assessments_enhanced").select("*").order("created_at", { ascending: false }),
         supabase.from("wellness_resources").select("*").order("created_at", { ascending: false }),
         supabase.from("affirmations").select("*").order("created_at", { ascending: false }),
         supabase.from("challenge_templates").select("*").order("created_at", { ascending: false }),
@@ -121,7 +121,7 @@ export default function ContentManagement() {
     try {
       let error;
       if (type === 'assessment') {
-        ({ error } = await supabase.from("assessments").delete().eq("id", id));
+        ({ error } = await supabase.from("assessments_enhanced").delete().eq("id", id));
         if (!error) setAssessments(prev => prev.filter(a => a.id !== id));
       } else if (type === 'affirmation') {
         ({ error } = await supabase.from("affirmations").delete().eq("id", id));

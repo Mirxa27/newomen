@@ -1,7 +1,7 @@
 import type { Json, Tables } from "@/integrations/supabase/types";
 
 export type AIConfiguration = Tables<'ai_configurations'>;
-export type Assessment = Tables<'assessments'>;
+export type Assessment = Tables<'assessments_enhanced'>;
 export type AssessmentAttempt = Tables<'assessment_attempts'>;
 export type AIAssessmentConfig = Tables<'ai_assessment_configs'>;
 

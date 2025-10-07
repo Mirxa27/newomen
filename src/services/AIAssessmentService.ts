@@ -64,7 +64,7 @@ export class AIAssessmentService {
   async getPublicAssessments(filters?: AssessmentFilters): Promise<Assessment[]> {
     try {
       let query = supabase
-        .from("assessments")
+        .from("assessments_enhanced")
         .select("*")
         .eq("is_public", true);
 

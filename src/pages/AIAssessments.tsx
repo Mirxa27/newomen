@@ -14,10 +14,10 @@ interface Assessment {
   id: string;
   title: string;
   description: string;
-  assessment_type: string;
+  type: string;
   category: string;
   difficulty_level: string;
-  estimated_duration_minutes: number;
+  time_limit_minutes: number;
   is_public: boolean;
   is_active: boolean;
 }
@@ -80,7 +80,7 @@ export default function AIAssessments() {
       let assessmentsData;
       try {
         const { data } = await supabase
-          .from("assessments")
+          .from("assessments_enhanced")
           .select("*")
           .eq("is_public", true)
           .eq("is_active", true)
@@ -94,10 +94,10 @@ export default function AIAssessments() {
             id: "1",
             title: "Personality Assessment",
             description: "Discover your personality traits and behavioral patterns",
-            assessment_type: "personality",
+            type: "personality",
             category: "Self-Discovery",
             difficulty_level: "medium",
-            estimated_duration_minutes: 15,
+            time_limit_minutes: 15,
             is_public: true,
             is_active: true
           },
@@ -105,16 +105,16 @@ export default function AIAssessments() {
             id: "2",
             title: "Emotional Intelligence Test",
             description: "Evaluate your emotional awareness and social skills",
-            assessment_type: "emotional",
+            type: "emotional",
             category: "Emotional Health",
             difficulty_level: "medium",
-            estimated_duration_minutes: 20,
+            time_limit_minutes: 20,
             is_public: true,
             is_active: true
           }
         ];
       }
-      setAssessments(assessmentsData || []);
+      setAssessments(assessmentsData as Assessment[] || []);
 
       // Load quizzes
       let quizzesData;
@@ -379,9 +379,9 @@ export default function AIAssessments() {
                         <CardHeader>
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex items-center gap-2">
-                              {getTypeIcon(assessment.assessment_type)}
+                              {getTypeIcon(assessment.type)}
                               <Badge variant="outline" className="capitalize">
-                                {assessment.assessment_type}
+                                {assessment.type}
                               </Badge>
                             </div>
                             <Badge className={getDifficultyColor(assessment.difficulty_level)}>
@@ -395,7 +395,7 @@ export default function AIAssessments() {
                           <div className="flex items-center justify-between text-sm text-muted-foreground">
                             <div className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
-                              <span>{assessment.estimated_duration_minutes} min</span>
+                              <span>{assessment.time_limit_minutes} min</span>
                             </div>
                             <Badge variant="secondary">{assessment.category}</Badge>
                           </div>

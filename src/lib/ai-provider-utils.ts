@@ -293,10 +293,7 @@ export async function getAIBehaviors(): Promise<AIBehavior[]> {
       return [];
     }
 
-    return (data || []).map(behavior => ({
-      ...behavior,
-      personality_traits: behavior.personality_traits as Record<string, number>
-    }));
+    return (data || []) as AIBehavior[];
   } catch (error) {
     console.error("Error in getAIBehaviors:", error);
     return [];

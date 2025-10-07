@@ -13,6 +13,6 @@ import { aiAssessmentService } from "@/services/AIAssessmentService";
 import type { AIProcessingResult } from "@/types/assessment-types";
 import type { Json, Tables } from "@/integrations/supabase/types";
 
-type SupabaseAssessmentRow = Tables<"assessments">;
+type SupabaseAssessmentRow = Tables<"assessments_enhanced">;
 
 // ... (rest of the file remains the same)

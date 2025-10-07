@@ -130,12 +130,10 @@ export async function checkAIRateLimit(userId: string, providerName: string): Pr
     const { data, error } = await supabase.rpc('check_ai_rate_limit', {
       p_user_id: userId,
       p_provider_name: providerName,
-      p_max_requests: 100,
-      p_window_minutes: 60
     });
 
     if (error) throw error;
-    return data as boolean;
+    return data;
   } catch (error) {
     console.error("Error checking rate limit:", error);
     return false;
@@ -150,8 +148,6 @@ export async function incrementAIRateLimit(userId: string, providerName: string)
     const { error } = await supabase.rpc('increment_ai_rate_limit', {
       p_user_id: userId,
       p_provider_name: providerName,
-      p_max_requests: 100,
-      p_window_minutes: 60
     });
 
     if (error) throw error;

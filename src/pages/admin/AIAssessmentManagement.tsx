@@ -39,15 +39,15 @@ export default function AIAssessmentManagement() {
       const [
         configsData,
         assessmentsData,
-        attemptsData,
+        assessmentAttemptsData,
         providersData,
         modelsData,
         useCasesData,
         behaviorsData,
       ] = await Promise.all([
         supabase.from("ai_configurations").select("*"),
-        supabase.from("assessments").select("*, ai_assessment_configs(name)"), // This join might still cause deep instantiation
-        supabase.from("assessment_attempts").select("*, assessments(title), user_profiles(nickname)"),
+        supabase.from("assessments_enhanced").select("*, ai_configurations(name)"), // This join might still cause deep instantiation
+        supabase.from("assessment_attempts").select("*, assessments_enhanced(title), user_profiles(nickname)"),
         supabase.from("providers").select("id, name"),
         supabase.from("models").select("id, display_name"),
         supabase.from("ai_use_cases").select("id, name"),
@@ -56,7 +56,7 @@ export default function AIAssessmentManagement() {
 
       if (configsData.error) throw configsData.error;
       if (assessmentsData.error) throw assessmentsData.error;
-      if (attemptsData.error) throw attemptsData.error;
+      if (assessmentAttemptsData.error) throw assessmentAttemptsData.error;
       if (providersData.error) throw providersData.error;
       if (modelsData.error) throw modelsData.error;
       if (useCasesData.error) throw useCasesData.error;
@@ -64,7 +64,7 @@ export default function AIAssessmentManagement() {
 
       setConfigs((configsData.data as AIConfiguration[]) || []);
       setAssessments((assessmentsData.data as any[]) || []);
-      setAttempts((attemptsData.data as any[]) || []);
+      setAttempts((assessmentAttemptsData.data as any[]) || []);
       setProviders(providersData.data || []);
       setModels(modelsData.data || []);
       setUseCases(useCasesData.data || []);
@@ -192,7 +192,7 @@ export default function AIAssessmentManagement() {
                     <TableRow key={assessment.id}>
                       <TableCell>{assessment.title}</TableCell>
                       <TableCell>{assessment.category}</TableCell>
-                      <TableCell>{(assessment as any).ai_assessment_configs?.name}</TableCell>
+                      <TableCell>{(assessment as any).ai_configurations?.name}</TableCell>
                       <TableCell>{assessment.is_public ? "Yes" : "No"}</TableCell>
                       <TableCell>
                         <Button variant="ghost" size="icon"><Edit className="w-4 h-4" /></Button>

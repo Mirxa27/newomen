@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { PostgrestFilterBuilder, PostgrestTransformBuilder } from "@supabase/supabase-js";
 import {
   Assessment,
   AssessmentInsert,
@@ -9,13 +8,14 @@ import {
   asAssessments,
   asAssessment
 } from "@/types/assessment-optimized";
+import type { Json } from "@/integrations/supabase/types";
 
 /**
  * Optimized Assessment Service with pre-typed query builders
  * Prevents TypeScript from complex type inference during compilation
  */
 export class AssessmentServiceOptimized {
-  private readonly assessmentsTable = "assessments";
+  private readonly assessmentsTable = "assessments_enhanced";
   private readonly attemptsTable = "assessment_attempts";
 
   /**
@@ -23,8 +23,8 @@ export class AssessmentServiceOptimized {
    */
   async getAssessments(filters?: AssessmentFilters): Promise<Assessment[]> {
     try {
-      // Use Supabase's PostgrestFilterBuilder directly
-      let query: PostgrestFilterBuilder<any, any, any, any> = supabase
+      // Use Supabase's query builder directly and let TypeScript infer the type
+      let query = supabase
         .from(this.assessmentsTable)
         .select("id, title, type, category, description, status, is_public, created_at, updated_at, questions, scoring_logic, outcome_descriptions");
 
@@ -134,8 +134,8 @@ export class AssessmentServiceOptimized {
       const { data, error } = await supabase
         .from(this.assessmentsTable)
         .update(updates)
-        .select()
         .eq("id", id)
+        .select()
         .single();
 
       if (error) {
@@ -248,8 +248,8 @@ export class AssessmentServiceOptimized {
           status: 'completed',
           completed_at: new Date().toISOString()
         })
-        .select()
         .eq("id", attemptId)
+        .select()
         .single();
 
       if (error) {

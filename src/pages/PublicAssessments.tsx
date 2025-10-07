@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Clock, CheckCircle } from "lucide-react";
 import { publicAssessments } from "@/data/publicAssessments";
 
-type SupabaseAssessmentRow = Tables<"assessments">;
+type SupabaseAssessmentRow = Tables<"assessments_enhanced">;
 
 interface AssessmentQuestion {
   text: string;
@@ -98,7 +98,7 @@ export default function PublicAssessments() {
   const loadPublicAssessments = useCallback(async () => {
     try {
       const { data, error } = await supabase
-        .from("assessments")
+        .from("assessments_enhanced")
         .select(
           "id, title, type, questions, is_public, description, category"
         )
