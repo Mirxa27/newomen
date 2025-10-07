@@ -23,15 +23,15 @@ export interface AssessmentBase {
   is_public: boolean | null;
   created_at: string | null;
   updated_at: string | null;
+  duration?: string | null; // Added duration
 }
 
 // Full assessment interface for create/update operations
 export interface AssessmentFull extends AssessmentBase {
   created_by: string | null;
-  duration: string | null;
-  questions: SimpleJson;
-  scoring_logic: SimpleJson | null;
-  outcome_descriptions: SimpleJson | null;
+  questions: Json; // Use Json from Supabase types
+  scoring_logic: Json | null;
+  outcome_descriptions: Json | null;
 }
 
 // Type for API responses (select operations)
@@ -50,16 +50,19 @@ export type AssessmentUpdate = Partial<Omit<AssessmentFull, 'id' | 'created_at' 
 // Assessment attempt types
 export interface AssessmentAttempt {
   id: string;
-  assessment_id: string;
-  user_id: string;
-  answers: SimpleJson;
-  score: number | null;
-  feedback: string | null;
-  is_completed: boolean;
+  assessment_id: string | null;
+  user_id: string | null;
+  attempt_number: number;
+  raw_responses: Json; // Matches Supabase schema
+  ai_analysis: Json | null;
+  ai_score: number | null; // Matches Supabase schema
+  ai_feedback: string | null; // Matches Supabase schema
+  is_ai_processed: boolean | null;
+  status: string | null;
   started_at: string | null;
   completed_at: string | null;
   created_at: string | null;
-  updated_at: string | null;
+  time_spent_minutes: number | null;
 }
 
 // AI Configuration types
@@ -103,16 +106,6 @@ export interface QueryResult<T> {
     message: string;
     details?: unknown;
   } | null;
-}
-
-// Supabase query builder type - simplified
-export interface SupabaseQuery<T> {
-  select(columns?: string): SupabaseQuery<T>;
-  eq(column: string, value: unknown): SupabaseQuery<T>;
-  in(column: string, values: unknown[]): SupabaseQuery<T>;
-  order(column: string, options?: { ascending?: boolean }): SupabaseQuery<T>;
-  limit(count: number): SupabaseQuery<T>;
-  range(from: number, to: number): SupabaseQuery<T>;
 }
 
 // Type assertion helpers to avoid complex inference

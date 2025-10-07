@@ -15,7 +15,7 @@ import type {
 export interface AIConfiguration {
   id: string;
   name: string;
-  provider: 'openai' | 'anthropic' | 'google' | 'azure' | 'custom';
+  provider: 'openai' | 'anthropic' | 'google' | 'azure' | 'custom' | 'elevenlabs' | 'cartesia' | 'deepgram' | 'hume';
   provider_name?: string;
   model: string;  // Note: using 'model' to match other parts of code
   apiKey: string;
@@ -88,7 +88,7 @@ export class AIService {
         this.configurations.set(config.id, {
           id: config.id,
           name: config.name,
-          provider: config.provider as 'openai' | 'anthropic' | 'google' | 'azure' | 'custom',
+          provider: config.provider as 'openai' | 'anthropic' | 'google' | 'azure' | 'custom' | 'elevenlabs' | 'cartesia' | 'deepgram' | 'hume',
           provider_name: config.provider_name || undefined,
           model: config.model_name,
           apiKey: config.api_key_encrypted || '', // Note: This should be decrypted in production
@@ -339,8 +339,15 @@ export class AIService {
           return await this.callOpenAI(config, prompt, startTime);
         case 'anthropic':
           return await this.callAnthropic(config, prompt, startTime);
-        case 'custom':
+        case 'google':
+          return await this.callGoogle(config, prompt, startTime);
+        case 'elevenlabs':
+          return await this.callElevenLabs(config, prompt, startTime);
+        case 'cartesia':
+        case 'deepgram':
+        case 'hume':
         case 'azure':
+        case 'custom':
           return await this.callCustomProvider(config, prompt, startTime);
         default:
           throw new Error(`Unsupported AI provider: ${config.provider}`);
@@ -355,14 +362,14 @@ export class AIService {
   }
 
   private async callOpenAI(config: AIConfiguration, prompt: string, startTime: number): Promise<AIResponse> {
-    // Get API key from Supabase secrets (in production)
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error('Not authenticated');
+    // Use VITE_OPENAI_API_KEY for client-side calls
+    const apiKey = import.meta.env.VITE_OPENAI_API_KEY || config.apiKey;
+    if (!apiKey) throw new Error('OpenAI API key not configured.');
 
     const response = await fetch(`${config.api_base_url || 'https://api.openai.com'}/v1/chat/completions`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY || 'your-api-key'}`,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -405,7 +412,7 @@ export class AIService {
     const response = await fetch(`${config.api_base_url || 'https://api.anthropic.com'}/v1/messages`, {
         method: 'POST',
         headers: {
-          'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY || 'your-api-key',
+          'x-api-key': config.apiKey || 'your-api-key', // Anthropic uses x-api-key
           'anthropic-version': '2023-06-01',
           'Content-Type': 'application/json',
         },
@@ -445,6 +452,85 @@ export class AIService {
       };
   }
 
+  private async callGoogle(config: AIConfiguration, prompt: string, startTime: number): Promise<AIResponse> {
+    // Google Gemini API
+    const response = await fetch(`${config.api_base_url || 'https://generativelanguage.googleapis.com/v1beta'}/models/${config.model}:generateContent`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': config.apiKey || 'your-api-key', // Google uses x-goog-api-key
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: prompt }],
+          },
+        ],
+        generationConfig: {
+          temperature: config.temperature,
+          maxOutputTokens: config.maxTokens,
+          topP: config.topP,
+        },
+        systemInstruction: {
+          parts: [{ text: config.systemPrompt || 'You are a helpful assistant.' }],
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Google Gemini API error: ${errorData.error?.message || response.statusText}`);
+    }
+
+    const data = await response.json();
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    // Placeholder for usage and cost calculation for Gemini
+    return {
+      success: true,
+      content: content,
+      usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+      cost_usd: 0,
+      processing_time_ms: Date.now() - startTime,
+    };
+  }
+
+  private async callElevenLabs(config: AIConfiguration, prompt: string, startTime: number): Promise<AIResponse> {
+    // ElevenLabs TTS API
+    const voiceId = config.model; // Assuming model field stores voice_id for ElevenLabs
+    const response = await fetch(`${config.api_base_url || 'https://api.elevenlabs.io/v1'}/text-to-speech/${voiceId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'xi-api-key': config.apiKey || 'your-api-key', // ElevenLabs uses xi-api-key
+      },
+      body: JSON.stringify({
+        text: prompt,
+        model_id: 'eleven_multilingual_v2', // Default model for TTS
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`ElevenLabs API error: ${errorData.detail?.[0]?.msg || response.statusText}`);
+    }
+
+    // ElevenLabs returns audio stream, not text content directly
+    // For this AIResponse, we'll return a placeholder or a URL to the audio
+    return {
+      success: true,
+      content: `Audio generated for prompt: "${prompt}"`, // Placeholder text
+      usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+      cost_usd: 0,
+      processing_time_ms: Date.now() - startTime,
+    };
+  }
+
   /**
    * Call custom OpenAI-compatible provider (Azure OpenAI, Groq, Together AI, etc.)
    * Supports custom base URLs, API versions, and headers
@@ -465,7 +551,14 @@ export class AIService {
       // Azure uses different auth, others typically use Bearer token
       if (config.provider === 'azure') {
         headers['api-key'] = config.apiKey;
-      } else {
+      } else if (config.provider === 'deepgram') {
+        headers['Authorization'] = `Token ${config.apiKey}`; // Deepgram uses Token
+      } else if (config.provider === 'hume') {
+        headers['X-Hume-Api-Key'] = config.apiKey; // Hume AI uses X-Hume-Api-Key
+      } else if (config.provider === 'cartesia') {
+        headers['X-Cartesia-API-Key'] = config.apiKey; // Cartesia uses X-Cartesia-API-Key
+      }
+      else {
         headers['Authorization'] = `Bearer ${config.apiKey}`;
       }
     }
@@ -475,7 +568,7 @@ export class AIService {
     if (config.provider === 'azure' && config.api_version) {
       // Azure URL format: {base_url}/openai/deployments/{model}/chat/completions?api-version={version}
       url = `${config.api_base_url}/openai/deployments/${config.model}/chat/completions?api-version=${config.api_version}`;
-    } else if (!url.includes('/chat/completions')) {
+    } else if (!url.includes('/chat/completions') && config.provider !== 'elevenlabs' && config.provider !== 'deepgram' && config.provider !== 'hume' && config.provider !== 'cartesia') {
       // Standard OpenAI-compatible endpoint
       url = `${url}/v1/chat/completions`;
     }
@@ -669,7 +762,7 @@ export class AIService {
       const config: AIConfiguration = {
         id: configData.config_id,
         name: configData.config_name,
-        provider: configData.provider as 'openai' | 'anthropic' | 'google' | 'azure' | 'custom',
+        provider: configData.provider as 'openai' | 'anthropic' | 'google' | 'azure' | 'custom' | 'elevenlabs' | 'cartesia' | 'deepgram' | 'hume',
         model: configData.model_name,
         apiKey: '', // API key should be fetched securely, not from this function
         temperature: Number(configData.temperature),

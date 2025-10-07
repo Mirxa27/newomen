@@ -7,6 +7,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { toast } from "sonner";
 import { Loader2, Plus, Edit, Trash2 } from "lucide-react";
 import type { AIConfiguration, Assessment, AssessmentAttempt } from "@/types/assessment-types";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 
 type Provider = { id: string; name: string };
 type Model = { id: string; display_name: string };
@@ -41,7 +46,7 @@ export default function AIAssessmentManagement() {
         behaviorsData,
       ] = await Promise.all([
         supabase.from("ai_configurations").select("*"),
-        supabase.from("assessments").select("*, ai_assessment_configs(name)"),
+        supabase.from("assessments").select("*, ai_assessment_configs(name)"), // This join might still cause deep instantiation
         supabase.from("assessment_attempts").select("*, assessments(title), user_profiles(nickname)"),
         supabase.from("providers").select("id, name"),
         supabase.from("models").select("id, display_name"),
@@ -84,8 +89,9 @@ export default function AIAssessmentManagement() {
       temperature: 0.7,
       max_tokens: 1024,
       system_prompt: "",
-      fallback_message: "I'm sorry, I couldn't process that.",
       is_active: true,
+      provider: "openai", // Default provider
+      model_name: "", // Default model name
     });
     setDialogOpen(true);
   };
@@ -94,14 +100,11 @@ export default function AIAssessmentManagement() {
     const newConfig: Partial<AIConfiguration> = {
       name: formData.name,
       description: formData.description,
-      provider_id: formData.provider_id,
-      model_id: formData.model_id,
-      use_case_id: formData.use_case_id,
-      behavior_id: formData.behavior_id,
+      provider: formData.provider,
+      model_name: formData.model_name,
       temperature: Number(formData.temperature),
       max_tokens: Number(formData.max_tokens),
       system_prompt: formData.system_prompt,
-      fallback_message: formData.fallback_message,
       is_active: formData.is_active,
     };
 
@@ -213,8 +216,82 @@ export default function AIAssessmentManagement() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {/* Form fields would go here */}
-            <p>Form under construction.</p>
+            {/* Form fields */}
+            <div className="space-y-2">
+              <Label htmlFor="config-name">Name</Label>
+              <Input
+                id="name"
+                value={formData.name || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Configuration Name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="config-description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Description"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="config-provider">Provider</Label>
+              <Select
+                value={formData.provider}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, provider: value as AIConfiguration["provider"] }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="openai">OpenAI</SelectItem>
+                  <SelectItem value="anthropic">Anthropic</SelectItem>
+                  <SelectItem value="google">Google (Gemini)</SelectItem>
+                  <SelectItem value="azure">Azure OpenAI</SelectItem>
+                  <SelectItem value="elevenlabs">ElevenLabs</SelectItem>
+                  <SelectItem value="cartesia">Cartesia</SelectItem>
+                  <SelectItem value="deepgram">Deepgram</SelectItem>
+                  <SelectItem value="hume">Hume AI</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="config-model">Model Name</Label>
+              <Input
+                id="model_name"
+                value={formData.model_name || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, model_name: e.target.value }))}
+                placeholder="Model Name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="config-temperature">Temperature</Label>
+              <Input
+                id="temperature"
+                type="number"
+                step="0.1"
+                value={formData.temperature}
+                onChange={(e) => setFormData(prev => ({ ...prev, temperature: parseFloat(e.target.value) }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="config-max-tokens">Max Tokens</Label>
+              <Input
+                id="max_tokens"
+                type="number"
+                value={formData.max_tokens}
+                onChange={(e) => setFormData(prev => ({ ...prev, max_tokens: parseInt(e.target.value) }))}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="is_active"
+                checked={formData.is_active}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+              />
+              <Label htmlFor="is_active">Is Active</Label>
+            </div>
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>

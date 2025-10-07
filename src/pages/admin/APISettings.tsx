@@ -22,6 +22,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Import Select components
 
 type APIIntegrationConfig = Tables<'api_integrations'>;
 type AIConfigurationRow = Tables<'ai_configurations'>;

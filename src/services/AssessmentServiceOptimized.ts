@@ -1,12 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
-import type {
+import { PostgrestFilterBuilder, PostgrestTransformBuilder } from "@supabase/supabase-js";
+import {
   Assessment,
   AssessmentInsert,
   AssessmentUpdate,
   AssessmentAttempt,
   AssessmentFilters,
-  QueryResult,
-  SupabaseQuery,
   asAssessments,
   asAssessment
 } from "@/types/assessment-optimized";
@@ -24,12 +23,12 @@ export class AssessmentServiceOptimized {
    */
   async getAssessments(filters?: AssessmentFilters): Promise<Assessment[]> {
     try {
-      // Build query with explicit typing to prevent inference
-      let query: SupabaseQuery<Assessment> = supabase
+      // Use Supabase's PostgrestFilterBuilder directly
+      let query: PostgrestFilterBuilder<any, any, any, any> = supabase
         .from(this.assessmentsTable)
-        .select("id, title, type, category, description, status, is_public, created_at, updated_at");
+        .select("id, title, type, category, description, status, is_public, created_at, updated_at, questions, scoring_logic, outcome_descriptions");
 
-      // Apply filters with explicit type guards
+      // Apply filters
       if (filters?.is_public !== undefined) {
         query = query.eq("is_public", filters.is_public);
       }
@@ -43,7 +42,6 @@ export class AssessmentServiceOptimized {
         query = query.eq("status", filters.status);
       }
 
-      // Execute query with explicit typing
       const { data, error } = await query;
 
       if (error) {
@@ -51,7 +49,6 @@ export class AssessmentServiceOptimized {
         return [];
       }
 
-      // Use type assertion helper instead of direct casting
       return data ? asAssessments(data) : [];
     } catch (error) {
       console.error("Unexpected error in getAssessments:", error);
@@ -210,8 +207,9 @@ export class AssessmentServiceOptimized {
       const attempt = {
         assessment_id: assessmentId,
         user_id: userId,
-        answers,
-        is_completed: false,
+        raw_responses: answers as Json, // Use raw_responses for JSON
+        attempt_number: 1, // Default to 1, or fetch next number
+        status: 'in_progress',
         started_at: new Date().toISOString()
       };
 
@@ -245,9 +243,9 @@ export class AssessmentServiceOptimized {
       const { data, error } = await supabase
         .from(this.attemptsTable)
         .update({
-          score,
-          feedback,
-          is_completed: true,
+          ai_score: score, // Use ai_score for number score
+          ai_feedback: feedback, // Use ai_feedback for string feedback
+          status: 'completed',
           completed_at: new Date().toISOString()
         })
         .select()

@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { RefreshCw, Plus, Loader2, Search, ShieldCheck } from "lucide-react";
+import { RefreshCw, Plus, Loader2, Search, ShieldCheck, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Provider {
@@ -70,9 +70,12 @@ const getErrorMessage = (error: unknown) => {
 const PROVIDER_TYPES = [
   { value: "openai", label: "OpenAI" },
   { value: "anthropic", label: "Anthropic" },
-  { value: "gemini", label: "Google Gemini" },
+  { value: "google", label: "Google Gemini" },
   { value: "azure", label: "Azure OpenAI" },
   { value: "elevenlabs", label: "ElevenLabs" },
+  { value: "cartesia", label: "Cartesia" },
+  { value: "deepgram", label: "Deepgram" },
+  { value: "hume", label: "Hume AI" },
 ];
 
 export default function ProvidersManagement() {
@@ -98,8 +101,8 @@ export default function ProvidersManagement() {
     try {
       const [providersData, modelsData, voicesData] = await Promise.all([
         supabase.from("providers").select("*").order("name"),
-        supabase.from("models").select("*").order("display_name"),
-        supabase.from("voices").select("*").order("name"),
+        supabase.from("models").select("*, providers(name)").order("display_name"),
+        supabase.from("voices").select("*, providers(name)").order("name"),
       ]);
 
       if (providersData.error) throw providersData.error;
@@ -213,9 +216,12 @@ export default function ProvidersManagement() {
     const defaults: Record<string, string> = {
       openai: "https://api.openai.com/v1",
       anthropic: "https://api.anthropic.com",
-      gemini: "https://generativelanguage.googleapis.com/v1beta",
+      google: "https://generativelanguage.googleapis.com/v1beta",
       azure: "",
       elevenlabs: "https://api.elevenlabs.io/v1",
+      cartesia: "https://api.cartesia.ai",
+      deepgram: "https://api.deepgram.com/v1",
+      hume: "https://api.hume.ai",
     };
     return defaults[type] || "";
   };
@@ -486,41 +492,33 @@ export default function ProvidersManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Voice</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Voice ID</TableHead>
                   <TableHead>Provider</TableHead>
-                  <TableHead>Locale</TableHead>
                   <TableHead>Gender</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Enabled</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {voices.slice(0, 15).map((voice) => {
-                  const provider = providers.find((p) => p.id === voice.provider_id);
-                  return (
-                    <TableRow key={voice.id}>
-                      <TableCell className="font-medium">{voice.name}</TableCell>
-                      <TableCell>{provider?.name ?? "-"}</TableCell>
-                      <TableCell>{voice.locale || "N/A"}</TableCell>
-                      <TableCell>{voice.gender || "N/A"}</TableCell>
+                {voices.slice(0, 15).map((v) => (
+                    <TableRow key={v.id}>
+                      <TableCell>{v.name}</TableCell>
+                      <TableCell className="font-mono text-xs">{v.voice_id}</TableCell>
+                      <TableCell>{(v as any).providers?.name}</TableCell>
+                      <TableCell>{v.gender}</TableCell>
+                      <TableCell>{v.enabled ? "Yes" : "No"}</TableCell>
                       <TableCell>
-                        <Badge variant={voice.enabled ? "default" : "secondary"}>
-                          {voice.enabled ? "Enabled" : "Disabled"}
-                        </Badge>
+                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(v, "voice")}><Edit className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => confirmDelete({ id: v.id, name: v.name || '' }, "voice")}><Trash2 className="w-4 h-4" /></Button>
                       </TableCell>
                     </TableRow>
-                  );
-                })}
-                {voices.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
-                      Connect a TTS provider to sync voices.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </ResponsiveTable>
-        </CardContent>
+                  ))}
+                </TableBody>
+              </Table>
+            </ResponsiveTable>
+          </CardContent>
+        </Card>
       </Card>
     </div>
   );

@@ -1,5 +1,8 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+/// <reference lib="deno.ns" />
+/// <reference lib="deno.window" />
+
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts"; // Updated Deno std version
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"; // Updated Supabase JS version
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -54,7 +57,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
     const body = (await req.json()) as Partial<ProviderAction>;
 
-    if (!body || !("action" in body)) {
+    if (!body || !body.action) { // Safely check for body.action
       throw new Error("Action is required");
     }
 
@@ -229,16 +232,19 @@ async function discoverAndPersistAssets(
 }
 
 function requiresApiKey(providerType: string) {
-  return ["openai", "elevenlabs", "azure"].includes(providerType);
+  return ["openai", "elevenlabs", "azure", "deepgram", "hume"].includes(providerType);
 }
 
 function getDefaultApiBase(providerType: string) {
   const map: Record<string, string> = {
     openai: "https://api.openai.com/v1",
     anthropic: "https://api.anthropic.com/v1",
-    gemini: "https://generativelanguage.googleapis.com/v1beta",
+    google: "https://generativelanguage.googleapis.com/v1beta",
     elevenlabs: "https://api.elevenlabs.io/v1",
     azure: "",
+    cartesia: "https://api.cartesia.ai",
+    deepgram: "https://api.deepgram.com/v1",
+    hume: "https://api.hume.ai",
   };
   return map[providerType] || "";
 }
@@ -250,8 +256,14 @@ async function discoverModels(providerType: string, apiKey?: string, apiBase?: s
       return discoverOpenAIModels(apiKey, apiBase ?? getDefaultApiBase("openai"));
     case "anthropic":
       return discoverAnthropicModels();
-    case "gemini":
+    case "google":
       return discoverGeminiModels();
+    case "cartesia":
+      return discoverCartesiaModels(); // Placeholder
+    case "deepgram":
+      return discoverDeepgramModels(); // Placeholder
+    case "hume":
+      return discoverHumeModels(); // Placeholder
     default:
       return [];
   }
@@ -262,6 +274,10 @@ async function discoverVoices(providerType: string, apiKey?: string, apiBase?: s
     case "elevenlabs":
       if (!apiKey) return [];
       return discoverElevenLabsVoices(apiKey, apiBase ?? getDefaultApiBase("elevenlabs"));
+    case "cartesia":
+      return discoverCartesiaVoices(); // Placeholder
+    case "hume":
+      return discoverHumeVoices(); // Placeholder
     default:
       return [];
   }
@@ -385,4 +401,40 @@ function discoverGeminiModels(): ModelRecord[] {
     is_realtime: true,
     enabled: true,
   }));
+}
+
+// Placeholder functions for new providers
+function discoverCartesiaModels(): ModelRecord[] {
+  return [{
+    provider_id: "", model_id: "cartesia-voice-v1", display_name: "Cartesia Voice",
+    modality: "audio", context_limit: 1000, latency_hint_ms: 150, is_realtime: true, enabled: true
+  }];
+}
+
+function discoverCartesiaVoices(): VoiceRecord[] {
+  return [{
+    provider_id: "", voice_id: "cartesia-default-female", name: "Cartesia Female",
+    locale: "en-US", gender: "female", latency_hint_ms: 150, enabled: true
+  }];
+}
+
+function discoverDeepgramModels(): ModelRecord[] {
+  return [{
+    provider_id: "", model_id: "nova-2", display_name: "Deepgram Nova-2",
+    modality: "audio", context_limit: null, latency_hint_ms: 50, is_realtime: true, enabled: true
+  }];
+}
+
+function discoverHumeModels(): ModelRecord[] {
+  return [{
+    provider_id: "", model_id: "empathic-voice-v1", display_name: "Hume AI Empathic Voice",
+    modality: "multimodal", context_limit: 2000, latency_hint_ms: 200, is_realtime: true, enabled: true
+  }];
+}
+
+function discoverHumeVoices(): VoiceRecord[] {
+  return [{
+    provider_id: "", voice_id: "hume-default-empathic", name: "Hume Empathic",
+    locale: "en-US", gender: "female", latency_hint_ms: 200, enabled: true
+  }];
 }

@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowRight, BarChart2, CheckCircle, Clock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import type { Assessment } from "@/types/assessment-optimized";
 import { assessmentServiceOptimized } from "@/services/AssessmentServiceOptimized";
-import type { Assessment } from "@/types/assessment-optimized"; // Use optimized type
 
 interface UserStats {
   total_assessments_completed: number;
@@ -15,7 +15,7 @@ interface UserStats {
   current_streak: number;
 }
 
-export default function Assessments() {
+export default function AssessmentsOptimized() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,9 +31,8 @@ export default function Assessments() {
 
     try {
       // Use optimized service to prevent type instantiation issues
-      const data = await assessmentServiceOptimized.getAssessments({
-        is_public: true,
-        status: 'active'
+      const data = await assessmentServiceOptimized.getPublicAssessments({
+        // Add filters if needed
       });
 
       setAssessments(data);
@@ -106,8 +105,8 @@ export default function Assessments() {
                 <Clock className="w-4 h-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{userStats.current_streak} days</div>
-                <p className="text-xs text-muted-foreground">of consistent growth</p>
+                <div className="text-2xl font-bold">{userStats.current_streak}</div>
+                <p className="text-xs text-muted-foreground">days in a row</p>
               </CardContent>
             </Card>
           </div>
@@ -117,37 +116,48 @@ export default function Assessments() {
           {assessments.map((assessment, index) => (
             <Card
               key={assessment.id}
-              className="hover:shadow-xl transition-all duration-300 cursor-pointer hover:-translate-y-1 animate-fade-in"
-              style={{ animationDelay: `${200 + index * 100}ms` }}
-              onClick={() => navigate(`/assessment/${assessment.id}`)}
+              className="glass-card hover:shadow-lg transition-all duration-300 cursor-pointer animate-fade-in"
+              style={{ animationDelay: `${index * 100}ms` }}
+              onClick={() => navigate(`/assessments/${assessment.id}`)}
             >
               <CardHeader>
-                <div className="flex items-start justify-between mb-2">
-                  <Badge variant="secondary" className="capitalize">
+                <div className="flex items-center justify-between mb-2">
+                  <Badge variant={assessment.category === 'personality' ? 'default' : 'secondary'}>
                     {assessment.category}
                   </Badge>
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Clock className="w-4 h-4 mr-1" />
-                    {assessment.duration}
-                  </div>
+                  <Badge variant="outline">
+                    {assessment.type}
+                  </Badge>
                 </div>
-                <CardTitle className="text-xl">{assessment.title}</CardTitle>
-                <CardDescription className="line-clamp-2">{assessment.description}</CardDescription>
+                <CardTitle className="text-lg">{assessment.title}</CardTitle>
+                {assessment.description && (
+                  <CardDescription className="line-clamp-3">
+                    {assessment.description}
+                  </CardDescription>
+                )}
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {/* Assuming questions property exists on Assessment type, or handle gracefully */}
-                  {/* @ts-ignore: questions property might not exist on AssessmentBase */}
-                  {Array.isArray(assessment.questions) ? assessment.questions.length : 0} insightful questions
-                </p>
-                <Button className="w-full group">
-                  Start Assessment
-                  <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </Button>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    {assessment.is_public ? 'Public' : 'Private'}
+                  </span>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
+
+        {assessments.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground mb-4">
+              No assessments available at the moment.
+            </p>
+            <Button onClick={() => window.location.reload()}>
+              Refresh
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
