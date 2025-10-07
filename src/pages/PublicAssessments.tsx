@@ -109,7 +109,7 @@ export default function PublicAssessments() {
       }
 
       const normalized = (data ?? [])
-        .map((record) => convertSupabaseAssessment(record))
+        .map((record) => convertSupabaseAssessment(record as SupabaseAssessmentRow))
         .filter((assessment): assessment is SelectedAssessment => Boolean(assessment));
 
       setAssessments(normalized);
