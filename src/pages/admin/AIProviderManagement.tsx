@@ -61,11 +61,11 @@ export default function AIProviderManagement() {
   const openNewDialog = (type: "provider" | "model" | "voice") => {
     setApiKey("");
     if (type === "provider") {
-      setFormState({ type, name: "", type: "llm" });
+      setFormState({ type: "provider", name: "" });
     } else if (type === "model") {
-      setFormState({ type, model_id: "", display_name: "", provider_id: "" });
+      setFormState({ type: "model", model_id: "", display_name: "", provider_id: "" });
     } else {
-      setFormState({ type, name: "", voice_id: "", provider_id: "", gender: "female", enabled: true });
+      setFormState({ type: "voice", name: "", voice_id: "", provider_id: "", gender: "female", enabled: true });
     }
     setDialogOpen(true);
   };

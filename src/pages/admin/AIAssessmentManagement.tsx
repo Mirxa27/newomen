@@ -4,13 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Loader2, Plus, Edit, Trash2 } from "lucide-react";
-import type { AIAssessmentConfig, Assessment, AssessmentAttempt } from "@/types/assessment-types";
+import type { AIConfiguration, Assessment, AssessmentAttempt } from "@/types/assessment-types";
 
 type Provider = { id: string; name: string };
 type Model = { id: string; display_name: string };
@@ -18,13 +14,13 @@ type UseCase = { id: string; name: string };
 type Behavior = { id: string; name: string };
 
 export default function AIAssessmentManagement() {
-  const [configs, setConfigs] = useState<AIAssessmentConfig[]>([]);
+  const [configs, setConfigs] = useState<AIConfiguration[]>([]);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [attempts, setAttempts] = useState<AssessmentAttempt[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formType, setFormType] = useState<"config" | "assessment">("config");
-  const [formData, setFormData] = useState<Partial<AIAssessmentConfig & Assessment>>({});
+  const [formData, setFormData] = useState<Partial<AIConfiguration>>({});
   
   // Data for dropdowns
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -44,7 +40,7 @@ export default function AIAssessmentManagement() {
         useCasesData,
         behaviorsData,
       ] = await Promise.all([
-        supabase.from("ai_assessment_configs").select("*"),
+        supabase.from("ai_configurations").select("*"),
         supabase.from("assessments").select("*, ai_assessment_configs(name)"),
         supabase.from("assessment_attempts").select("*, assessments(title), user_profiles(nickname)"),
         supabase.from("providers").select("id, name"),
@@ -61,7 +57,7 @@ export default function AIAssessmentManagement() {
       if (useCasesData.error) throw useCasesData.error;
       if (behaviorsData.error) throw behaviorsData.error;
 
-      setConfigs((configsData.data as any[]) || []);
+      setConfigs((configsData.data as AIConfiguration[]) || []);
       setAssessments((assessmentsData.data as any[]) || []);
       setAttempts((attemptsData.data as any[]) || []);
       setProviders(providersData.data || []);
@@ -88,7 +84,6 @@ export default function AIAssessmentManagement() {
       temperature: 0.7,
       max_tokens: 1024,
       system_prompt: "",
-      evaluation_criteria: {},
       fallback_message: "I'm sorry, I couldn't process that.",
       is_active: true,
     });
@@ -96,7 +91,7 @@ export default function AIAssessmentManagement() {
   };
 
   const handleSaveConfig = async () => {
-    const newConfig = {
+    const newConfig: Partial<AIConfiguration> = {
       name: formData.name,
       description: formData.description,
       provider_id: formData.provider_id,
@@ -106,13 +101,12 @@ export default function AIAssessmentManagement() {
       temperature: Number(formData.temperature),
       max_tokens: Number(formData.max_tokens),
       system_prompt: formData.system_prompt,
-      evaluation_criteria: typeof formData.evaluation_criteria === 'string' ? JSON.parse(formData.evaluation_criteria) : formData.evaluation_criteria,
       fallback_message: formData.fallback_message,
       is_active: formData.is_active,
     };
 
     try {
-      const { error } = await supabase.from("ai_assessment_configs").insert(newConfig as any);
+      const { error } = await supabase.from("ai_configurations").insert(newConfig as any);
       if (error) throw error;
       toast.success("AI Config saved successfully!");
       setDialogOpen(false);

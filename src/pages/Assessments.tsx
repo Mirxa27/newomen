@@ -36,7 +36,7 @@ export default function Assessments() {
         .eq("is_active", true);
 
       if (error) throw error;
-      setAssessments(data || []);
+      setAssessments((data as Assessment[]) || []);
 
       // NOTE: 'user_assessment_stats' table does not exist. Stats are mocked.
       setUserStats({

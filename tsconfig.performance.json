@@ -1,0 +1,41 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    /* Performance Optimizations */
+    "incremental": true,
+    "tsBuildInfoFile": ".tsbuildinfo/performance",
+
+    /* Type Instantiation Limits */
+    "maxNodeModuleJsDepth": 2,
+
+    /* Skip expensive checks */
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+
+    /* Reduce type complexity */
+    "strictFunctionTypes": false,
+    "strictPropertyInitialization": false,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitReturns": false,
+    "noUncheckedIndexedAccess": false,
+
+    /* Compilation optimizations */
+    "isolatedModules": true,
+    "assumeChangesOnlyAffectDirectDependencies": true,
+
+    /* Memory optimizations */
+    "preserveSymlinks": false,
+
+    /* Additional performance flags */
+    "disableSizeLimit": true,
+    "disableReferencedProjectResolve": true
+  },
+  "include": ["src"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/tests/**/*"
+  ]
+}
