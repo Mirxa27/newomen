@@ -403,10 +403,13 @@ export default function AssessmentsPage() {
 
 // --- Helper Functions ---
 const normalizeSupabaseAssessment = (record: Assessment): AssessmentDetails | null => {
-  const questions = Array.isArray(record.questions) ? record.questions.map(q => ({
-    question: (q as any)?.question ?? "",
-    options: Array.isArray((q as any)?.options) ? (q as any).options.map(String) : [],
-  })) : [];
+  const questions = Array.isArray(record.questions) ? record.questions.map(q => {
+    const question = q as { question?: string; options?: string[] };
+    return {
+      question: question?.question ?? "",
+      options: Array.isArray(question?.options) ? question.options.map(String) : [],
+    };
+  }) : [];
 
   if (questions.length === 0) return null;
 

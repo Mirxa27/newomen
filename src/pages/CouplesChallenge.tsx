@@ -19,8 +19,8 @@ function ChallengeInterface() {
   if (error) return <div className="text-center p-10 text-red-500">{error}</div>;
   if (!challenge || !profile) return <div className="text-center p-10">Challenge not found.</div>;
 
-  const questions = (challenge.question_set as any)?.questions || [];
-  const responses = (challenge.responses as any) || {};
+  const questions = (challenge.question_set as { questions?: Array<{ id: string; text: string }> })?.questions || [];
+  const responses = (challenge.responses as Record<string, { initiator_response?: string; partner_response?: string }>) || {};
   const isInitiator = challenge.initiator_id === profile.id;
 
   const handleResponseSubmit = (questionId: string) => {
@@ -62,11 +62,11 @@ function ChallengeInterface() {
                     <AlertTitle>{partnerNickname} Answer</AlertTitle>
                     <AlertDescription>{isInitiator ? partnerResponse : initiatorResponse}</AlertDescription>
                   </Alert>
-                  {challenge.ai_analysis && (challenge.ai_analysis as any)[q.id] && (
+                  {challenge.ai_analysis && (challenge.ai_analysis as unknown as Record<string, string>)[q.id] && (
                      <Alert variant="default" className="border-primary/50 glass">
                         <AlertTitle className="font-semibold text-primary">AI Analysis</AlertTitle>
                         <AlertDescription>
-                          {(challenge.ai_analysis as any)[q.id]}
+                          {(challenge.ai_analysis as unknown as Record<string, string>)[q.id]}
                         </AlertDescription>
                     </Alert>
                   )}

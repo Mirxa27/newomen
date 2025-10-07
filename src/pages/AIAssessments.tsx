@@ -119,6 +119,7 @@ export default function AIAssessments() {
       // Load quizzes
       let quizzesData;
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data } = await (supabase as any)
           .from("quizzes")
           .select("*")
@@ -157,6 +158,7 @@ export default function AIAssessments() {
       // Load challenges
       let challengesData;
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data } = await (supabase as any)
           .from("challenges")
           .select("*")
@@ -199,6 +201,7 @@ export default function AIAssessments() {
       // Load user stats
       let statsData;
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data } = await (supabase as any)
           .from("user_assessment_stats")
           .select("*")

@@ -9,6 +9,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 import MainLayout from "./components/layout/MainLayout";
 import AdminLayout from "./components/layout/AdminLayout";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const Landing = lazy(() => import("./pages/Landing"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -47,22 +48,26 @@ const APISettings = lazy(() => import("./pages/admin/APISettings"));
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Suspense fallback={
-            <div className="min-h-screen flex items-center justify-center">
-              <div className="glass-card p-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-              <p>Loading...</p>
-            </div>
-          </div>
-        }>
-          <Routes>
+const App = () => {
+  console.log("App component rendering...");
+  
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AuthProvider>
+              <Suspense fallback={
+                <div className="min-h-screen flex items-center justify-center">
+                  <div className="glass-card p-8">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+                  <p>Loading...</p>
+                </div>
+              </div>
+            }>
+              <Routes>
           <Route path="/" element={<MainLayout><Landing /></MainLayout>} />
           <Route path="/auth" element={<MainLayout><Auth /></MainLayout>} />
           <Route path="/about" element={<MainLayout><AboutUs /></MainLayout>} />
@@ -155,6 +160,8 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  </ErrorBoundary>
+  );
+};
 
 export default App;

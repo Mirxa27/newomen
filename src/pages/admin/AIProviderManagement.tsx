@@ -54,7 +54,7 @@ interface Provider {
   frequency_penalty: number;
   presence_penalty: number;
   system_instructions: string | null;
-  behavior_config: any;
+  behavior_config: Record<string, unknown>;
 }
 
 interface AIUseCase {
@@ -72,7 +72,7 @@ interface PromptTemplate {
   name: string;
   system_prompt: string;
   user_prompt_template: string | null;
-  variables: any;
+  variables: Record<string, unknown>;
   temperature: number;
   max_tokens: number;
   is_default: boolean;
@@ -84,11 +84,20 @@ interface AIBehavior {
   id: string;
   name: string;
   description: string;
-  personality_traits: any;
+  personality_traits: Record<string, unknown>;
   communication_style: string;
   response_length: string;
   emotional_tone: string;
   is_active: boolean;
+}
+
+interface AIModel {
+  id: string;
+  provider_id: string;
+  name: string;
+  description?: string;
+  max_tokens?: number;
+  supports_streaming?: boolean;
 }
 
 interface AIModelConfig {
@@ -101,7 +110,7 @@ interface AIModelConfig {
   priority: number;
   is_active: boolean;
   provider: Provider;
-  model: any;
+  model: AIModel;
   use_case: AIUseCase;
   behavior: AIBehavior;
 }

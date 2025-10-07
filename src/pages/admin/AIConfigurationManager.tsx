@@ -93,6 +93,7 @@ export default function AIConfigurationManager() {
 
       if (error) throw error;
       // Supabase returns a wide object; cast to any to satisfy the local AIConfiguration type
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setConfigurations((data as any) || []);
     } catch (error) {
       console.error('Error loading configurations:', error);
@@ -118,6 +119,7 @@ export default function AIConfigurationManager() {
 
       if (error) throw error;
       // Cast to any because the joined shape is looser than our TS interface
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setServiceConfigs((data as any) || []);
     } catch (error) {
       console.error('Error loading service configs:', error);
@@ -130,6 +132,7 @@ export default function AIConfigurationManager() {
         const { error } = await supabase
           .from('ai_configurations')
           // Cast to any to avoid Postgrest typing mismatches for partial updates
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .update(config as any)
           .eq('id', editing);
 
@@ -143,6 +146,7 @@ export default function AIConfigurationManager() {
         const { error } = await supabase
           .from('ai_configurations')
           // Insert may receive a partial config at runtime; cast to any to satisfy overloads
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .insert([config as any]);
 
         if (error) throw error;
@@ -308,7 +312,7 @@ export default function AIConfigurationManager() {
               <Label htmlFor="provider">Provider*</Label>
               <Select
                 value={formData.provider}
-                onValueChange={(value: any) => setFormData({ ...formData, provider: value })}
+                onValueChange={(value: string) => setFormData({ ...formData, provider: value })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -675,10 +679,10 @@ export default function AIConfigurationManager() {
                           {serviceConfig.ai_configurations && (
                             <div>
                               <div className="font-medium">
-                                {(serviceConfig.ai_configurations as any).name}
+                                {(serviceConfig.ai_configurations as { name?: string }).name}
                               </div>
                               <div className="text-sm text-muted-foreground">
-                                {(serviceConfig.ai_configurations as any).provider} - {(serviceConfig.ai_configurations as any).model_name}
+                                {(serviceConfig.ai_configurations as { provider?: string; model_name?: string }).provider} - {(serviceConfig.ai_configurations as { provider?: string; model_name?: string }).model_name}
                               </div>
                             </div>
                           )}
