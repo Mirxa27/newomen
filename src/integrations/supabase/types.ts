@@ -32,7 +32,7 @@ export * from './tables/sessions';
 export * from './tables/messages';
 export * from './tables/ai_assessment_configs';
 export * from './tables/prompt_templates';
-export * from './tables/achievements'; // Added missing export
+export * from './tables/achievements';
 
 
 export type Json =
@@ -46,40 +46,40 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      agents: import('./tables/agents').Agents['Row'];
-      ai_behaviors: import('./tables/ai_behaviors').AiBehaviors['Row'];
-      ai_configurations: import('./tables/ai_configurations').AIConfigurations['Row'];
-      ai_model_configs: import('./tables/ai_model_configs').AiModelConfigs['Row'];
-      ai_usage_logs: import('./tables/ai_usage_logs').AiUsageLogs['Row'];
-      ai_use_cases: import('./tables/ai_use_cases').AiUseCases['Row'];
-      api_integrations: import('./tables/api_integrations').ApiIntegrations['Row'];
-      assessment_attempts: import('./tables/assessment_attempts').AssessmentAttempts['Row'];
-      assessments_enhanced: import('./tables/assessments_enhanced').AssessmentsEnhanced['Row'];
-      challenge_templates: import('./tables/challenge_templates').ChallengeTemplates['Row'];
-      community_connections: import('./tables/community_connections').CommunityConnections['Row'];
-      couples_challenges: import('./tables/couples_challenges').CouplesChallenges['Row'];
-      level_thresholds: import('./tables/level_thresholds').LevelThresholds['Row'];
-      models: import('./tables/models').Models['Row'];
-      newme_assessment_tracking: import('./tables/newme_assessment_tracking').NewmeAssessmentTracking['Row'];
-      newme_conversations: import('./tables/newme_conversations').NewmeConversations['Row'];
-      newme_emotional_snapshots: import('./tables/newme_emotional_snapshots').NewmeEmotionalSnapshots['Row'];
-      newme_messages: import('./tables/newme_messages').NewmeMessages['Row'];
-      newme_user_memories: import('./tables/newme_user_memories').NewmeUserMemories['Row'];
-      providers: import('./tables/providers').Providers['Row'];
-      prompts: import('./tables/prompts').Prompts['Row'];
-      subscriptions: import('./tables/subscriptions').Subscriptions['Row'];
-      user_achievements: import('./tables/user_achievements').UserAchievements['Row'];
-      user_assessment_progress: import('./tables/user_assessment_progress').UserAssessmentProgress['Row'];
-      user_memory_profiles: import('./tables/user_memory_profiles').UserMemoryProfiles['Row'];
-      user_profiles: import('./tables/user_profiles').UserProfiles['Row'];
-      voices: import('./tables/voices').Voices['Row'];
-      wellness_resources: import('./tables/wellness_resources').WellnessResources['Row'];
-      affirmations: import('./tables/affirmations').Affirmations['Row'];
-      sessions: import('./tables/sessions').Sessions['Row'];
-      messages: import('./tables/messages').Messages['Row'];
-      ai_assessment_configs: import('./tables/ai_assessment_configs').AiAssessmentConfigs['Row'];
-      prompt_templates: import('./tables/prompt_templates').PromptTemplates['Row'];
-      achievements: import('./tables/achievements').Achievements['Row']; // Added missing table
+      agents: import('./tables/agents').Agents;
+      ai_behaviors: import('./tables/ai_behaviors').AiBehaviors;
+      ai_configurations: import('./tables/ai_configurations').AIConfigurations;
+      ai_model_configs: import('./tables/ai_model_configs').AiModelConfigs;
+      ai_usage_logs: import('./tables/ai_usage_logs').AiUsageLogs;
+      ai_use_cases: import('./tables/ai_use_cases').AiUseCases;
+      api_integrations: import('./tables/api_integrations').ApiIntegrations;
+      assessment_attempts: import('./tables/assessment_attempts').AssessmentAttempts;
+      assessments_enhanced: import('./tables/assessments_enhanced').AssessmentsEnhanced;
+      challenge_templates: import('./tables/challenge_templates').ChallengeTemplates;
+      community_connections: import('./tables/community_connections').CommunityConnections;
+      couples_challenges: import('./tables/couples_challenges').CouplesChallenges;
+      level_thresholds: import('./tables/level_thresholds').LevelThresholds;
+      models: import('./tables/models').Models;
+      newme_assessment_tracking: import('./tables/newme_assessment_tracking').NewmeAssessmentTracking;
+      newme_conversations: import('./tables/newme_conversations').NewmeConversations;
+      newme_emotional_snapshots: import('./tables/newme_emotional_snapshots').NewmeEmotionalSnapshots;
+      newme_messages: import('./tables/newme_messages').NewmeMessages;
+      newme_user_memories: import('./tables/newme_user_memories').NewmeUserMemories;
+      providers: import('./tables/providers').Providers;
+      prompts: import('./tables/prompts').Prompts;
+      subscriptions: import('./tables/subscriptions').Subscriptions;
+      user_achievements: import('./tables/user_achievements').UserAchievements;
+      user_assessment_progress: import('./tables/user_assessment_progress').UserAssessmentProgress;
+      user_memory_profiles: import('./tables/user_memory_profiles').UserMemoryProfiles;
+      user_profiles: import('./tables/user_profiles').UserProfiles;
+      voices: import('./tables/voices').Voices;
+      wellness_resources: import('./tables/wellness_resources').WellnessResources;
+      affirmations: import('./tables/affirmations').Affirmations;
+      sessions: import('./tables/sessions').Sessions;
+      messages: import('./tables/messages').Messages;
+      ai_assessment_configs: import('./tables/ai_assessment_configs').AiAssessmentConfigs;
+      prompt_templates: import('./tables/prompt_templates').PromptTemplates;
+      achievements: import('./tables/achievements').Achievements;
     };
     Views: {
       [_ in never]: never
