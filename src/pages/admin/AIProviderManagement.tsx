@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Database } from "@/integrations/supabase/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,9 +12,9 @@ import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 import { toast } from "sonner";
 import { Loader2, Plus, Edit, Trash2, KeyRound, Server, Cpu, CaseSensitive } from "lucide-react";
 
-type Provider = Tables<"providers">;
-type Model = Tables<"models">;
-type Voice = Tables<"voices">;
+type Provider = Database["public"]["Tables"]["providers"]["Row"];
+type Model = Database["public"]["Tables"]["models"]["Row"];
+type Voice = Database["public"]["Tables"]["voices"]["Row"];
 
 type FormState<T> = Partial<T> & { type: "provider" | "model" | "voice" };
 
@@ -44,8 +44,8 @@ export default function AIProviderManagement() {
       if (voicesRes.error) throw voicesRes.error;
 
       setProviders(providersRes.data || []);
-      setModels(modelsRes.data as any[] || []);
-      setVoices(voicesRes.data as any[] || []);
+      setModels(modelsRes.data || []);
+      setVoices(voicesRes.data || []);
     } catch (error) {
       console.error("Error loading data:", error);
       toast.error("Failed to load AI provider data.");
@@ -96,7 +96,7 @@ export default function AIProviderManagement() {
         if (error) throw error;
 
         if (apiKey && insertedProvider) {
-          const { error: keyError } = await supabase.rpc("store_provider_api_key" as any, {
+          const { error: keyError } = await supabase.rpc("store_provider_api_key", {
             p_provider_id: insertedProvider.id,
             p_api_key: apiKey,
           });
@@ -422,7 +422,9 @@ export default function AIProviderManagement() {
           </DialogHeader>
           {renderDialogContent()}
           <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={handleSave} disabled={saving}>
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Save

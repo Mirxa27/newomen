@@ -143,7 +143,7 @@ export class NewMeMemoryService {
       if (error) throw error;
 
       // Update message count in conversation
-      await supabase.rpc('increment_message_count' as any, { conv_id: input.conversation_id });
+      await supabase.rpc('increment_message_count', { conv_id: input.conversation_id });
 
       return data as NewMeMessage;
     } catch (error) {
@@ -199,7 +199,7 @@ export class NewMeMemoryService {
           .update({
             memory_value: input.memory_value,
             context: input.context,
-            importance_score: input.importance_score || existing.importance_score,
+            importance_score: input.importance_score ?? existing.importance_score,
             last_referenced_at: new Date().toISOString(),
             reference_count: existing.reference_count + 1,
           })
@@ -215,7 +215,7 @@ export class NewMeMemoryService {
           .from('newme_user_memories')
           .insert({
             ...input,
-            importance_score: input.importance_score || 5,
+            importance_score: input.importance_score ?? 5,
           })
           .select()
           .single();
@@ -334,6 +334,7 @@ export class NewMeMemoryService {
           suggested_in_conversation_id: conversationId,
           suggested_at: new Date().toISOString(),
           completion_status: 'suggested',
+          follow_up_discussed: false,
         })
         .select()
         .single();
@@ -403,11 +404,9 @@ export class NewMeMemoryService {
    * Extract key insights from conversation messages
    */
   extractKeyInsights(messages: NewMeMessage[]): string[] {
-    // This is a simple implementation - could be enhanced with NLP
     const insights: string[] = [];
     const assistantMessages = messages.filter((m) => m.role === 'assistant');
 
-    // Look for messages that contain insight keywords
     const insightKeywords = [
       'realize',
       'discover',
@@ -422,7 +421,6 @@ export class NewMeMemoryService {
     assistantMessages.forEach((msg) => {
       const lowerContent = msg.content.toLowerCase();
       if (insightKeywords.some((keyword) => lowerContent.includes(keyword))) {
-        // Take a meaningful snippet
         const sentences = msg.content.split(/[.!?]+/);
         sentences.forEach((sentence) => {
           if (
@@ -436,9 +434,8 @@ export class NewMeMemoryService {
       }
     });
 
-    return insights.slice(0, 5); // Top 5 insights
+    return insights.slice(0, 5);
   }
 }
 
-// Singleton instance
 export const newMeMemoryService = new NewMeMemoryService();

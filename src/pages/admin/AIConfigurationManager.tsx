@@ -31,17 +31,15 @@ import {
 } from '@/components/ui/table';
 import ResponsiveTable from '@/components/ui/ResponsiveTable';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Trash2, Edit2, TestTube, Save, X, Settings, Activity, DollarSign } from 'lucide-react';
+import { Loader2, Plus, Trash2, Edit2, TestTube, Save, Settings, Activity, DollarSign } from 'lucide-react';
 import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-
 
 interface AIConfiguration {
   id: string;
@@ -79,11 +77,19 @@ interface ServiceConfig {
 
 export default function AIConfigurationManager() {
   const [configurations, setConfigurations] = useState<AIConfiguration[]>([]);
-  const [serviceConfigs, setServiceConfigs] = useState<ServiceConfig[]>([]); // eslint-disable-line @typescript-eslint/no-unused-vars
+  const [serviceConfigs, setServiceConfigs] = useState<ServiceConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingConfig, setEditingConfig] = useState<AIConfiguration | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
-  const [testResults, setTestResults] = useState<{ testing: boolean; configId: string; success?: boolean; response?: string; usage?: any; time?: number; error?: string } | null>(null);
+  const [testResults, setTestResults] = useState<{
+    testing: boolean;
+    configId: string;
+    success?: boolean;
+    response?: string;
+    usage?: any;
+    time?: number;
+    error?: string;
+  } | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [configToDelete, setConfigToDelete] = useState<string | null>(null);
   const { toast } = useToast();
@@ -110,6 +116,7 @@ export default function AIConfigurationManager() {
   }, []);
 
   const loadConfigurations = async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('ai_configurations')
@@ -117,7 +124,7 @@ export default function AIConfigurationManager() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setConfigurations((data as AIConfiguration[]) || []);
+      setConfigurations(data || []);
     } catch (error) {
       console.error('Error loading configurations:', error);
       toast({
@@ -141,7 +148,7 @@ export default function AIConfigurationManager() {
         .order('service_type', { ascending: true });
 
       if (error) throw error;
-      setServiceConfigs((data as ServiceConfig[]) || []);
+      setServiceConfigs(data || []);
     } catch (error) {
       console.error('Error loading service configs:', error);
     }
@@ -434,7 +441,6 @@ export default function AIConfigurationManager() {
                   id="system_prompt"
                   value={formData.system_prompt || ''}
                   onChange={handleFormChange}
-                  placeholder="Define the AI's role and behavior"
                   rows={3}
                   className="glass"
                 />
@@ -445,7 +451,8 @@ export default function AIConfigurationManager() {
                   Cancel
                 </Button>
                 <Button onClick={() => handleSave(formData)} className="clay-button">
-                  Create Configuration
+                  <Save className="w-4 h-4 mr-2" />
+                  Update Configuration
                 </Button>
               </div>
             </div>
@@ -497,63 +504,63 @@ export default function AIConfigurationManager() {
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
-                  <TableBody>
-                    {configurations.map((config) => (
-                      <TableRow key={config.id}>
-                        <TableCell className="font-medium">
-                          <div>
-                            <div className="font-semibold">{config.name}</div>
-                            {config.description && (
-                              <div className="text-sm text-muted-foreground">{config.description}</div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="capitalize">
-                            {config.provider}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{config.model_name}</TableCell>
-                        <TableCell>
-                          <Badge variant={config.is_active ? "default" : "secondary"}>
-                            {config.is_active ? "Active" : "Inactive"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleTest(config)}
-                            disabled={testResults?.testing && testResults?.configId === config.id}
-                            className="glass"
-                          >
-                            <TestTube className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
+                    <TableBody>
+                      {configurations.map((config) => (
+                        <TableRow key={config.id}>
+                          <TableCell className="font-medium">
+                            <div>
+                              <div className="font-semibold">{config.name}</div>
+                              {config.description && (
+                                <div className="text-sm text-muted-foreground">{config.description}</div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">
+                              {config.provider}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{config.model_name}</TableCell>
+                          <TableCell>
+                            <Badge variant={config.is_active ? "default" : "secondary"}>
+                              {config.is_active ? "Active" : "Inactive"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => startEdit(config)}
+                              onClick={() => handleTest(config)}
+                              disabled={testResults?.testing && testResults?.configId === config.id}
                               className="glass"
                             >
-                              <Edit2 className="w-4 h-4" />
+                              <TestTube className="w-4 h-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => { setConfigToDelete(config.id); setDeleteDialogOpen(true); }}
-                              className="glass"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => startEdit(config)}
+                                className="glass"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => { setConfigToDelete(config.id); setDeleteDialogOpen(true); }}
+                                className="glass"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </ResponsiveTable>
               )}
             </CardContent>
@@ -596,165 +603,6 @@ export default function AIConfigurationManager() {
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Edit Configuration Dialog */}
-      <Dialog open={!!editingConfig} onOpenChange={() => setEditingConfig(null)}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto glass-card">
-          <DialogHeader>
-            <DialogTitle className="gradient-text">Edit AI Configuration</DialogTitle>
-            <DialogDescription>
-              Modify the AI model configuration settings
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit_name">Configuration Name</Label>
-                <Input
-                  id="name" // Changed to 'name' to match formData key
-                  value={formData.name || ''}
-                  onChange={handleFormChange}
-                  className="glass"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit_provider">AI Provider</Label>
-                <Select
-                  value={formData.provider}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, provider: value as AIConfiguration["provider"] }))}
-                >
-                  <SelectTrigger className="glass">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="openai">OpenAI</SelectItem>
-                    <SelectItem value="anthropic">Anthropic</SelectItem>
-                    <SelectItem value="google">Google (Gemini)</SelectItem>
-                    <SelectItem value="azure">Azure OpenAI</SelectItem>
-                    <SelectItem value="elevenlabs">ElevenLabs</SelectItem>
-                    <SelectItem value="cartesia">Cartesia</SelectItem>
-                    <SelectItem value="deepgram">Deepgram</SelectItem>
-                    <SelectItem value="hume">Hume AI</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit_model_name">Model Name</Label>
-                <Input
-                  id="model_name" // Changed to 'model_name' to match formData key
-                  value={formData.model_name || ''}
-                  onChange={handleFormChange}
-                  className="glass"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit_api_base_url">API Base URL</Label>
-                <Input
-                  id="api_base_url" // Changed to 'api_base_url' to match formData key
-                  value={formData.api_base_url || ''}
-                  onChange={handleFormChange}
-                  className="glass"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit_temperature">Temperature: {formData.temperature}</Label>
-                <Input
-                  id="temperature" // Changed to 'temperature' to match formData key
-                  type="range"
-                  min="0"
-                  max="2"
-                  step="0.1"
-                  value={formData.temperature}
-                  onChange={handleFormChange}
-                  className="glass"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit_max_tokens">Max Tokens: {formData.max_tokens}</Label>
-                <Input
-                  id="max_tokens" // Changed to 'max_tokens' to match formData key
-                  type="range"
-                  min="100"
-                  max="4000"
-                  step="100"
-                  value={formData.max_tokens}
-                  onChange={handleFormChange}
-                  className="glass"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit_system_prompt">System Prompt</Label>
-              <Textarea
-                id="system_prompt" // Changed to 'system_prompt' to match formData key
-                value={formData.system_prompt || ''}
-                onChange={handleFormChange}
-                rows={3}
-                className="glass"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setEditingConfig(null)} className="glass">
-                Cancel
-              </Button>
-              <Button onClick={() => handleSave(formData)} className="clay-button">
-                <Save className="w-4 h-4 mr-2" />
-                Update Configuration
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Test Results Display */}
-      {testResults && (
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 gradient-text">
-              <TestTube className="w-5 h-5" />
-              Test Results
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {testResults.testing ? (
-              <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-                <span>Testing AI configuration...</span>
-              </div>
-            ) : testResults.success ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Badge variant="default">✓ Test Successful</Badge>
-                  <span className="text-sm text-muted-foreground">
-                    Response time: {testResults.time}ms
-                  </span>
-                </div>
-                {testResults.usage && (
-                  <div className="text-sm text-muted-foreground">
-                    Tokens: {testResults.usage.prompt_tokens} prompt + {testResults.usage.completion_tokens} completion = {testResults.usage.total_tokens} total
-                  </div>
-                )}
-                <div className="glass p-3 rounded-lg">
-                  <p className="text-sm">{testResults.response}</p>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-red-500">
-                <Badge variant="destructive">✗ Test Failed</Badge>
-                <span className="text-sm">{testResults.error}</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
       <ConfirmationDialog
         open={deleteDialogOpen}

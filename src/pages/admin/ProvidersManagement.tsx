@@ -52,52 +52,19 @@ interface Voice {
   enabled: boolean;
 }
 
-type ProviderFormState = {
-  name: string;
-  type: string;
-  api_key: string;
-  api_base: string;
-  region: string;
-};
-
-
-const getErrorMessage = (error: unknown) => {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "string") return error;
-  return "Unexpected error";
-};
-
-const PROVIDER_TYPES = [
-  { value: "openai", label: "OpenAI" },
-  { value: "anthropic", label: "Anthropic" },
-  { value: "google", label: "Google Gemini" },
-  { value: "azure", label: "Azure OpenAI" },
-  { value: "elevenlabs", label: "ElevenLabs" },
-  { value: "cartesia", label: "Cartesia" },
-  { value: "deepgram", label: "Deepgram" },
-  { value: "hume", label: "Hume AI" },
-];
-
 export default function ProvidersManagement() {
+  const { toast } = useToast();
+  const [isDiscovering, setIsDiscovering] = useState(false);
+  const [discoveryResults, setDiscoveryResults] = useState<any>(null);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [models, setModels] = useState<Model[]>([]);
   const [voices, setVoices] = useState<Voice[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [syncing, setSyncing] = useState<string | null>(null);
+  const [isLoadingProviders, setIsLoadingProviders] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const { toast } = useToast();
-
-  const [newProvider, setNewProvider] = useState<ProviderFormState>({
-    name: "",
-    type: "openai",
-    api_key: "",
-    api_base: "",
-    region: "",
-  });
 
   const loadProviders = useCallback(async () => {
-    setLoading(true);
+    setIsLoadingProviders(true);
     try {
       const [providersData, modelsData, voicesData] = await Promise.all([
         supabase.from("providers").select("*").order("name"),
@@ -112,118 +79,68 @@ export default function ProvidersManagement() {
       setProviders(providersData.data || []);
       setModels(modelsData.data || []);
       setVoices(voicesData.data || []);
-    } catch (error: unknown) {
+    } catch (error) {
       console.error("Error loading providers:", error);
       toast({
         title: "Unable to load providers",
-        description: getErrorMessage(error),
+        description: error instanceof Error ? error.message : "Unknown error",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setIsLoadingProviders(false);
     }
   }, [toast]);
 
+  useEffect(() => {
+    void loadProviders();
+  }, [loadProviders]);
+
   const invokeProviderFunction = async (payload: Record<string, unknown>) => {
     try {
-      // Try the main provider-discovery function first
       return await supabase.functions.invoke("provider-discovery", {
         body: payload,
       });
     } catch (error) {
       console.warn("Main provider-discovery failed, trying simplified version:", error);
-      // Fallback to simplified version
       return await supabase.functions.invoke("provider-discovery-simple", {
         body: payload,
       });
     }
   };
 
-  const addProvider = async () => {
-    if (!newProvider.name.trim() || !newProvider.api_key.trim()) {
-      toast({
-        title: "Missing details",
-        description: "Provider name and API key are required",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleDiscoverProviders = async () => {
+    setIsDiscovering(true);
     try {
-      const response = await invokeProviderFunction({
-        action: "create",
-        provider: {
-          name: newProvider.name.trim(),
-          type: newProvider.type,
-          apiKey: newProvider.api_key.trim(),
-          apiBase: newProvider.api_base.trim() || getDefaultApiBase(newProvider.type),
-          region: newProvider.region.trim() || null,
-        },
-      });
-
-      if (response.error) throw response.error;
-
-      const summary = response.data as { providerId: string; modelsCount: number; voicesCount: number };
+      const { data, error } = await invokeProviderFunction({ action: "sync" });
+      if (error) throw error;
+      setDiscoveryResults(data.results);
       toast({
-        title: "Provider connected",
-        description: `Discovered ${summary.modelsCount} models and ${summary.voicesCount} voices`,
+        title: "Discovery Complete!",
+        description: `Synced ${data.results.providers} providers, ${data.results.models} models, ${data.results.voices} voices`,
       });
-
-      setDialogOpen(false);
-      setNewProvider({ name: "", type: "openai", api_key: "", api_base: "", region: "" });
       loadProviders();
-    } catch (error: unknown) {
-      console.error("Error adding provider:", error);
+    } catch (error) {
+      console.error("Error discovering providers:", error);
       toast({
-        title: "Failed to connect provider",
-        description: getErrorMessage(error),
-        variant: "destructive",
-      });
-    }
-  };
-
-  const syncProvider = async (providerId: string, providerType: string) => {
-    setSyncing(providerId);
-    try {
-      const response = await invokeProviderFunction({
-        action: "sync",
-        providerId,
-        providerType,
-      });
-
-      if (response.error) throw response.error;
-      const summary = response.data as { modelsCount: number; voicesCount: number };
-
-      toast({
-        title: "Provider synced",
-        description: `Found ${summary.modelsCount} models and ${summary.voicesCount} voices`,
-      });
-
-      loadProviders();
-    } catch (error: unknown) {
-      console.error("Error syncing provider:", error);
-      toast({
-        title: "Sync failed",
-        description: getErrorMessage(error),
+        title: "Discovery Failed",
+        description: error instanceof Error ? error.message : "Failed to discover providers",
         variant: "destructive",
       });
     } finally {
-      setSyncing(null);
+      setIsDiscovering(false);
     }
   };
 
-  const getDefaultApiBase = (type: string) => {
-    const defaults: Record<string, string> = {
-      openai: "https://api.openai.com/v1",
-      anthropic: "https://api.anthropic.com",
-      google: "https://generativelanguage.googleapis.com/v1beta",
-      azure: "",
-      elevenlabs: "https://api.elevenlabs.io/v1",
-      cartesia: "https://api.cartesia.ai",
-      deepgram: "https://api.deepgram.com/v1",
-      hume: "https://api.hume.ai",
-    };
-    return defaults[type] || "";
+  const openEditDialog = (item: Provider | Model | Voice, type: "provider" | "model" | "voice") => {
+    // Implement edit dialog logic here
+    // For now, just log
+    console.log("Edit dialog open for", type, item);
+  };
+
+  const confirmDelete = (item: { id: string; name: string }, type: "provider" | "model" | "voice") => {
+    // Implement delete confirmation logic here
+    // For now, just log
+    console.log("Confirm delete for", type, item);
   };
 
   const filteredProviders = useMemo(() => {
@@ -246,280 +163,134 @@ export default function ProvidersManagement() {
 
   return (
     <div className="space-y-6">
-      <Card className="glass-card border-white/10">
-        <CardHeader>
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <CardTitle className="text-2xl gradient-text">AI Providers</CardTitle>
-              <CardDescription>
-                Connect and monitor the third-party AI services powering Newomen
-              </CardDescription>
-            </div>
-            <div className="flex flex-col gap-3 md:flex-row md:items-center">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search providers..."
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="clay-button">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Provider
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="glass-card border-white/10 max-w-lg">
-                  <DialogHeader>
-                    <DialogTitle className="gradient-text">Connect a new provider</DialogTitle>
-                    <DialogDescription>
-                      API credentials are encrypted at rest using your Supabase database key.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="provider-name">Provider Name</Label>
-                      <Input
-                        id="provider-name"
-                        placeholder="e.g. Primary OpenAI workspace"
-                        value={newProvider.name}
-                        onChange={(event) => setNewProvider((prev) => ({ ...prev, name: event.target.value }))}
-                        className="glass"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="provider-type">Provider Type</Label>
-                      <Select
-                        value={newProvider.type}
-                        onValueChange={(value) => setNewProvider((prev) => ({ ...prev, type: value }))}
-                      >
-                        <SelectTrigger className="glass">
-                          <SelectValue placeholder="Select provider" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PROVIDER_TYPES.map((provider) => (
-                            <SelectItem key={provider.value} value={provider.value}>
-                              {provider.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="provider-key">API Key</Label>
-                      <Input
-                        id="provider-key"
-                        type="password"
-                        placeholder="sk-..."
-                        value={newProvider.api_key}
-                        onChange={(event) => setNewProvider((prev) => ({ ...prev, api_key: event.target.value }))}
-                        className="glass"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="provider-base">API Base URL (optional)</Label>
-                      <Input
-                        id="provider-base"
-                        placeholder={getDefaultApiBase(newProvider.type) || "https://"}
-                        value={newProvider.api_base}
-                        onChange={(event) => setNewProvider((prev) => ({ ...prev, api_base: event.target.value }))}
-                        className="glass"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="provider-region">Region (optional)</Label>
-                      <Input
-                        id="provider-region"
-                        placeholder="us-east-1"
-                        value={newProvider.region}
-                        onChange={(event) => setNewProvider((prev) => ({ ...prev, region: event.target.value }))}
-                        className="glass"
-                      />
-                    </div>
-                    <div className="rounded-lg border border-dashed border-white/20 bg-muted/40 p-3 text-xs text-muted-foreground flex items-start gap-2">
-                      <ShieldCheck className="h-4 w-4 text-primary mt-0.5" />
-                      <span>
-                        Keys are encrypted with the database secret (<code>app.settings.provider_encryption_key</code>). Make
-                        sure this value is configured before connecting providers.
-                      </span>
-                    </div>
-                    <Button onClick={addProvider} className="w-full" disabled={loading}>
-                      Connect & Discover
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex h-48 items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold gradient-text">Provider Management</h2>
+          <p className="text-muted-foreground mt-1">
+            Discover and sync AI models and voices from providers
+          </p>
+        </div>
+        <Button
+          onClick={handleDiscoverProviders}
+          disabled={isDiscovering}
+          className="clay-button bg-gradient-to-r from-primary to-accent"
+        >
+          {isDiscovering ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Discovering...
+            </>
           ) : (
-            <ResponsiveTable>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Models</TableHead>
-                    <TableHead>Voices</TableHead>
-                    <TableHead>Last Synced</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProviders.map((provider) => {
-                    const modelCount = providerStats.modelMap[provider.id] || 0;
-                    const voiceCount = providerStats.voiceMap[provider.id] || 0;
-                    return (
-                      <TableRow key={provider.id}>
-                        <TableCell className="font-medium">{provider.name}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{provider.type}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={provider.status === "active" ? "default" : "secondary"}>
-                            {provider.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{modelCount}</TableCell>
-                        <TableCell>{voiceCount}</TableCell>
-                        <TableCell>
-                          {provider.last_synced_at
-                            ? new Date(provider.last_synced_at).toLocaleString()
-                            : "Never"}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => syncProvider(provider.id, provider.type)}
-                            disabled={syncing === provider.id}
-                          >
-                            {syncing === provider.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <RefreshCw className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {filteredProviders.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground">
-                        No providers yet. Connect one to get started.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </ResponsiveTable>
+            <>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Discover Providers
+            </>
           )}
-        </CardContent>
-      </Card>
+        </Button>
+      </div>
 
-      <Card className="glass-card border-white/10">
-        <CardHeader>
-          <CardTitle className="gradient-text">Discovered Models</CardTitle>
-          <CardDescription>Models available from connected providers</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveTable>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Model</TableHead>
-                  <TableHead>Provider</TableHead>
-                  <TableHead>Modality</TableHead>
-                  <TableHead>Context</TableHead>
-                  <TableHead>Realtime</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {models.slice(0, 15).map((model) => {
-                  const provider = providers.find((p) => p.id === model.provider_id);
-                  return (
-                    <TableRow key={model.id}>
-                      <TableCell className="font-medium">{model.display_name}</TableCell>
-                      <TableCell>{provider?.name ?? "-"}</TableCell>
-                      <TableCell>{model.modality || "text"}</TableCell>
-                      <TableCell>{model.context_limit?.toLocaleString() || "N/A"}</TableCell>
-                      <TableCell>
-                        {model.is_realtime ? (
-                          <Badge variant="default">Yes</Badge>
-                        ) : (
-                          <Badge variant="secondary">No</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={model.enabled ? "default" : "secondary"}>
-                          {model.enabled ? "Enabled" : "Disabled"}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-                {models.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      Models will appear here after connecting a provider.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </ResponsiveTable>
-        </CardContent>
-      </Card>
-
-      <Card className="glass-card border-white/10">
-        <CardHeader>
-          <CardTitle className="gradient-text">Discovered Voices</CardTitle>
-          <CardDescription>Voices fetched from connected TTS providers</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveTable>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Voice ID</TableHead>
-                  <TableHead>Provider</TableHead>
-                  <TableHead>Gender</TableHead>
-                  <TableHead>Enabled</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {voices.slice(0, 15).map((v) => (
-                    <TableRow key={v.id}>
-                      <TableCell>{v.name}</TableCell>
-                      <TableCell className="font-mono text-xs">{v.voice_id}</TableCell>
-                      <TableCell>{(v as any).providers?.name}</TableCell>
-                      <TableCell>{v.gender}</TableCell>
-                      <TableCell>{v.enabled ? "Yes" : "No"}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(v, "voice")}><Edit className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => confirmDelete({ id: v.id, name: v.name || '' }, "voice")}><Trash2 className="w-4 h-4" /></Button>
-                      </TableCell>
-                    </TableRow>
+      {discoveryResults && (
+        <Card className="glass-card border-green-500/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-green-500" />
+              Last Discovery Results
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-green-500">
+                  {discoveryResults.providers}
+                </div>
+                <div className="text-sm text-muted-foreground">Providers</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-blue-500">
+                  {discoveryResults.models}
+                </div>
+                <div className="text-sm text-muted-foreground">Models</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-purple-500">
+                  {discoveryResults.voices}
+                </div>
+                <div className="text-sm text-muted-foreground">Voices</div>
+              </div>
+            </div>
+            {discoveryResults.errors && discoveryResults.errors.length > 0 && (
+              <div className="mt-4">
+                <p className="text-sm font-semibold text-yellow-500 mb-2">Errors:</p>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  {discoveryResults.errors.map((error: string, idx: number) => (
+                    <li key={idx}>• {error}</li>
                   ))}
-                </TableBody>
-              </Table>
-            </ResponsiveTable>
+                </ul>
+              </div>
+            )}
           </CardContent>
         </Card>
-      </Card>
+      )}
+
+      <div className="grid gap-4">
+        {isLoadingProviders ? (
+          <div className="flex items-center justify-center p-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          providers.map((provider) => {
+            const modelCount = providerStats.modelMap[provider.id] || 0;
+            const voiceCount = providerStats.voiceMap[provider.id] || 0;
+            return (
+              <Card key={provider.id} className="glass-card">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-lg bg-primary/20 flex items-center justify-center">
+                        <ShieldCheck className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle>{provider.name}</CardTitle>
+                        <CardDescription>
+                          Type: {provider.type.toUpperCase()} • 
+                          Last synced: {provider.last_synced_at ? new Date(provider.last_synced_at).toLocaleDateString() : 'Never'}
+                        </CardDescription>
+                      </div>
+                    </div>
+                    <Badge variant={provider.status === 'active' ? 'default' : 'secondary'}>
+                      {provider.status}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Models:</span>
+                      <Badge variant="outline">
+                        {modelCount}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Voices:</span>
+                      <Badge variant="outline">
+                        {voiceCount}
+                      </Badge>
+                    </div>
+                    {provider.api_base && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">API:</span>
+                        <code className="text-xs bg-muted px-2 py-1 rounded">
+                          {provider.api_base}
+                        </code>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }

@@ -15,7 +15,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Database } from "@/integrations/supabase/types";
 import { trackDailyLogin } from "@/lib/gamification-events";
 
 const AFFIRMATIONS = [
@@ -30,8 +30,8 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<Tables<"user_profiles"> | null>(null);
-  const [levelThresholds, setLevelThresholds] = useState<Tables<"level_thresholds">[]>([]);
+  const [profile, setProfile] = useState<Database["public"]["Tables"]["user_profiles"]["Row"] | null>(null);
+  const [levelThresholds, setLevelThresholds] = useState<Database["public"]["Tables"]["level_thresholds"]["Row"][]>([]);
   const [affirmation, setAffirmation] = useState("");
 
   useEffect(() => {
