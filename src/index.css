@@ -85,7 +85,9 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-image: url('./assets/fixed-background.jpg');
+    /* Temporarily use gradient instead of image for debugging */
+    background: linear-gradient(135deg, #1a1a2e 0%, #0f0f23 100%);
+    /* background-image: url('./assets/fixed-background.jpg'); */
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debug Test Page</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 40px;
+      background: linear-gradient(135deg, #1a1a2e 0%, #0f0f23 100%);
+      color: white;
+      font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+    .info {
+      background: rgba(255,255,255,0.1);
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .success {
+      color: #4ade80;
+    }
+    .error {
+      color: #ef4444;
+    }
+  </style>
+</head>
+<body>
+  <h1>Debug Test Page</h1>
+  
+  <div class="info">
+    <h2>Static HTML Test</h2>
+    <p class="success">✓ This page loads successfully without React</p>
+  </div>
+
+  <div class="info">
+    <h2>Build Status</h2>
+    <p>The application has been built successfully with the following fixes:</p>
+    <ul>
+      <li>✓ Fixed circular dependency issues with buttonVariants</li>
+      <li>✓ Replaced background image with gradient for stability</li>
+      <li>✓ Added error boundary for better error handling</li>
+      <li>✓ Added debug logging to track initialization</li>
+    </ul>
+  </div>
+
+  <div class="info">
+    <h2>Testing the Main App</h2>
+    <p>To test the main application:</p>
+    <ol>
+      <li>Go to <a href="/" style="color: #60a5fa;">Home Page</a></li>
+      <li>Open browser console (F12) to see debug logs</li>
+      <li>Check for any error messages</li>
+      <li>Try hard refresh (Ctrl+Shift+R)</li>
+    </ol>
+  </div>
+
+  <script>
+    console.log('Test page loaded successfully');
+  </script>
+</body>
+</html>
