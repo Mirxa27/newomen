@@ -3,9 +3,10 @@ import React, { useRef, useEffect } from 'react';
 
 interface WaveformProps {
   isActive: boolean;
+  audioLevel: number;
 }
 
-const Waveform: React.FC<WaveformProps> = ({ isActive }) => {
+const Waveform: React.FC<WaveformProps> = ({ isActive, audioLevel }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number>();
 
@@ -53,10 +54,9 @@ const Waveform: React.FC<WaveformProps> = ({ isActive }) => {
         // Create wave effect
         const baseWave = Math.sin(i * 0.15 + time * 0.05) + 1;
         const secondaryWave = Math.sin(i * 0.08 - time * 0.03) + 1;
-        const audioLevel = isActive ? 0.7 : 0.1;
         
         const normalizedHeight = (baseWave + secondaryWave) / 4;
-        const barHeight = (height * 0.1) + (height * audioLevel * normalizedHeight);
+        const barHeight = (height * 0.1) + (height * (isActive ? audioLevel : 0.1) * normalizedHeight);
 
         const x = i * (barWidth + gap);
         const y = middle - barHeight / 2;
@@ -76,7 +76,7 @@ const Waveform: React.FC<WaveformProps> = ({ isActive }) => {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isActive]);
+  }, [isActive, audioLevel]);
 
   return (
     <div className="h-16 sm:h-20 md:h-24 w-full bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
@@ -86,4 +86,3 @@ const Waveform: React.FC<WaveformProps> = ({ isActive }) => {
 };
 
 export { Waveform };
-

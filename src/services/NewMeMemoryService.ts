@@ -143,7 +143,7 @@ export class NewMeMemoryService {
       if (error) throw error;
 
       // Update message count in conversation
-      await supabase.rpc('increment_message_count', { conv_id: input.conversation_id });
+      await supabase.rpc('increment_message_count' as any, { conv_id: input.conversation_id });
 
       return data as NewMeMessage;
     } catch (error) {

@@ -505,8 +505,6 @@ export default function Agents() {
         onOpenChange={setDeleteDialogOpen}
         title="Delete agent"
         description={`Are you sure you want to delete ${agentToDelete?.name}? This action cannot be undone.`}
-        confirmText="Delete"
-        confirmVariant="destructive"
         onConfirm={deleteAgent}
       />
     </div>

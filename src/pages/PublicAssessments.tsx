@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -66,7 +66,7 @@ const convertSupabaseAssessment = (record: SupabaseAssessmentRow): SelectedAsses
     id: record.id,
     title: record.title,
     description: record.description ?? undefined,
-    assessmentType: record.assessment_type,
+    assessmentType: record.type,
     questions,
     category: record.category ?? undefined,
   };
@@ -94,6 +94,33 @@ export default function PublicAssessments() {
   const [assessmentsFetched, setAssessmentsFetched] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const navigate = useNavigate();
+
+  const loadPublicAssessments = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("assessments")
+        .select(
+          "id, title, type, questions, is_public, description, category"
+        )
+        .eq("is_public", true);
+
+      if (error) {
+        throw error;
+      }
+
+      const normalized = (data ?? [])
+        .map((record) => convertSupabaseAssessment(record))
+        .filter((assessment): assessment is SelectedAssessment => Boolean(assessment));
+
+      setAssessments(normalized);
+    } catch (error) {
+      console.error("Error loading assessments:", error);
+      toast.error("Failed to load assessments");
+      setAssessments([]);
+    } finally {
+      setAssessmentsFetched(true);
+    }
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -133,33 +160,6 @@ export default function PublicAssessments() {
     }
   }, [assessmentId, assessments, assessmentsFetched]);
 
-  const loadPublicAssessments = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from("assessments")
-        .select(
-          "id, title, assessment_type, questions, is_public, description, category"
-        )
-        .eq("is_public", true);
-
-      if (error) {
-        throw error;
-      }
-
-      const normalized = (data ?? [])
-        .map((record) => convertSupabaseAssessment(record))
-        .filter((assessment): assessment is SelectedAssessment => Boolean(assessment));
-
-      setAssessments(normalized);
-    } catch (error) {
-      console.error("Error loading assessments:", error);
-      toast.error("Failed to load assessments");
-      setAssessments([]);
-    } finally {
-      setAssessmentsFetched(true);
-    }
-  }, []);
-
   const handleAnswerChange = (value: string) => {
     setAnswers({ ...answers, [currentQuestion]: value });
   };
@@ -193,6 +193,7 @@ export default function PublicAssessments() {
     setAnswers({});
     setShowResults(false);
     setLoading(false);
+    navigate('/assessments');
   };
 
   if (loading) {

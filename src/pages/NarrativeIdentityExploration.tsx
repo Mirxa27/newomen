@@ -76,9 +76,30 @@ export default function NarrativeIdentityExploration() {
         .single();
 
       if (existingData?.narrative_identity_data) {
-        const parsedData = existingData.narrative_identity_data as any;
-        if(parsedData.analysis) {
-          setAnalysisResult(parsedData.analysis);
+        let parsedData: { answers?: Record<number, string>; analysis?: NarrativeAnalysis | string; completed_at?: string } | null = null;
+        if (typeof existingData.narrative_identity_data === 'string') {
+          try {
+            parsedData = JSON.parse(existingData.narrative_identity_data);
+          } catch (e) {
+            console.error('Failed to parse narrative_identity_data as JSON:', e);
+          }
+        } else if (typeof existingData.narrative_identity_data === 'object' && existingData.narrative_identity_data !== null) {
+          parsedData = existingData.narrative_identity_data as any;
+        }
+        if (parsedData?.analysis) {
+          let analysisObj: NarrativeAnalysis | null = null;
+          if (typeof parsedData.analysis === 'string') {
+            try {
+              analysisObj = JSON.parse(parsedData.analysis);
+            } catch (e) {
+              console.error('Failed to parse analysis as JSON:', e);
+            }
+          } else if (typeof parsedData.analysis === 'object') {
+            analysisObj = parsedData.analysis;
+          }
+          if (analysisObj) {
+            setAnalysisResult(analysisObj);
+          }
         }
         setHasExistingExploration(true);
       }
@@ -129,7 +150,7 @@ export default function NarrativeIdentityExploration() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const narrativeText = questions.map((q, idx) => 
+      const narrativeText = questions.map((q, idx) =>
         `${q.category}: ${q.question}\nAnswer: ${allAnswers[idx + 1]}`
       ).join('\n\n');
 
@@ -147,16 +168,19 @@ export default function NarrativeIdentityExploration() {
         transformationOpportunities: Array.isArray(data?.transformationOpportunities) ? data.transformationOpportunities.map(String) : [],
         personalityArchetype: typeof data?.personalityArchetype === 'string' ? data.personalityArchetype : 'Explorer',
         narrativeCoherence: Math.min(100, Math.max(0, coherence)),
-        transformationRoadmap: Array.isArray(data?.transformationRoadmap) ? data.transformationRoadmap.map((step: any) => ({
-          title: step.title ?? '',
-          description: step.description ?? '',
-          actions: Array.isArray(step.actions) ? step.actions.map(String) : [],
-        })) : [],
+        transformationRoadmap: Array.isArray(data?.transformationRoadmap)
+          ? data.transformationRoadmap.map((step: { title?: string; description?: string; actions?: string[] }) => ({
+              title: step.title ?? '',
+              description: step.description ?? '',
+              actions: Array.isArray(step.actions) ? step.actions.map(String) : [],
+            })
+          )
+          : [],
       };
 
       await supabase.from('user_memory_profiles').upsert({
         user_id: user.id,
-        narrative_identity_data: { answers: allAnswers, analysis: analysis, completed_at: new Date().toISOString() }
+        narrative_identity_data: JSON.stringify({ answers: allAnswers, analysis: analysis, completed_at: new Date().toISOString() })
       });
 
       setAnalysisResult(analysis);

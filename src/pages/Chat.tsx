@@ -93,6 +93,7 @@ const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [partialTranscript, setPartialTranscript] = useState("");
   const [duration, setDuration] = useState(0);
+  const [audioLevel, setAudioLevel] = useState(0);
   const chatRef = useRef<RealtimeChat | null>(null);
   const durationInterval = useRef<NodeJS.Timeout>();
   const conversationIdRef = useRef<string | null>(null);
@@ -187,6 +188,7 @@ const Chat = () => {
         systemPrompt: NEWME_SYSTEM_PROMPT,
         voice: "verse",
         modalities: ["audio", "text"] as Array<"audio" | "text">,
+        onAudioLevel: setAudioLevel,
       };
 
       if (user?.id) {
@@ -496,7 +498,7 @@ const Chat = () => {
 
           {/* Waveform */}
           <div className="flex-shrink-0 p-3 sm:p-4">
-            <Waveform isActive={isConnected && isSpeaking} />
+            <Waveform isActive={isConnected && isSpeaking} audioLevel={audioLevel} />
           </div>
 
           {/* Composer */}

@@ -90,7 +90,7 @@ const VoiceTraining: React.FC = () => {
         </CardHeader>
         <CardContent className="flex flex-col items-center space-y-4">
           <div className="w-full h-24 bg-gray-100 rounded-lg overflow-hidden">
-            <Waveform audioLevel={audioLevel} />
+            <Waveform isActive={isRecording} audioLevel={audioLevel} />
           </div>
           <div className="flex items-center space-x-4">
             {!isRecording ? (

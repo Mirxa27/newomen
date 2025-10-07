@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { UserPlus, Users, Search, Check, X, Mail, Send } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
+import { Badge } from '@/components/ui/badge';
 
 export default function Community() {
   const {
@@ -30,7 +31,7 @@ export default function Community() {
   }, [debouncedSearchQuery, searchUsers]);
 
   const pendingRequests = useMemo(() =>
-    connections.filter(c => c.status === 'pending' && c.receiver_id === currentUserId),
+    connections.filter(c => c.status === 'pending' && c.receiver.id === currentUserId),
     [connections, currentUserId]
   );
 
@@ -40,13 +41,13 @@ export default function Community() {
   );
 
   const sentRequests = useMemo(() =>
-    connections.filter(c => c.status === 'pending' && c.requester_id === currentUserId),
+    connections.filter(c => c.status === 'pending' && c.requester.id === currentUserId),
     [connections, currentUserId]
   );
 
   const isAlreadyConnectedOrPending = (userId: string) => {
     return connections.some(c =>
-      (c.requester_id === userId || c.receiver_id === userId)
+      (c.requester.id === userId || c.receiver.id === userId)
     );
   };
 
@@ -93,9 +94,9 @@ export default function Community() {
                         className="clay-button"
                       >
                         <UserPlus className="w-4 h-4 mr-2" />
-                        {connections.some(c => (c.requester_id === user.id || c.receiver_id === user.id) && c.status === 'pending') 
+                        {connections.some(c => (c.requester.id === user.id || c.receiver.id === user.id) && c.status === 'pending') 
                           ? 'Pending' 
-                          : connections.some(c => (c.requester_id === user.id || c.receiver_id === user.id) && c.status === 'accepted')
+                          : connections.some(c => (c.requester.id === user.id || c.receiver.id === user.id) && c.status === 'accepted')
                           ? 'Connected'
                           : 'Connect'}
                       </Button>
@@ -160,7 +161,7 @@ export default function Community() {
                   </TabsList>
                   <TabsContent value="accepted" className="space-y-2 mt-4">
                     {acceptedConnections.map(conn => {
-                      const friend = conn.requester_id === currentUserId ? conn.receiver : conn.requester;
+                      const friend = conn.requester.id === currentUserId ? conn.receiver : conn.requester;
                       return (
                         <div key={conn.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-primary/10">
                           <Avatar>

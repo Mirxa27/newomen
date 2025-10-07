@@ -5,16 +5,18 @@ import { useUserProfile } from './useUserProfile';
 import { toast } from 'sonner';
 
 type ConnectionStatus = 'pending' | 'accepted' | 'declined';
-type CommunityConnection = Tables<'community_connections'> & {
-  requester: Pick<Tables<'user_profiles'>, 'id' | 'nickname' | 'avatar_url'>;
-  receiver: Pick<Tables<'user_profiles'>, 'id' | 'nickname' | 'avatar_url'>;
+type UserProfilePartial = Pick<Tables<'user_profiles'>, 'id' | 'nickname' | 'avatar_url'>;
+
+type CommunityConnection = Omit<Tables<'community_connections'>, 'requester_id' | 'receiver_id'> & {
+  requester: UserProfilePartial;
+  receiver: UserProfilePartial;
 };
 
 export function useCommunity() {
   const { profile } = useUserProfile();
   const [connections, setConnections] = useState<CommunityConnection[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchResults, setSearchResults] = useState<Tables<'user_profiles'>[]>([]);
+  const [searchResults, setSearchResults] = useState<UserProfilePartial[]>([]);
   const [searching, setSearching] = useState(false);
 
   const fetchConnections = useCallback(async () => {
@@ -31,7 +33,7 @@ export function useCommunity() {
         .or(`requester_id.eq.${profile.id},receiver_id.eq.${profile.id}`);
 
       if (error) throw error;
-      setConnections(data as CommunityConnection[]);
+      setConnections(data as unknown as CommunityConnection[]);
     } catch (error) {
       console.error('Error fetching connections:', error);
       toast.error('Could not load community connections.');
@@ -88,7 +90,7 @@ export function useCommunity() {
     }
   }, [profile, fetchConnections]);
 
-  const updateConnectionStatus = useCallback(async (connectionId: number, status: ConnectionStatus) => {
+  const updateConnectionStatus = useCallback(async (connectionId: string, status: ConnectionStatus) => {
     try {
       const { error } = await supabase
         .from('community_connections')

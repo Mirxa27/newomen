@@ -8,8 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Search, User, Trophy, Calendar } from "lucide-react";
 import { toast } from "sonner";
 
-interface UserWithEmail extends Tables<"user_profiles"> {
-  email?: string;
+interface UserWithEmail extends Omit<Tables<"user_profiles">, 'email'> {
+  email: string;
 }
 
 export default function UserManagement() {
@@ -32,7 +32,7 @@ export default function UserManagement() {
 
       const usersWithEmails = data?.map(profile => ({
         ...profile,
-        email: `user-${profile.user_id.slice(0, 8)}@newomen.app`
+        email: profile.email || `user-${profile.user_id?.slice(0, 8)}@newomen.app`
       })) || [];
 
       setUsers(usersWithEmails);
@@ -80,7 +80,7 @@ export default function UserManagement() {
               {users.filter(u => {
                 const lastWeek = new Date();
                 lastWeek.setDate(lastWeek.getDate() - 7);
-                return u.last_login_date && new Date(u.last_login_date) > lastWeek;
+                return u.last_streak_date && new Date(u.last_streak_date) > lastWeek;
               }).length}
             </div>
           </CardContent>

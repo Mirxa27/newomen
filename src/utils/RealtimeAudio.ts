@@ -9,6 +9,7 @@ export interface RealtimeChatOptions {
   agentId?: string;
   userId?: string;
   model?: string;
+  onAudioLevel?: (level: number) => void;
 }
 
 export class AudioRecorder {
@@ -193,6 +194,10 @@ export class RealtimeChat {
             type: 'input_audio_buffer.append',
             audio: this.encodeAudioData(audioData)
           }));
+        }
+        if (this.options.onAudioLevel) {
+          const rms = Math.sqrt(audioData.reduce((sum, val) => sum + val * val, 0) / audioData.length);
+          this.options.onAudioLevel(Math.min(rms * 10, 1));
         }
       });
       await this.recorder.start();

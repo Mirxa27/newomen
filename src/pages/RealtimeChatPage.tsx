@@ -101,7 +101,7 @@ const RealtimeChatPage = () => {
               </div>
 
               <div className="glass rounded-3xl border border-white/10 p-4 shadow-lg">
-                <Waveform isActive={isSpeaking} />
+                <Waveform isActive={isSpeaking} audioLevel={audioLevel} />
               </div>
             </div>
 
