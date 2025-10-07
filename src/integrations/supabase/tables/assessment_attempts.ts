@@ -1,0 +1,54 @@
+export type AssessmentAttempts = {
+  Row: {
+    id: string;
+    assessment_id: string | null;
+    user_id: string | null;
+    attempt_number: number;
+    started_at: string | null;
+    completed_at: string | null;
+    time_spent_minutes: number | null;
+    status: string | null;
+    raw_responses: import('../types').Json;
+    ai_analysis: import('../types').Json | null;
+    ai_score: number | null;
+    ai_feedback: string | null;
+    is_ai_processed: boolean | null;
+    ai_processing_error: string | null;
+    created_at: string | null;
+  };
+  Insert: {
+    id?: string;
+    assessment_id?: string | null;
+    user_id?: string | null;
+    attempt_number: number;
+    started_at?: string | null;
+    completed_at?: string | null;
+    time_spent_minutes?: number | null;
+    status?: string | null;
+    raw_responses: import('../types').Json;
+    ai_analysis?: import('../types').Json | null;
+    ai_score?: number | null;
+    ai_feedback?: string | null;
+    is_ai_processed?: boolean | null;
+    ai_processing_error?: string | null;
+    created_at?: string | null;
+  };
+  Update: {
+    id?: string;
+    assessment_id?: string | null;
+    user_id?: string | null;
+    attempt_number?: number;
+    started_at?: string | null;
+    completed_at?: string | null;
+    time_spent_minutes?: number | null;
+    status?: string | null;
+    raw_responses?: import('../types').Json;
+    ai_analysis?: import('../types').Json | null;
+    ai_score?: number | null;
+    ai_feedback?: string | null;
+    is_ai_processed?: boolean | null;
+    ai_processing_error?: string | null;
+    created_at?: string | null;
+  };
+  Relationships: [];
+};
