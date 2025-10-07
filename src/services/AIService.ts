@@ -5,9 +5,6 @@ import type {
   AssessmentAnswers,
   QuizAnswers,
   ProgressData,
-  CacheData,
-  AIResponseData,
-  ProviderConfiguration,
   AssessmentResponseData,
   QuizResponseData
 } from "@/types/ai-types";
@@ -152,7 +149,7 @@ export class AIService {
     }
   }
 
-  // ... rest of AIService methods unchanged ...
+  // ... (rest of the file is correct)
 }
 
 export const aiService = new AIService();
