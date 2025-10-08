@@ -1,3 +1,6 @@
+/// <reference lib="deno.ns" />
+/// <reference lib="deno.window" />
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -370,8 +373,8 @@ serve(async (req) => {
     // Determine voice, model, and modalities with fallbacks
     const selectedVoice = body.voice ?? 'alloy';
     const selectedModel = body.model ?? 'gpt-4o-realtime-preview-2024-12-17';
-    const selectedModalities = Array.isArray(body.modalities) && body.modalities.length > 0
-      ? body.modalities as Array<"audio" | "text">
+    const selectedModalities: Array<"audio" | "text"> = Array.isArray(body.modalities) && body.modalities.length > 0
+      ? body.modalities
       : ["audio", "text"];
 
     logRequest('Creating OpenAI session', {

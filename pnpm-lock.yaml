@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@deno/types':
+        specifier: ^0.0.1
+        version: 0.0.1
       '@hookform/resolvers':
         specifier: ^3.10.0
         version: 3.10.0(react-hook-form@7.64.0(react@18.3.1))
@@ -243,6 +246,9 @@ packages:
   '@babel/runtime@7.28.4':
     resolution: {integrity: sha512-Q/N6JNWvIvPnLDvjlE1OUBLPQHH6l3CltCEsHIujp45zQUSSh8K+gHnaEX45yAT1nyngnINhvWtzN+Nb9D8RAQ==}
     engines: {node: '>=6.9.0'}
+
+  '@deno/types@0.0.1':
+    resolution: {integrity: sha512-KTB6Blr05Iw7k7aMzPWlJX0kv08xXZ5Mu7fxSp0M1HnaOHDRnFC956I4PxYdOtN27+b2723Id2G2oofxLvA35A==}
 
   '@esbuild/aix-ppc64@0.21.5':
     resolution: {integrity: sha512-1SDgH6ZSPTlggy1yI6+Dbkiz8xzpHJEVAlF/AM1tHPLsf5STom9rwtjE4hKAF20FfXXNTFqEYXyJNWh1GiZedQ==}
@@ -3020,6 +3026,8 @@ snapshots:
   '@babel/helper-validator-identifier@7.27.1': {}
 
   '@babel/runtime@7.28.4': {}
+
+  '@deno/types@0.0.1': {}
 
   '@esbuild/aix-ppc64@0.21.5':
     optional: true
