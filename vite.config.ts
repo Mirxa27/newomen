@@ -19,27 +19,10 @@ export default defineConfig(({ mode }) => ({
     sourcemap: mode === 'development',
     rollupOptions: {
       output: {
-        // Force cache bust with timestamp
-        entryFileNames: `[name]-[hash]-${Date.now()}.js`,
-        chunkFileNames: `[name]-[hash]-${Date.now()}.js`,
-        assetFileNames: `[name]-[hash]-${Date.now()}.[ext]`,
-        manualChunks: (id) => {
-          if (id.includes('node_modules')) {
-            // Keep React together to avoid context issues
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-              return 'react-core';
-            }
-            // Separate UI libraries
-            if (id.includes('@radix-ui') || id.includes('sonner') || id.includes('@tanstack')) {
-              return 'ui-libs';
-            }
-            // Supabase and other services
-            if (id.includes('@supabase')) {
-              return 'supabase';
-            }
-            // Everything else
-            return 'vendor';
-          }
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
+          'charts': ['recharts'],
         },
       },
     },
