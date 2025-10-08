@@ -164,6 +164,18 @@ export class RealtimeChat {
       this.dc.addEventListener("message", (e) => {
         const event = JSON.parse(e.data);
         console.log("Received event:", event.type);
+
+        // Pause recording when AI starts speaking to prevent feedback loop
+        if (event.type === 'response.audio.started') {
+          this.recorder?.pause();
+        }
+        // Resume recording if it was active before AI started speaking
+        if (event.type === 'response.audio.ended') {
+          if (this.isRecording) {
+            this.recorder?.resume();
+          }
+        }
+
         this.onMessage(event);
       });
 

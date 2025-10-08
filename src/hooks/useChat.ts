@@ -126,7 +126,7 @@ export function useChat() {
       const { data: { user } } = await supabase.auth.getUser();
       const chatOptions: RealtimeChatOptions = {
         systemPrompt: NEWME_SYSTEM_PROMPT,
-        voice: "verse",
+        voice: "marin",
         modalities: ["audio", "text"],
         onAudioLevel: setAudioLevel,
         userId: user?.id,
