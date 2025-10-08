@@ -142,9 +142,31 @@ export function useChat() {
       }
 
       if (user) {
-        const [context, greeting] = await Promise.all([newMeMemoryService.getUserContext(user.id), getNewMeGreeting(user.id)]);
-        chatOptions.memoryContext = buildSessionContext(context);
+        const [profileRes, memoryContext] = await Promise.all([
+          supabase.from('user_profiles').select('nickname').eq('user_id', user.id).single(),
+          newMeMemoryService.getUserContext(user.id)
+        ]);
+
+        if (profileRes.error) throw profileRes.error;
+        const profile = profileRes.data;
+
+        let finalContext = memoryContext;
+
+        if (profile?.nickname && profile.nickname !== memoryContext?.nickname) {
+          await newMeMemoryService.saveMemory({
+            user_id: user.id,
+            memory_type: 'personal_detail',
+            memory_key: 'nickname',
+            memory_value: profile.nickname,
+            importance_score: 10,
+          });
+          finalContext = { ...finalContext, nickname: profile.nickname };
+        }
+
+        const greeting = await getNewMeGreeting(user.id, finalContext);
+        chatOptions.memoryContext = buildSessionContext(finalContext);
         chatOptions.initialGreeting = greeting;
+        
         const conversation = await newMeMemoryService.createConversation({ user_id: user.id, topics_discussed: [], emotional_tone: 'warm' });
         if (conversation?.id) {
           conversationIdRef.current = conversation.id;
