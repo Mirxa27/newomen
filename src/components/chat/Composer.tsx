@@ -99,4 +99,3 @@ const Composer: React.FC<ComposerProps> = ({
 };
 
 export { Composer };
-

@@ -121,4 +121,3 @@ const TranscriptPane: React.FC<TranscriptPaneProps> = (props) => {
 };
 
 export { TranscriptPane };
-
