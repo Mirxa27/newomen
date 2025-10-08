@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    // Specify Deno libraries to resolve 'Deno' namespace and reference directives.
+    "lib": ["deno.ns", "deno.window"],
+    // These settings are recommended for Deno environments.
+    "module": "esnext",
+    "moduleResolution": "bundler"
+  },
+  "include": [
+    // Apply these settings to all TypeScript files in this directory.
+    "./**/*.ts",
+    // Include the global declaration file for remote Deno modules.
+    "../../src/types/deno.d.ts"
+  ]
+}
