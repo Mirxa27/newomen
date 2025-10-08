@@ -79,15 +79,21 @@ export async function generateNewMeResponse(
 
 export function getNewMeGreeting(userContext: NewMeUserContext | null): string {
     try {
+        let nickname = userContext?.nickname;
+
+        // BUG FIX: Explicitly guard against using the AI's own name.
+        if (nickname && ['newme', 'newomen'].includes(nickname.toLowerCase())) {
+            nickname = undefined;
+        }
+
         if (!userContext || !userContext.last_conversation_date) {
             const templates = NEWME_GREETING_TEMPLATES.firstTime;
             let greeting = templates[Math.floor(Math.random() * templates.length)];
-            greeting = greeting.replace('[nickname]', userContext?.nickname || 'there');
+            greeting = greeting.replace('[nickname]', nickname || 'there');
             return greeting;
         }
 
         const daysSince = newMeMemoryService.calculateDaysSinceLastConversation(userContext.last_conversation_date);
-        const nickname = userContext.nickname;
 
         if (daysSince > 7) {
             const templates = NEWME_GREETING_TEMPLATES.afterLongBreak;

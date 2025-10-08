@@ -8,6 +8,7 @@ import { NEWME_SYSTEM_PROMPT } from '@/config/newme-system-prompt';
 import { newMeMemoryService } from '@/services/NewMeMemoryService';
 import { getNewMeGreeting } from '@/services/ai/newme/newmeService';
 import type { NewMeUserContext } from '@/types/newme-memory-types';
+import type { User } from '@supabase/supabase-js';
 
 export interface Message {
   role: 'user' | 'assistant';
@@ -79,7 +80,6 @@ export function useChat() {
 
       case 'response.audio.ended':
         setIsSpeaking(false);
-        // Final message is handled by audio_transcript.done to ensure sync
         break;
 
       case 'response.audio_transcript.done':
@@ -89,7 +89,7 @@ export function useChat() {
             void newMeMemoryService.addMessage({ conversation_id: conversationIdRef.current, role: 'assistant', content: event.transcript });
           }
         }
-        setPartialTranscript(""); // Clear partial transcript after final message
+        setPartialTranscript("");
         break;
 
       case 'conversation.item.input_audio_transcription.completed':
@@ -108,8 +108,40 @@ export function useChat() {
     }
   }, [toast]);
 
+  const setupConversation = async (user: User) => {
+    const [profileRes, memoryContext] = await Promise.all([
+      supabase.from('user_profiles').select('nickname').eq('user_id', user.id).single(),
+      newMeMemoryService.getUserContext(user.id)
+    ]);
+
+    if (profileRes.error) throw profileRes.error;
+    
+    let finalContext = memoryContext;
+    const profileNickname = profileRes.data?.nickname;
+
+    if (profileNickname && profileNickname !== memoryContext?.nickname) {
+        await newMeMemoryService.saveMemory({
+            user_id: user.id,
+            memory_type: 'personal_detail',
+            memory_key: 'nickname',
+            memory_value: profileNickname,
+            importance_score: 10,
+        });
+        finalContext = { ...finalContext, nickname: profileNickname };
+    }
+
+    const greeting = getNewMeGreeting(finalContext);
+    const sessionContext = buildSessionContext(finalContext);
+
+    const conversation = await newMeMemoryService.createConversation({ user_id: user.id });
+    if (conversation) {
+        conversationIdRef.current = conversation.id;
+    }
+
+    return { greeting, sessionContext };
+  };
+
   const startConversation = useCallback(async () => {
-    let conversationStarted = false;
     setIsConnecting(true);
     try {
       if (!navigator.mediaDevices?.getUserMedia || !window.WebSocket) {
@@ -142,53 +174,24 @@ export function useChat() {
       }
 
       if (user) {
-        const [profileRes, memoryContext] = await Promise.all([
-          supabase.from('user_profiles').select('nickname').eq('user_id', user.id).single(),
-          newMeMemoryService.getUserContext(user.id)
-        ]);
-
-        if (profileRes.error) throw profileRes.error;
-        const profile = profileRes.data;
-
-        let finalContext = memoryContext;
-
-        if (profile?.nickname && profile.nickname !== memoryContext?.nickname) {
-          await newMeMemoryService.saveMemory({
-            user_id: user.id,
-            memory_type: 'personal_detail',
-            memory_key: 'nickname',
-            memory_value: profile.nickname,
-            importance_score: 10,
-          });
-          finalContext = { ...finalContext, nickname: profile.nickname };
-        }
-
-        const greeting = getNewMeGreeting(finalContext);
-        chatOptions.memoryContext = buildSessionContext(finalContext);
+        const { greeting, sessionContext } = await setupConversation(user);
         chatOptions.initialGreeting = greeting;
-        
-        const conversation = await newMeMemoryService.createConversation({ user_id: user.id, topics_discussed: [], emotional_tone: 'warm' });
-        if (conversation?.id) {
-          conversationIdRef.current = conversation.id;
-          conversationStarted = true;
-        }
-      }
-
-      if (!chatOptions.initialGreeting) {
+        chatOptions.memoryContext = sessionContext;
+      } else {
         chatOptions.initialGreeting = "Hey there... I'm NewMe. I'm so glad you're here. I've been waiting to meet you.";
       }
 
       chatRef.current = new RealtimeChat(handleMessage, chatOptions);
-      await chatRef.current.init(true); // Start with recorder paused
+      await chatRef.current.init(true);
       setIsConnected(true);
-      setIsRecording(false); // User is not recording by default
+      setIsRecording(false);
 
       if (durationInterval.current) clearInterval(durationInterval.current);
       durationInterval.current = setInterval(() => setDuration(prev => prev + 1), 1000);
 
       toast({ title: "Connected", description: "Your conversation with NewMe has started" });
     } catch (error) {
-      if (conversationStarted && conversationIdRef.current) {
+      if (conversationIdRef.current) {
         void newMeMemoryService.updateConversation(conversationIdRef.current, { ended_at: new Date().toISOString(), duration_seconds: 0 });
         conversationIdRef.current = null;
       }
