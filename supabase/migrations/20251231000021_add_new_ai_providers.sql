@@ -17,9 +17,6 @@ EXCEPTION
   WHEN duplicate_object THEN null;
 END $$;
 
--- Refresh the type cache, just in case
-ALTER TYPE public.ai_provider_type REFRESH;
-
 -- Step 2: Remove any existing default value from the column
 ALTER TABLE public.ai_configurations ALTER COLUMN provider DROP DEFAULT;
 
