@@ -1,6 +1,6 @@
 # 🚀 Production Deployment Guide
 
-Complete step-by-step guide to deploy the NewWomen platform to production.
+Complete step-by-step guide to deploy the Newomen platform to production.
 
 ---
 
@@ -453,7 +453,7 @@ supabase db dump > backup-$(date +%Y%m%d).sql
 
 ## ✅ Deployment Complete!
 
-Your NewWomen platform is now live and production-ready! 🎉
+Your Newomen platform is now live and production-ready! 🎉
 
 Monitor the application closely during the first 24-48 hours to catch any issues early.
 
