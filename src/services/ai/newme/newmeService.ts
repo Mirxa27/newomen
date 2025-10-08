@@ -81,14 +81,16 @@ export function getNewMeGreeting(userContext: NewMeUserContext | null): string {
     try {
         let nickname = userContext?.nickname;
 
-        // BUG FIX: Explicitly guard against using the AI's own name.
-        if (nickname && ['newme', 'newomen'].includes(nickname.toLowerCase())) {
+        // BUG FIX: Explicitly guard against using AI's own name or generic roles.
+        if (nickname && ['newme', 'newomen', 'admin', 'user'].includes(nickname.toLowerCase())) {
             nickname = undefined;
         }
 
-        if (!userContext || !userContext.last_conversation_date) {
+        // If we don't have a valid nickname, treat it as a first-time interaction for greeting purposes.
+        if (!nickname || !userContext || !userContext.last_conversation_date) {
             const templates = NEWME_GREETING_TEMPLATES.firstTime;
             let greeting = templates[Math.floor(Math.random() * templates.length)];
+            // The firstTime template is designed to work with or without a nickname.
             greeting = greeting.replace('[nickname]', nickname || 'there');
             return greeting;
         }
@@ -98,24 +100,29 @@ export function getNewMeGreeting(userContext: NewMeUserContext | null): string {
         if (daysSince > 7) {
             const templates = NEWME_GREETING_TEMPLATES.afterLongBreak;
             let greeting = templates[Math.floor(Math.random() * templates.length)];
-            if (nickname) greeting = greeting.replace('[nickname]', nickname);
+            greeting = greeting.replace('[nickname]', nickname);
             if (userContext.last_conversation_topic) {
                 greeting = greeting.replace('[last topic]', userContext.last_conversation_topic);
             } else {
+                // Clean up the placeholder if no topic exists
                 greeting = greeting.replace(' about [last topic]', '');
+                greeting = greeting.replace(' dealing with [last topic]', '');
             }
             return greeting;
         }
 
+        // Default returning user
         const templates = NEWME_GREETING_TEMPLATES.returning;
         let greeting = templates[Math.floor(Math.random() * templates.length)];
-        if (nickname) greeting = greeting.replace('[nickname]', nickname);
+        greeting = greeting.replace('[nickname]', nickname);
         return greeting;
+
     } catch (error) {
         console.error('Error getting NewMe greeting:', error);
+        // Fallback to a safe, generic greeting
         const templates = NEWME_GREETING_TEMPLATES.firstTime;
         let greeting = templates[Math.floor(Math.random() * templates.length)];
-        greeting = greeting.replace('[nickname]', userContext?.nickname || 'there');
+        greeting = greeting.replace('[nickname]', 'there');
         return greeting;
     }
 }
