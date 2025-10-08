@@ -83,7 +83,7 @@ export default function Analytics() {
       const userRows = (usersData.data ?? []) as Array<Pick<UserProfileRow, "id" | "crystal_balance" | "created_at">>;
       const sessionRows = (sessionsData.data ?? []) as Array<Pick<SessionRow, "user_id" | "duration_seconds" | "cost_usd" | "start_ts" | "status">>;
       const recentUserRows = (recentUsersData.data ?? []) as Array<Pick<UserProfileRow, "id" | "nickname" | "email" | "subscription_tier" | "created_at">>;
-      const recentSessionRows = (recentSessionsData.data as any[]) ?? [];
+      const recentSessionRows = (recentSessionsData.data as unknown as SessionWithRelations[]) ?? [];
 
       const totalUsers = userRows.length;
       const totalSessions = sessionRows.length;
@@ -139,7 +139,7 @@ export default function Analytics() {
         startTimestamp: row.start_ts ?? null,
         userNickname: row.user_profiles?.nickname ?? null,
         userEmail: row.user_profiles?.email ?? null,
-        agentName: row.agents?.name ?? null,
+        agentName: (row.agents?.name as string) ?? null,
       }));
 
       setRecentUsers(recentUserEntries);

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 import { toast } from "sonner";
 import { Loader2, Plus, Edit, Trash2, KeyRound, Server, Cpu, CaseSensitive } from "lucide-react";
@@ -44,8 +44,8 @@ export default function AIProviderManagement() {
       if (voicesRes.error) throw voicesRes.error;
 
       setProviders(providersRes.data || []);
-      setModels(modelsRes.data || []);
-      setVoices(voicesRes.data || []);
+      setModels(modelsRes.data as Model[] || []);
+      setVoices(voicesRes.data as Voice[] || []);
     } catch (error) {
       console.error("Error loading data:", error);
       toast.error("Failed to load AI provider data.");
@@ -360,7 +360,7 @@ export default function AIProviderManagement() {
                     <TableRow key={m.id}>
                       <TableCell>{m.display_name}</TableCell>
                       <TableCell className="font-mono text-xs">{m.model_id}</TableCell>
-                      <TableCell>{(m as { providers?: { name: string } }).providers?.name}</TableCell>
+                      <TableCell>{(m as any).providers?.name}</TableCell>
                       <TableCell>
                         <Button variant="ghost" size="icon" onClick={() => openEditDialog(m, "model")}><Edit className="w-4 h-4" /></Button>
                         <Button variant="ghost" size="icon" onClick={() => confirmDelete({ id: m.id, name: m.display_name || m.model_id || '' }, "model")}><Trash2 className="w-4 h-4" /></Button>
@@ -397,7 +397,7 @@ export default function AIProviderManagement() {
                     <TableRow key={v.id}>
                       <TableCell>{v.name}</TableCell>
                       <TableCell className="font-mono text-xs">{v.voice_id}</TableCell>
-                      <TableCell>{(v as { providers?: { name: string } }).providers?.name}</TableCell>
+                      <TableCell>{(v as any).providers?.name}</TableCell>
                       <TableCell>{v.gender}</TableCell>
                       <TableCell>{v.enabled ? "Yes" : "No"}</TableCell>
                       <TableCell>

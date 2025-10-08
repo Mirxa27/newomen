@@ -228,14 +228,20 @@ export async function processAssessmentWithAI(
 function parseAIResponse(response: string): AIAnalysisResult {
   try {
     const parsed = JSON.parse(response);
+    const traits = parsed.traits || parsed.coreThemes || parsed.insights || [];
+    const strengths = parsed.strengths || parsed.strengthPatterns || [];
+    const improvements = parsed.areas_for_improvement || parsed.improvements || [];
+    const recommendations =
+      parsed.recommendations || parsed.recommended_practices || parsed.transformationOpportunities || [];
+
     return {
       score: parsed.score || 0,
       feedback: parsed.feedback || "No feedback available",
       explanation: parsed.explanation || "No explanation available",
-      insights: parsed.insights || [],
-      recommendations: parsed.recommendations || [],
-      strengths: parsed.strengths || [],
-      areas_for_improvement: parsed.areas_for_improvement || []
+      insights: Array.isArray(traits) ? traits : [],
+      recommendations: Array.isArray(recommendations) ? recommendations : [],
+      strengths: Array.isArray(strengths) ? strengths : [],
+      areas_for_improvement: Array.isArray(improvements) ? improvements : []
     };
   } catch (error) {
     console.error("Error parsing AI response:", error);

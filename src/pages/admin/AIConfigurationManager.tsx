@@ -23,30 +23,9 @@ import {
 import { ConfigurationForm } from '@/components/admin/ai-config/ConfigurationForm';
 import { ConfigurationTable } from '@/components/admin/ai-config/ConfigurationTable';
 import { TestResultCard } from '@/components/admin/ai-config/TestResultCard';
+import type { Tables } from '@/integrations/supabase/types';
 
-export interface AIConfiguration {
-  id: string;
-  name: string;
-  description?: string;
-  provider: 'openai' | 'anthropic' | 'google' | 'azure' | 'custom' | 'elevenlabs' | 'cartesia' | 'deepgram' | 'hume' | 'zai';
-  provider_name?: string;
-  model_name: string;
-  api_base_url?: string;
-  api_version?: string;
-  temperature: number;
-  max_tokens: number;
-  top_p: number;
-  frequency_penalty: number;
-  presence_penalty: number;
-  system_prompt?: string;
-  is_active: boolean;
-  is_default: boolean;
-  cost_per_1k_prompt_tokens?: number;
-  cost_per_1k_completion_tokens?: number;
-  test_status?: string;
-  created_at: string;
-  last_tested_at?: string;
-}
+type AIConfiguration = Tables<'ai_configurations'>;
 
 const BLANK_FORM_STATE: Partial<AIConfiguration> = {
   name: "",
@@ -97,7 +76,7 @@ const AIConfigurationManager = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setConfigurations((data as AIConfiguration[]) || []);
+      setConfigurations(data || []);
     } catch (error) {
       console.error('Error loading configurations:', error);
       toast({

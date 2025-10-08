@@ -372,7 +372,7 @@ async function handleWellnessResourceCompletion(supabase: SupabaseClient, userId
   console.log(`User ${userId} awarded ${crystalReward} crystals for wellness resource completion.`);
 }
 
-async function handleMakeConnection(supabase: any, userId: string, payload: any) {
+async function handleMakeConnection(supabase: SupabaseClient, userId: string, payload: { connectionId: string; targetUserId: string }) {
   const { connectionId } = payload;
   const crystalReward = 5; // Example reward
 
@@ -417,7 +417,7 @@ async function handleMakeConnection(supabase: any, userId: string, payload: any)
   console.log(`User ${userId} awarded ${crystalReward} crystals for making a connection.`);
 }
 
-async function checkAndAwardAchievements(supabase: any, userId: string) {
+async function checkAndAwardAchievements(supabase: SupabaseClient, userId: string) {
   console.log(`Checking achievements for user: ${userId}`);
   const { error } = await supabase.rpc("check_achievements", { p_user_id: userId });
   if (error) {

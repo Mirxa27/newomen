@@ -15,31 +15,9 @@ import { toast } from "sonner";
 import { Settings, Plus, Edit, Trash2, TestTube, Activity, DollarSign, Zap, Save, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
+import type { Tables } from "@/integrations/supabase/types";
 
-export interface AIConfiguration {
-  id: string;
-  name: string;
-  description?: string;
-  provider: 'openai' | 'anthropic' | 'google' | 'azure' | 'custom' | 'elevenlabs' | 'cartesia' | 'deepgram' | 'hume' | 'zai';
-  provider_name?: string;
-  model_name: string;
-  api_base_url?: string;
-  api_version?: string;
-  temperature: number;
-  max_tokens: number;
-  top_p: number;
-  frequency_penalty: number;
-  presence_penalty: number;
-  system_prompt?: string;
-  user_prompt_template?: string;
-  is_active: boolean;
-  is_default?: boolean;
-  cost_per_1k_prompt_tokens?: number;
-  cost_per_1k_completion_tokens?: number;
-  test_status?: string;
-  created_at?: string;
-  updated_at?: string;
-}
+type AIConfiguration = Tables<'ai_configurations'>;
 
 export interface CreateAIConfigurationData {
   name: string;
@@ -84,7 +62,7 @@ export default function AIConfigurationPage() {
   const [formData, setFormData] = useState<CreateAIConfigurationData>({
     name: "",
     description: "",
-    provider: "openai" as AIConfiguration["provider"],
+    provider: "openai",
     model_name: "",
     api_base_url: "",
     temperature: 0.7,
@@ -108,7 +86,7 @@ export default function AIConfigurationPage() {
         .select("*")
         .order("name");
       if (error) throw error;
-      setConfigurations((data || []) as AIConfiguration[]);
+      setConfigurations(data || []);
     } catch (error) {
       console.error("Error loading configurations:", error);
       toast.error("Failed to load AI configurations");
@@ -185,19 +163,19 @@ export default function AIConfigurationPage() {
     setFormData({
       name: config.name,
       description: config.description || "",
-      provider: config.provider,
-      provider_name: config.provider_name,
+      provider: config.provider as AIConfiguration['provider'],
+      provider_name: config.provider_name || "",
       model_name: config.model_name,
       api_base_url: config.api_base_url || "",
-      api_version: config.api_version,
-      temperature: config.temperature,
-      max_tokens: config.max_tokens,
-      top_p: config.top_p,
-      frequency_penalty: config.frequency_penalty,
-      presence_penalty: config.presence_penalty,
+      api_version: config.api_version || "",
+      temperature: config.temperature || 0,
+      max_tokens: config.max_tokens || 0,
+      top_p: config.top_p || 1,
+      frequency_penalty: config.frequency_penalty || 0,
+      presence_penalty: config.presence_penalty || 0,
       system_prompt: config.system_prompt || "",
       user_prompt_template: config.user_prompt_template || "",
-      is_active: config.is_active
+      is_active: config.is_active || false
     });
   };
 

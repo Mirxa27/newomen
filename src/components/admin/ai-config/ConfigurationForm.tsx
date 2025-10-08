@@ -8,7 +8,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { AIConfiguration } from '@/pages/admin/AIConfigurationManager';
+import type { Tables } from '@/integrations/supabase/types';
+
+type AIConfiguration = Tables<'ai_configurations'>;
 
 interface ConfigurationFormProps {
   formData: Partial<AIConfiguration>;
