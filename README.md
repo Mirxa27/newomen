@@ -3,11 +3,14 @@
 [![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black)](https://newomen.me)
 [![Built with React](https://img.shields.io/badge/Built%20with-React-61DAFB)](https://reactjs.org/)
 [![Powered by Supabase](https://img.shields.io/badge/Powered%20by-Supabase-3ECF8E)](https://supabase.com/)
-[![Production Ready](https://img.shields.io/badge/Status-Production%20Ready-success)](https://github.com/Mirxa27/new-mind-nexus)
+[![Production Ready](https://img.shields.io/badge/Status-Production%20Ready-success)](https://github.com/Mirxa27/newomen)
+[![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue)](https://www.typescriptlang.org/)
 
 Transform your life with **Newomen**, an emotionally intelligent AI companion designed for personal growth, meaningful connections, and lasting transformation.
 
-🌐 **Live Site**: [newomen.me](https://newomen.me)
+🌐 **Live Site**: [mirxa.io](https://mirxa.io) (pending DNS configuration)  
+📚 **Documentation**: [Production Deployment Checklist](./PRODUCTION_DEPLOYMENT_CHECKLIST.md)  
+🚀 **Status**: Production-ready with comprehensive deployment automation
 
 ---
 
@@ -223,11 +226,70 @@ new-mind-nexus/
 
 ---
 
+## 🚀 Production Deployment
+
+The NewWomen platform is **production-ready** with comprehensive deployment automation and documentation.
+
+### Quick Start
+
+```bash
+# 1. Clone and install
+git clone https://github.com/Mirxa27/newomen.git
+cd newomen
+PUPPETEER_SKIP_DOWNLOAD=true npm install
+
+# 2. Run automated deployment
+./deploy-production-full.sh
+```
+
+### Deployment Resources
+
+| Document | Description |
+|----------|-------------|
+| [**PRODUCTION_IMPLEMENTATION_COMPLETE.md**](./PRODUCTION_IMPLEMENTATION_COMPLETE.md) | 📊 Complete implementation report and status |
+| [**PRODUCTION_DEPLOYMENT_CHECKLIST.md**](./PRODUCTION_DEPLOYMENT_CHECKLIST.md) | ✅ Step-by-step deployment guide (7 phases) |
+| [**ENVIRONMENT_SETUP.md**](./ENVIRONMENT_SETUP.md) | 🔧 Environment variables configuration |
+| [**PRODUCTION_TESTING_GUIDE.md**](./PRODUCTION_TESTING_GUIDE.md) | 🧪 Comprehensive testing procedures |
+| [**deploy-production-full.sh**](./deploy-production-full.sh) | 🤖 Automated deployment script |
+
+### Deployment Status
+
+- ✅ **Code Quality**: 100% TypeScript type safety, zero errors
+- ✅ **Build System**: Verified working, production-optimized
+- ✅ **Documentation**: Complete deployment guides
+- ✅ **Automation**: Interactive deployment script ready
+- ⏳ **Database**: 37 migrations ready to apply
+- ⏳ **Edge Functions**: 7 functions ready to deploy
+- ⏳ **Domain**: Mirxa.io DNS configuration pending
+
+### Environment Requirements
+
+**Required:**
+- Supabase Project: `fkikaozubngmzcrnhkqe`
+- OpenAI API Key (for AI features)
+
+**Optional:**
+- PayPal Client ID & Secret (for payments)
+- ElevenLabs API Key (for voice synthesis)
+
+See [ENVIRONMENT_SETUP.md](./ENVIRONMENT_SETUP.md) for detailed configuration.
+
+---
+
 ## 📚 Documentation
 
+### Deployment & Operations
+- **[PRODUCTION_IMPLEMENTATION_COMPLETE.md](PRODUCTION_IMPLEMENTATION_COMPLETE.md)** - ⭐ Complete implementation report
+- **[PRODUCTION_DEPLOYMENT_CHECKLIST.md](PRODUCTION_DEPLOYMENT_CHECKLIST.md)** - Step-by-step deployment guide
+- **[ENVIRONMENT_SETUP.md](ENVIRONMENT_SETUP.md)** - Environment variables configuration
+- **[PRODUCTION_TESTING_GUIDE.md](PRODUCTION_TESTING_GUIDE.md)** - Testing procedures and checklists
+- **[deploy-production-full.sh](deploy-production-full.sh)** - Automated deployment script
+
+### Features & Setup
 - **[FEATURES_COMPLETED.md](FEATURES_COMPLETED.md)** - Complete list of implemented features
 - **[PAYPAL_SETUP.md](PAYPAL_SETUP.md)** - PayPal integration setup guide
-- **[DEPLOYMENT_PRODUCTION.md](DEPLOYMENT_PRODUCTION.md)** - Production deployment guide
+- **[DEPLOYMENT_PRODUCTION.md](DEPLOYMENT_PRODUCTION.md)** - Production deployment guide (legacy)
+- **[TESTING_GUIDE.md](TESTING_GUIDE.md)** - Manual testing guide
 - **[.env.example](.env.example)** - Environment variables reference
 
 ---
