@@ -163,7 +163,7 @@ export function useChat() {
           finalContext = { ...finalContext, nickname: profile.nickname };
         }
 
-        const greeting = await getNewMeGreeting(user.id, finalContext);
+        const greeting = getNewMeGreeting(finalContext);
         chatOptions.memoryContext = buildSessionContext(finalContext);
         chatOptions.initialGreeting = greeting;
         

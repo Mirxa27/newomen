@@ -77,7 +77,7 @@ export async function generateNewMeResponse(
     }
 }
 
-export async function getNewMeGreeting(userId: string, userContext: NewMeUserContext | null): Promise<string> {
+export function getNewMeGreeting(userContext: NewMeUserContext | null): string {
     try {
         if (!userContext || !userContext.last_conversation_date) {
             const templates = NEWME_GREETING_TEMPLATES.firstTime;
