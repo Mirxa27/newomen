@@ -45,17 +45,6 @@ It will guide you through setting up the API key.
 npx supabase secrets set OPENAI_API_KEY=sk-your-actual-key-here
 ```
 
-## 📝 Getting an OpenAI API Key
-
-If you don't have an OpenAI API key:
-
-1. Visit: https://platform.openai.com/api-keys
-2. Sign in or create an account
-3. Click "Create new secret key"
-4. **Important**: Select a key with access to the **Realtime API** (GPT-4 Realtime Preview)
-5. Copy the key (starts with `sk-`)
-6. Use it in one of the methods above
-
 ## ✅ After Setting the Key
 
 1. **Wait 1-2 minutes** for the secret to propagate
