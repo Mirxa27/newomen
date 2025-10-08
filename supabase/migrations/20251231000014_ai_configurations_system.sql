@@ -189,6 +189,9 @@ CREATE TRIGGER ai_service_configs_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_ai_configurations_updated_at();
 
+DROP FUNCTION IF EXISTS get_ai_config_for_service(TEXT, UUID);
+DROP FUNCTION IF EXISTS get_ai_config_for_service(TEXT);
+
 -- Helper function to get best AI config for a service
 CREATE OR REPLACE FUNCTION get_ai_config_for_service(
   p_service_type TEXT,

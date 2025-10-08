@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { processAssessmentWithAI, createAssessmentAttempt, submitAssessmentResponses } from "@/lib/ai-assessment-utils";
 import { trackAssessmentCompletion } from "@/lib/gamification-events";
 import type { Tables } from "@/integrations/supabase/types";
+import type { AssessmentAnswers } from "@/types/ai-types";
 
 interface AssessmentQuestion {
   id: string;
@@ -63,7 +64,7 @@ export default function Assessment() {
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [attempt, setAttempt] = useState<AssessmentAttempt | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [responses, setResponses] = useState<Record<string, unknown>>({});
+  const [responses, setResponses] = useState<AssessmentAnswers>({});
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -213,7 +214,7 @@ export default function Assessment() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleResponseChange = (questionId: string, value: unknown) => {
+  const handleResponseChange = (questionId: string, value: string | number | boolean | string[]) => {
     setResponses(prev => ({
       ...prev,
       [questionId]: value

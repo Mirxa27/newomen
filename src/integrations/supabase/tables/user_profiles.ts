@@ -11,8 +11,8 @@ export type UserProfiles = {
     crystal_balance: number | null;
     daily_streak: number | null;
     last_streak_date: string | null;
-    role: string;
     created_at: string | null;
+    role: string;
     updated_at: string | null;
   };
   Insert: {
@@ -27,8 +27,8 @@ export type UserProfiles = {
     crystal_balance?: number | null;
     daily_streak?: number | null;
     last_streak_date?: string | null;
-    role?: string;
     created_at?: string | null;
+    role?: string;
     updated_at?: string | null;
   };
   Update: {
@@ -43,8 +43,8 @@ export type UserProfiles = {
     crystal_balance?: number | null;
     daily_streak?: number | null;
     last_streak_date?: string | null;
-    role?: string;
     created_at?: string | null;
+    role?: string;
     updated_at?: string | null;
   };
   Relationships: [];

@@ -1,6 +1,30 @@
 export type CommunityConnections = {
-  Row: { [key: string]: any };
-  Insert: { [key: string]: any };
-  Update: { [key: string]: any };
+  Row: {
+    id: string;
+    requester_id: string | null;
+    receiver_id: string | null;
+    status: string | null;
+    created_at: string | null;
+    message: string | null;
+    updated_at: string;
+  };
+  Insert: {
+    id?: string;
+    requester_id?: string | null;
+    receiver_id?: string | null;
+    status?: string | null;
+    created_at?: string | null;
+    message?: string | null;
+    updated_at?: string;
+  };
+  Update: {
+    id?: string;
+    requester_id?: string | null;
+    receiver_id?: string | null;
+    status?: string | null;
+    created_at?: string | null;
+    message?: string | null;
+    updated_at?: string;
+  };
   Relationships: [];
 };

@@ -15,7 +15,7 @@ export interface AssessmentQuestion {
 export interface AssessmentSubmission {
   assessment_id: string;
   user_id: string;
-  responses: Record<string, unknown>;
+  responses: AssessmentAnswers;
   time_spent_minutes: number;
   attempt_id?: string;
   attempt_number?: number;
@@ -130,7 +130,7 @@ export async function processAssessmentWithAI(
     const aiSubmission: AIServiceSubmission = {
       assessment_id: assessmentId,
       user_id: submission.user_id,
-      answers: submission.responses as AssessmentAnswers,
+      answers: submission.responses,
     };
 
     const aiResponse = await aiService.generateAssessmentResult(aiSubmission, runtimeConfig.id);
@@ -416,7 +416,7 @@ export async function updateUserProgress(
     if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
 
     const isNewRecord = !currentProgress;
-    const isNewBestScore = isNewRecord || score > (currentProgress?.best_score || 0);
+    const isNewBestScore = isNewRecord || score > Number(currentProgress?.best_score || 0);
 
     if (isNewRecord) {
       // Create new progress record
@@ -441,7 +441,7 @@ export async function updateUserProgress(
         .update({
           best_score: isNewBestScore ? score : currentProgress.best_score,
           best_attempt_id: isNewBestScore ? attemptId : currentProgress.best_attempt_id,
-          total_attempts: (currentProgress.total_attempts ?? 0) + 1,
+          total_attempts: (Number(currentProgress.total_attempts) ?? 0) + 1,
           last_attempt_at: new Date().toISOString(),
           is_completed: score >= 70 || currentProgress.is_completed,
           completion_date: score >= 70 && !currentProgress.is_completed ? new Date().toISOString() : currentProgress.completion_date

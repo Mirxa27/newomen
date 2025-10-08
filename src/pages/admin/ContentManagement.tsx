@@ -103,7 +103,7 @@ export default function ContentManagement() {
         category: newChallenge.category,
         questions: [newChallenge.question.trim()],
       } satisfies Partial<ChallengeTemplate> & { questions: string[] };
-      const { data, error } = await supabase.from("challenge_templates").insert(payload).select().single();
+      const { data, error } = await supabase.from("challenge_templates").insert(payload as any).select().single();
       if (error) throw error;
       setChallenges((prev) => (data ? [data, ...prev] : prev));
       setNewChallenge({ title: "", question: "", category: newChallenge.category, description: "" });
@@ -214,11 +214,11 @@ export default function ContentManagement() {
                   <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>Category</TableHead><TableHead>Duration</TableHead><TableHead>Created</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {resources.map((resource) => (
-                      <TableRow key={resource.id}>
-                        <TableCell className="font-medium">{resource.title}</TableCell>
-                        <TableCell>{resource.category}</TableCell>
+                      <TableRow key={String(resource.id)}>
+                        <TableCell className="font-medium">{String(resource.title)}</TableCell>
+                        <TableCell>{String(resource.category)}</TableCell>
                         <TableCell>{resource.duration ? `${resource.duration} min` : "-"}</TableCell>
-                        <TableCell>{resource.created_at ? new Date(resource.created_at).toLocaleDateString() : "-"}</TableCell>
+                        <TableCell>{resource.created_at ? new Date(resource.created_at as string).toLocaleDateString() : "-"}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
                             <Button variant="ghost" size="sm"><Edit className="w-4 h-4" /></Button>
@@ -257,10 +257,10 @@ export default function ContentManagement() {
                     {affirmations.map((affirmation) => (
                       <TableRow key={affirmation.id}>
                         <TableCell>{affirmation.content}</TableCell>
-                        <TableCell><Badge variant="outline">{affirmation.category}</Badge></TableCell>
+                        <TableCell><Badge variant="outline">{String(affirmation.category)}</Badge></TableCell>
                         <TableCell>{affirmation.tone || "-"}</TableCell>
-                        <TableCell>{affirmation.updated_at ? new Date(affirmation.updated_at).toLocaleDateString() : "-"}</TableCell>
-                        <TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => setDialogState({ type: 'affirmation', id: affirmation.id })}><Trash2 className="w-4 h-4" /></Button></TableCell>
+                        <TableCell>{affirmation.updated_at ? new Date(affirmation.updated_at as string).toLocaleDateString() : "-"}</TableCell>
+                        <TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => setDialogState({ type: 'affirmation', id: String(affirmation.id) })}><Trash2 className="w-4 h-4" /></Button></TableCell>
                       </TableRow>
                     ))}
                     {affirmations.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No affirmations found.</TableCell></TableRow>}
@@ -291,14 +291,14 @@ export default function ContentManagement() {
                     <CardHeader>
                       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                         <div>
-                          <CardTitle className="text-lg">{challenge.title}</CardTitle>
-                          <p className="text-sm text-muted-foreground capitalize">{challenge.category}</p>
+                          <CardTitle className="text-lg">{String(challenge.title)}</CardTitle>
+                          <p className="text-sm text-muted-foreground capitalize">{String(challenge.category)}</p>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => setDialogState({ type: 'challenge', id: challenge.id })}><Trash2 className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => setDialogState({ type: 'challenge', id: String(challenge.id) })}><Trash2 className="w-4 h-4" /></Button>
                       </div>
                     </CardHeader>
                     <CardContent>
-                      {challenge.description && <p className="text-sm text-muted-foreground mb-3">{challenge.description}</p>}
+                      {challenge.description && <p className="text-sm text-muted-foreground mb-3">{String(challenge.description)}</p>}
                       <div className="space-y-2">
                         <p className="text-sm font-medium">Questions:</p>
                         <ul className="list-disc list-inside space-y-1">

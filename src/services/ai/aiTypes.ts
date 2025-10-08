@@ -1,7 +1,7 @@
 export interface AIConfiguration {
   id: string;
   name: string;
-  provider: 'openai' | 'anthropic' | 'google' | 'azure' | 'custom' | 'elevenlabs' | 'cartesia' | 'deepgram' | 'hume';
+  provider: 'openai' | 'anthropic' | 'google' | 'azure' | 'custom' | 'elevenlabs' | 'cartesia' | 'deepgram' | 'hume' | 'zai';
   provider_name?: string;
   model: string;
   apiKey: string;

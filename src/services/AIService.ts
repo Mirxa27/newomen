@@ -12,7 +12,7 @@ import type {
 export interface AIConfiguration {
   id: string;
   name: string;
-  provider: 'openai' | 'anthropic' | 'google' | 'azure' | 'custom' | 'elevenlabs' | 'cartesia' | 'deepgram' | 'hume';
+  provider: 'openai' | 'anthropic' | 'google' | 'azure' | 'custom' | 'elevenlabs' | 'cartesia' | 'deepgram' | 'hume' | 'zai';
   provider_name?: string;
   model: string;  // Note: using 'model' to match other parts of code
   apiKey: string;
@@ -85,7 +85,7 @@ export class AIService {
         this.configurations.set(config.id, {
           id: config.id,
           name: config.name,
-          provider: config.provider as 'openai' | 'anthropic' | 'google' | 'azure' | 'custom' | 'elevenlabs' | 'cartesia' | 'deepgram' | 'hume',
+          provider: config.provider as 'openai' | 'anthropic' | 'google' | 'azure' | 'custom' | 'elevenlabs' | 'cartesia' | 'deepgram' | 'hume' | 'zai',
           provider_name: config.provider_name || undefined,
           model: config.model_name,
           apiKey: config.api_key_encrypted || '', // Note: This should be decrypted in production

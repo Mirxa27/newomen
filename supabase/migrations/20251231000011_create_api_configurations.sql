@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS api_configurations (
 ALTER TABLE api_configurations ENABLE ROW LEVEL SECURITY;
 
 -- Only admins can view and manage API configurations
+DROP POLICY IF EXISTS "Admins can view API configurations" ON api_configurations;
 CREATE POLICY "Admins can view API configurations"
   ON api_configurations
   FOR SELECT
@@ -29,6 +30,7 @@ CREATE POLICY "Admins can view API configurations"
     )
   );
 
+DROP POLICY IF EXISTS "Admins can insert API configurations" ON api_configurations;
 CREATE POLICY "Admins can insert API configurations"
   ON api_configurations
   FOR INSERT
@@ -42,6 +44,7 @@ CREATE POLICY "Admins can insert API configurations"
     )
   );
 
+DROP POLICY IF EXISTS "Admins can update API configurations" ON api_configurations;
 CREATE POLICY "Admins can update API configurations"
   ON api_configurations
   FOR UPDATE
@@ -63,15 +66,17 @@ CREATE POLICY "Admins can update API configurations"
     )
   );
 
+DROP POLICY IF EXISTS "Admins can delete API configurations" ON api_configurations;
 CREATE POLICY "Admins can delete API configurations"
   ON api_configurations
   FOR DELETE
   TO authenticated
   USING (
     EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-      AND profiles.role = 'admin'
+      SELECT 1
+      FROM user_profiles
+      WHERE (user_profiles.user_id = auth.uid() OR user_profiles.id = auth.uid())
+        AND user_profiles.role IN ('admin', 'ADMIN')
     )
   );
 
@@ -84,14 +89,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS api_configurations_updated_at ON api_configurations;
 CREATE TRIGGER api_configurations_updated_at
   BEFORE UPDATE ON api_configurations
   FOR EACH ROW
   EXECUTE FUNCTION update_api_configurations_updated_at();
 
 -- Add indexes
-CREATE INDEX idx_api_configurations_service ON api_configurations(service);
-CREATE INDEX idx_api_configurations_is_active ON api_configurations(is_active);
+CREATE INDEX IF NOT EXISTS idx_api_configurations_service ON api_configurations(service);
+CREATE INDEX IF NOT EXISTS idx_api_configurations_is_active ON api_configurations(is_active);
 
 -- Add comments
 COMMENT ON TABLE api_configurations IS 'Stores third-party API configurations for services like PayPal, OpenAI, etc.';

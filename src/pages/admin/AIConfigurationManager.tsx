@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,7 +28,7 @@ export interface AIConfiguration {
   id: string;
   name: string;
   description?: string;
-  provider: 'openai' | 'anthropic' | 'google' | 'azure' | 'custom' | 'elevenlabs' | 'cartesia' | 'deepgram' | 'hume';
+  provider: 'openai' | 'anthropic' | 'google' | 'azure' | 'custom' | 'elevenlabs' | 'cartesia' | 'deepgram' | 'hume' | 'zai';
   provider_name?: string;
   model_name: string;
   api_base_url?: string;
@@ -74,7 +74,11 @@ const AIConfigurationManager = () => {
     configId: string;
     success?: boolean;
     response?: string;
-    usage?: any;
+    usage?: {
+      prompt_tokens?: number;
+      completion_tokens?: number;
+      total_tokens?: number;
+    };
     time?: number;
     error?: string;
   } | null>(null);
@@ -84,11 +88,7 @@ const AIConfigurationManager = () => {
 
   const [formData, setFormData] = useState<Partial<AIConfiguration>>(BLANK_FORM_STATE);
 
-  useEffect(() => {
-    loadConfigurations();
-  }, []);
-
-  const loadConfigurations = async () => {
+  const loadConfigurations = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -97,7 +97,7 @@ const AIConfigurationManager = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setConfigurations((data as any[]) || []);
+      setConfigurations((data as AIConfiguration[]) || []);
     } catch (error) {
       console.error('Error loading configurations:', error);
       toast({
@@ -108,7 +108,11 @@ const AIConfigurationManager = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    loadConfigurations();
+  }, [loadConfigurations]);
 
   const handleSave = async () => {
     try {
@@ -191,7 +195,7 @@ const AIConfigurationManager = () => {
     setShowNewForm(true);
   };
 
-  const handleFormChange = (field: keyof Partial<AIConfiguration>, value: any) => {
+  const handleFormChange = (field: keyof Partial<AIConfiguration>, value: string | number | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 

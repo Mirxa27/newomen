@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.42.0";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.42.0";
 
 console.log("Gamification Engine Function Started");
 
@@ -83,7 +83,7 @@ serve(async (req) => {
   }
 });
 
-async function handleAssessmentCompletion(supabase: any, userId: string, payload: any) {
+async function handleAssessmentCompletion(supabase: SupabaseClient, userId: string, payload: { assessmentId: string; score: number }) {
   const { assessmentId, score } = payload;
   const crystalReward = 20; // Example reward
 
@@ -129,7 +129,7 @@ async function handleAssessmentCompletion(supabase: any, userId: string, payload
   console.log(`User ${userId} awarded ${crystalReward} crystals for assessment completion.`);
 }
 
-async function handleDailyLogin(supabase: any, userId: string) {
+async function handleDailyLogin(supabase: SupabaseClient, userId: string) {
   const crystalReward = 10; // Example reward for daily login
   const { data: userProfile, error: profileError } = await supabase
     .from("user_profiles")
@@ -192,7 +192,7 @@ async function handleDailyLogin(supabase: any, userId: string) {
   console.log(`User ${userId} daily login processed. Streak: ${newDailyStreak}. Bonus awarded: ${awardedBonus}`);
 }
 
-async function handleConversationCompletion(supabase: any, userId: string, payload: any) {
+async function handleConversationCompletion(supabase: SupabaseClient, userId: string, payload: { conversationId: string; duration?: number }) {
   const { conversationId } = payload;
   const crystalReward = 15; // Example reward
 
@@ -237,7 +237,7 @@ async function handleConversationCompletion(supabase: any, userId: string, paylo
   console.log(`User ${userId} awarded ${crystalReward} crystals for conversation completion.`);
 }
 
-async function handleNarrativeExplorationCompletion(supabase: any, userId: string, payload: any) {
+async function handleNarrativeExplorationCompletion(supabase: SupabaseClient, userId: string, payload: { explorationId: string; sessionId?: string; duration?: number }) {
   const { explorationId } = payload;
   const crystalReward = 30; // Example reward
 
@@ -282,7 +282,7 @@ async function handleNarrativeExplorationCompletion(supabase: any, userId: strin
   console.log(`User ${userId} awarded ${crystalReward} crystals for narrative exploration completion.`);
 }
 
-async function handleCouplesChallengeCompletion(supabase: any, userId: string, payload: any) {
+async function handleCouplesChallengeCompletion(supabase: SupabaseClient, userId: string, payload: { challengeId: string; partnerId?: string }) {
   const { challengeId } = payload;
   const crystalReward = 25; // Example reward
 
@@ -327,7 +327,7 @@ async function handleCouplesChallengeCompletion(supabase: any, userId: string, p
   console.log(`User ${userId} awarded ${crystalReward} crystals for couples challenge completion.`);
 }
 
-async function handleWellnessResourceCompletion(supabase: any, userId: string, payload: any) {
+async function handleWellnessResourceCompletion(supabase: SupabaseClient, userId: string, payload: { resourceId: string; type?: string }) {
   const { resourceId } = payload;
   const crystalReward = 10; // Example reward
 

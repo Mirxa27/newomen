@@ -44,16 +44,12 @@ export class NewMeMemoryService {
     try {
       const { data, error } = await supabase
         .from('newme_conversations')
-        .insert({
-          user_id: input.user_id,
-          topics_discussed: input.topics_discussed,
-          emotional_tone: input.emotional_tone,
-        })
+        .insert(input as any)
         .select()
         .single();
 
       if (error) throw error;
-      return data as NewMeConversation;
+      return data as unknown as NewMeConversation;
     } catch (error) {
       console.error('Error creating conversation:', error);
       return null;
@@ -70,7 +66,7 @@ export class NewMeMemoryService {
     try {
       const { error } = await supabase
         .from('newme_conversations')
-        .update(updates)
+        .update(updates as any)
         .eq('id', conversationId);
 
       if (error) throw error;
@@ -97,7 +93,7 @@ export class NewMeMemoryService {
         .limit(limit);
 
       if (error) throw error;
-      return data as NewMeConversation[];
+      return data as unknown as NewMeConversation[];
     } catch (error) {
       console.error('Error fetching conversation history:', error);
       return [];
@@ -122,7 +118,7 @@ export class NewMeMemoryService {
         if (error.code === 'PGRST116') return null; // No rows found
         throw error;
       }
-      return data as NewMeConversation;
+      return data as unknown as NewMeConversation;
     } catch (error) {
       console.error('Error fetching active conversation:', error);
       return null;
@@ -136,7 +132,7 @@ export class NewMeMemoryService {
     try {
       const { data, error } = await supabase
         .from('newme_messages')
-        .insert(input)
+        .insert(input as any)
         .select()
         .single();
 
@@ -145,7 +141,7 @@ export class NewMeMemoryService {
       // Update message count in conversation
       await supabase.rpc('increment_message_count', { conv_id: input.conversation_id });
 
-      return data as NewMeMessage;
+      return data as unknown as NewMeMessage;
     } catch (error) {
       console.error('Error adding message:', error);
       return null;
@@ -170,7 +166,7 @@ export class NewMeMemoryService {
       const { data, error } = await query;
 
       if (error) throw error;
-      return data as NewMeMessage[];
+      return data as unknown as NewMeMessage[];
     } catch (error) {
       console.error('Error fetching messages:', error);
       return [];
@@ -201,14 +197,14 @@ export class NewMeMemoryService {
             context: input.context,
             importance_score: input.importance_score ?? existing.importance_score,
             last_referenced_at: new Date().toISOString(),
-            reference_count: existing.reference_count + 1,
+            reference_count: Number(existing.reference_count) + 1,
           })
           .eq('id', existing.id)
           .select()
           .single();
 
         if (error) throw error;
-        return data as NewMeUserMemory;
+        return data as unknown as NewMeUserMemory;
       } else {
         // Create new memory
         const { data, error } = await supabase
@@ -216,12 +212,12 @@ export class NewMeMemoryService {
           .insert({
             ...input,
             importance_score: input.importance_score ?? 5,
-          })
+          } as any)
           .select()
           .single();
 
         if (error) throw error;
-        return data as NewMeUserMemory;
+        return data as unknown as NewMeUserMemory;
       }
     } catch (error) {
       console.error('Error saving memory:', error);
@@ -248,7 +244,7 @@ export class NewMeMemoryService {
       const { data, error } = await query;
 
       if (error) throw error;
-      return data as NewMeUserMemory[];
+      return data as unknown as NewMeUserMemory[];
     } catch (error) {
       console.error('Error fetching user memories:', error);
       return [];
@@ -282,12 +278,12 @@ export class NewMeMemoryService {
     try {
       const { data, error } = await supabase
         .from('newme_emotional_snapshots')
-        .insert(input)
+        .insert(input as any)
         .select()
         .single();
 
       if (error) throw error;
-      return data as NewMeEmotionalSnapshot;
+      return data as unknown as NewMeEmotionalSnapshot;
     } catch (error) {
       console.error('Error creating emotional snapshot:', error);
       return null;
@@ -310,7 +306,7 @@ export class NewMeMemoryService {
         .limit(limit);
 
       if (error) throw error;
-      return data as NewMeEmotionalSnapshot[];
+      return data as unknown as NewMeEmotionalSnapshot[];
     } catch (error) {
       console.error('Error fetching emotional journey:', error);
       return [];
@@ -340,7 +336,7 @@ export class NewMeMemoryService {
         .single();
 
       if (error) throw error;
-      return data as NewMeAssessmentTracking;
+      return data as unknown as NewMeAssessmentTracking;
     } catch (error) {
       console.error('Error tracking assessment suggestion:', error);
       return null;
@@ -357,7 +353,7 @@ export class NewMeMemoryService {
     try {
       const { error } = await supabase
         .from('newme_assessment_tracking')
-        .update(updates)
+        .update(updates as any)
         .eq('id', trackingId);
 
       if (error) throw error;
@@ -380,7 +376,7 @@ export class NewMeMemoryService {
         .order('suggested_at', { ascending: false });
 
       if (error) throw error;
-      return data as NewMeAssessmentTracking[];
+      return data as unknown as NewMeAssessmentTracking[];
     } catch (error) {
       console.error('Error fetching assessment tracking:', error);
       return [];

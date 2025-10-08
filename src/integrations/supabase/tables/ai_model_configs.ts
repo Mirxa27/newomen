@@ -1,6 +1,6 @@
 export type AiModelConfigs = {
-  Row: { [key: string]: any };
-  Insert: { [key: string]: any };
-  Update: { [key: string]: any };
+  Row: { [key: string]: unknown };
+  Insert: { [key: string]: unknown };
+  Update: { [key: string]: unknown };
   Relationships: [];
 };

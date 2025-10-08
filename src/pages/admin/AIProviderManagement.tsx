@@ -160,7 +160,7 @@ export default function AIProviderManagement() {
     if (!formState) return null;
 
     switch (formState.type) {
-      case "provider":
+      case "provider": {
         const providerState = formState as Partial<Provider>;
         return (
           <div className="space-y-4">
@@ -188,7 +188,8 @@ export default function AIProviderManagement() {
             </div>
           </div>
         );
-      case "model":
+      }
+      case "model": {
         const modelState = formState as Partial<Model>;
         return (
           <div className="space-y-4">
@@ -226,7 +227,8 @@ export default function AIProviderManagement() {
             </div>
           </div>
         );
-      case "voice":
+      }
+      case "voice": {
         const voiceState = formState as Partial<Voice>;
         return (
           <div className="space-y-4">
@@ -285,6 +287,7 @@ export default function AIProviderManagement() {
             </div>
           </div>
         );
+      }
       default:
         return null;
     }
@@ -357,7 +360,7 @@ export default function AIProviderManagement() {
                     <TableRow key={m.id}>
                       <TableCell>{m.display_name}</TableCell>
                       <TableCell className="font-mono text-xs">{m.model_id}</TableCell>
-                      <TableCell>{(m as any).providers?.name}</TableCell>
+                      <TableCell>{(m as { providers?: { name: string } }).providers?.name}</TableCell>
                       <TableCell>
                         <Button variant="ghost" size="icon" onClick={() => openEditDialog(m, "model")}><Edit className="w-4 h-4" /></Button>
                         <Button variant="ghost" size="icon" onClick={() => confirmDelete({ id: m.id, name: m.display_name || m.model_id || '' }, "model")}><Trash2 className="w-4 h-4" /></Button>
@@ -394,7 +397,7 @@ export default function AIProviderManagement() {
                     <TableRow key={v.id}>
                       <TableCell>{v.name}</TableCell>
                       <TableCell className="font-mono text-xs">{v.voice_id}</TableCell>
-                      <TableCell>{(v as any).providers?.name}</TableCell>
+                      <TableCell>{(v as { providers?: { name: string } }).providers?.name}</TableCell>
                       <TableCell>{v.gender}</TableCell>
                       <TableCell>{v.enabled ? "Yes" : "No"}</TableCell>
                       <TableCell>

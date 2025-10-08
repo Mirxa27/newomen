@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { processAssessmentWithAI, createAssessmentAttempt, submitAssessmentResponses } from "@/lib/ai-assessment-utils";
+import type { AssessmentAnswers } from "@/types/ai-types";
 
 interface TestAssessment {
   id: string;
@@ -53,7 +54,7 @@ export default function AssessmentTest() {
   const [assessment, setAssessment] = useState<TestAssessment | null>(null);
   const [attempt, setAttempt] = useState<Record<string, unknown> | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [responses, setResponses] = useState<Record<string, unknown>>({});
+  const [responses, setResponses] = useState<AssessmentAnswers>({});
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [aiProcessing, setAiProcessing] = useState(false);
@@ -134,7 +135,7 @@ export default function AssessmentTest() {
     }
   };
 
-  const handleResponseChange = (questionId: string, value: unknown) => {
+  const handleResponseChange = (questionId: string, value: string | number | boolean | string[]) => {
     setResponses(prev => ({
       ...prev,
       [questionId]: value
@@ -403,7 +404,7 @@ export default function AssessmentTest() {
           <CardContent>
             {currentQuestionData?.type === 'multiple_choice' && (
               <RadioGroup
-                value={String(responses[currentQuestionData.id] || '')}
+                value={responses[currentQuestionData.id] as string || ''}
                 onValueChange={(value) => handleResponseChange(currentQuestionData.id, value)}
               >
                 {currentQuestionData.options?.map((option, index) => (
@@ -417,7 +418,7 @@ export default function AssessmentTest() {
 
             {currentQuestionData?.type === 'text' && (
               <Textarea
-                value={String(responses[currentQuestionData.id] || '')}
+                value={responses[currentQuestionData.id] as string || ''}
                 onChange={(e) => handleResponseChange(currentQuestionData.id, e.target.value)}
                 placeholder="Enter your response..."
                 rows={4}
@@ -428,7 +429,7 @@ export default function AssessmentTest() {
               <div className="space-y-2">
                 <Label>Rate from 1 to 5:</Label>
                 <RadioGroup
-                  value={String(responses[currentQuestionData.id] || '')}
+                  value={responses[currentQuestionData.id] as string || ''}
                   onValueChange={(value) => handleResponseChange(currentQuestionData.id, value)}
                 >
                   {[1, 2, 3, 4, 5].map((rating) => (
@@ -443,7 +444,7 @@ export default function AssessmentTest() {
 
             {currentQuestionData?.type === 'boolean' && (
               <RadioGroup
-                value={String(responses[currentQuestionData.id] || '')}
+                value={responses[currentQuestionData.id] as string || ''}
                 onValueChange={(value) => handleResponseChange(currentQuestionData.id, value)}
               >
                 <div className="flex items-center space-x-2">

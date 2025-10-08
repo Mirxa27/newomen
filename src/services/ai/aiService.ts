@@ -37,6 +37,8 @@ class AIService {
         case 'deepgram':
         case 'hume':
           return await providers.callCustomProvider(config, prompt, startTime);
+        case 'zai':
+          return await providers.callZAI(config, prompt, startTime);
         default:
           throw new Error(`Unsupported AI provider: ${config.provider}`);
       }

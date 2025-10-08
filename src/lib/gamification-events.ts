@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-const triggerGamificationEvent = async (eventType: string, payload: any = {}) => {
+const triggerGamificationEvent = async (eventType: string, payload: Record<string, unknown> = {}) => {
   try {
     const { data, error } = await supabase.functions.invoke("gamification-engine", {
       body: {
@@ -16,9 +16,9 @@ const triggerGamificationEvent = async (eventType: string, payload: any = {}) =>
 
     console.log(`Gamification event ${eventType} triggered successfully:`, data);
     return { success: true, data };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(`Exception triggering gamification event ${eventType}:`, error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 };
 

@@ -62,7 +62,7 @@ export async function getAIProviderForUseCase(useCaseId: string): Promise<AIProv
       return null;
     }
 
-    return data?.provider as any;
+    return data?.provider as unknown as AIProviderConfig;
   } catch (error) {
     console.error("Error in getAIProviderForUseCase:", error);
     return null;
@@ -97,7 +97,7 @@ export async function getPromptTemplate(useCaseId: string, providerId?: string):
       return null;
     }
 
-    return data as any;
+    return data as unknown as PromptTemplate;
   } catch (error) {
     console.error("Error in getPromptTemplate:", error);
     return null;
@@ -121,7 +121,7 @@ export async function getAIBehavior(behaviorId: string): Promise<AIBehavior | nu
       return null;
     }
 
-    return data as AIBehavior;
+    return data as unknown as AIBehavior;
   } catch (error) {
     console.error("Error in getAIBehavior:", error);
     return null;
@@ -176,8 +176,8 @@ export async function getAIConfiguration(useCaseId: string): Promise<{
       return null;
     }
 
-    const provider = data?.provider as any;
-    const behavior = data?.behavior as any;
+    const provider = data?.provider as unknown as AIProviderConfig;
+    const behavior = data?.behavior as unknown as AIBehavior;
 
     // Get the prompt template
     const template = await getPromptTemplate(useCaseId, provider?.id);
@@ -270,7 +270,7 @@ export async function getAIUseCases(): Promise<Array<{ id: string; name: string;
       return [];
     }
 
-    return data || [];
+    return (data || []) as unknown as { id: string; name: string; category: string; }[];
   } catch (error) {
     console.error("Error in getAIUseCases:", error);
     return [];
@@ -293,7 +293,7 @@ export async function getAIBehaviors(): Promise<AIBehavior[]> {
       return [];
     }
 
-    return (data || []) as AIBehavior[];
+    return (data || []) as unknown as AIBehavior[];
   } catch (error) {
     console.error("Error in getAIBehaviors:", error);
     return [];

@@ -105,9 +105,7 @@ export function useCouplesChallenge(challengeId: string | null) {
     setChannel(newChannel);
 
     return () => {
-      if (channel) {
-        void supabase.removeChannel(channel);
-      }
+      void supabase.removeChannel(newChannel);
     };
   }, [challengeId, profile, handleIncomingChanges]);
 

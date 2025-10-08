@@ -52,7 +52,7 @@ export function useUserProfile() {
         .eq('user_id', profileData.id);
 
       if (achievementsError) throw achievementsError;
-      setAchievements((achievementsData as any[]) ?? []);
+      setAchievements((achievementsData as unknown as UserAchievement[]) ?? []);
 
     } catch (error) {
       console.error('Error loading profile:', error);

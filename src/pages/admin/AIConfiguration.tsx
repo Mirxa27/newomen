@@ -20,7 +20,7 @@ export interface AIConfiguration {
   id: string;
   name: string;
   description?: string;
-  provider: 'openai' | 'anthropic' | 'google' | 'azure' | 'custom';
+  provider: 'openai' | 'anthropic' | 'google' | 'azure' | 'custom' | 'elevenlabs' | 'cartesia' | 'deepgram' | 'hume' | 'zai';
   provider_name?: string;
   model_name: string;
   api_base_url?: string;
@@ -65,7 +65,19 @@ export default function AIConfigurationPage() {
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingConfig, setEditingConfig] = useState<AIConfiguration | null>(null);
-  const [testResults, setTestResults] = useState<any>(null);
+  const [testResults, setTestResults] = useState<{
+    testing: boolean;
+    configId: string;
+    success?: boolean;
+    response?: string;
+    usage?: {
+      prompt_tokens?: number;
+      completion_tokens?: number;
+      total_tokens?: number;
+    };
+    time?: number;
+    error?: string;
+  } | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [configToDelete, setConfigToDelete] = useState<string | null>(null);
 
@@ -283,8 +295,14 @@ export default function AIConfigurationPage() {
                     <SelectContent>
                       <SelectItem value="openai">OpenAI</SelectItem>
                       <SelectItem value="anthropic">Anthropic</SelectItem>
-                      <SelectItem value="google">Google</SelectItem>
+                      <SelectItem value="google">Google (Gemini)</SelectItem>
                       <SelectItem value="azure">Azure OpenAI</SelectItem>
+                      <SelectItem value="custom">Custom Provider</SelectItem>
+                      <SelectItem value="elevenlabs">ElevenLabs</SelectItem>
+                      <SelectItem value="cartesia">Cartesia</SelectItem>
+                      <SelectItem value="deepgram">Deepgram</SelectItem>
+                      <SelectItem value="hume">Hume AI</SelectItem>
+                      <SelectItem value="zai">Z.ai</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -551,8 +569,14 @@ export default function AIConfigurationPage() {
                   <SelectContent>
                     <SelectItem value="openai">OpenAI</SelectItem>
                     <SelectItem value="anthropic">Anthropic</SelectItem>
-                    <SelectItem value="google">Google</SelectItem>
+                    <SelectItem value="google">Google (Gemini)</SelectItem>
                     <SelectItem value="azure">Azure OpenAI</SelectItem>
+                    <SelectItem value="custom">Custom Provider</SelectItem>
+                    <SelectItem value="elevenlabs">ElevenLabs</SelectItem>
+                    <SelectItem value="cartesia">Cartesia</SelectItem>
+                    <SelectItem value="deepgram">Deepgram</SelectItem>
+                    <SelectItem value="hume">Hume AI</SelectItem>
+                    <SelectItem value="zai">Z.ai</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

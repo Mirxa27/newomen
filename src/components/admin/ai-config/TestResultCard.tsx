@@ -8,7 +8,11 @@ interface TestResultCardProps {
     configId: string;
     success?: boolean;
     response?: string;
-    usage?: any;
+    usage?: {
+      prompt_tokens?: number;
+      completion_tokens?: number;
+      total_tokens?: number;
+    };
     time?: number;
     error?: string;
   } | null;

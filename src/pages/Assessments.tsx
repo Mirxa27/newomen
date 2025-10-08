@@ -147,8 +147,7 @@ export default function Assessments() {
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-4">
                   {/* Assuming questions property exists on Assessment type, or handle gracefully */}
-                  {/* @ts-ignore: questions property might not exist on AssessmentBase */}
-                  {Array.isArray(assessment.questions) ? assessment.questions.length : 0} insightful questions
+                  {Array.isArray((assessment as { questions?: unknown[] }).questions) ? (assessment as { questions: unknown[] }).questions.length : 0} insightful questions
                 </p>
                 <Button className="w-full group">
                   Start Assessment

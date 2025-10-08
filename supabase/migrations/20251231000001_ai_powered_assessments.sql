@@ -211,17 +211,35 @@ BEGIN
     SELECT 1
     FROM information_schema.columns
     WHERE table_schema = 'public'
-      AND table_name = 'assessments'
+      AND table_name = 'assessments_enhanced'
       AND column_name = 'assessment_type'
   ) THEN
-    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_assessments_type ON assessments(assessment_type)';
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_assessments_type ON assessments_enhanced(assessment_type)';
   ELSE
-    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_assessments_type ON assessments(type)';
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_assessments_type ON assessments_enhanced(type)';
   END IF;
 END $$;
-CREATE INDEX IF NOT EXISTS idx_assessments_category ON assessments(category);
-CREATE INDEX IF NOT EXISTS idx_assessments_public ON assessments(is_public, is_active);
-CREATE INDEX IF NOT EXISTS idx_assessments_ai ON assessments(is_ai_powered, ai_configuration_id);
+CREATE INDEX IF NOT EXISTS idx_assessments_category ON assessments_enhanced(category);
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'assessments_enhanced' AND column_name = 'is_active'
+  ) THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_assessments_public ON assessments_enhanced(is_public, is_active)';
+  ELSE
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_assessments_public ON assessments_enhanced(is_public)';
+  END IF;
+END $$;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'assessments_enhanced' AND column_name = 'ai_config_id'
+  ) THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_assessments_ai ON assessments_enhanced(ai_config_id)';
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_quizzes_category ON quizzes(category);
 CREATE INDEX IF NOT EXISTS idx_quizzes_public ON quizzes(is_public, is_active);

@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS public.newme_conversations (
 ALTER TABLE public.newme_conversations ENABLE ROW LEVEL SECURITY;
 
 -- Create policies
+DROP POLICY IF EXISTS "NewMe conversations viewable by admins only" ON public.newme_conversations;
 CREATE POLICY "NewMe conversations viewable by admins only"
 ON public.newme_conversations
 FOR ALL
@@ -36,6 +37,7 @@ USING (
 );
 
 -- Add trigger for updated_at
+DROP TRIGGER IF EXISTS update_newme_conversations_updated_at ON public.newme_conversations;
 CREATE TRIGGER update_newme_conversations_updated_at
   BEFORE UPDATE ON public.newme_conversations
   FOR EACH ROW

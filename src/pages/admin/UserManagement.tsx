@@ -35,7 +35,7 @@ export default function UserManagement() {
         email: profile.email || `user-${profile.user_id?.slice(0, 8)}@newomen.app`
       })) || [];
 
-      setUsers(usersWithEmails);
+      setUsers(usersWithEmails as UserWithEmail[]);
     } catch (error) {
       console.error("Error loading users:", error);
       toast.error("Failed to load users");
@@ -148,7 +148,7 @@ export default function UserManagement() {
                   <TableCell>{user.daily_streak} days</TableCell>
                   <TableCell>{user.remaining_minutes} min</TableCell>
                   <TableCell>
-                    {new Date(user.created_at).toLocaleDateString()}
+                    {new Date(user.created_at as string).toLocaleDateString()}
                   </TableCell>
                 </TableRow>
               ))}

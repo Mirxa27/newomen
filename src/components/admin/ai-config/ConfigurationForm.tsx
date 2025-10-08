@@ -12,7 +12,7 @@ import type { AIConfiguration } from '@/pages/admin/AIConfigurationManager';
 
 interface ConfigurationFormProps {
   formData: Partial<AIConfiguration>;
-  onFieldChange: (field: keyof Partial<AIConfiguration>, value: any) => void;
+  onFieldChange: (field: keyof Partial<AIConfiguration>, value: string | number | boolean) => void;
   onSelectChange: (field: keyof Partial<AIConfiguration>, value: string) => void;
 }
 
@@ -54,6 +54,7 @@ export const ConfigurationForm = ({ formData, onFieldChange, onSelectChange }: C
               <SelectItem value="cartesia">Cartesia</SelectItem>
               <SelectItem value="deepgram">Deepgram</SelectItem>
               <SelectItem value="hume">Hume AI</SelectItem>
+              <SelectItem value="zai">Z.ai</SelectItem>
             </SelectContent>
           </Select>
         </div>

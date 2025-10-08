@@ -1,6 +1,51 @@
 export type Subscriptions = {
-  Row: { [key: string]: any };
-  Insert: { [key: string]: any };
-  Update: { [key: string]: any };
+  Row: {
+    id: string;
+    user_id: string | null;
+    provider: string | null;
+    provider_id: string | null;
+    status: string | null;
+    renewal_date: string | null;
+    created_at: string | null;
+    tier: string;
+    minutes_included: number;
+    minutes_used: number | null;
+    price: number | null;
+    currency: string | null;
+    cancelled_at: string | null;
+    updated_at: string;
+  };
+  Insert: {
+    id?: string;
+    user_id?: string | null;
+    provider?: string | null;
+    provider_id?: string | null;
+    status?: string | null;
+    renewal_date?: string | null;
+    created_at?: string | null;
+    tier?: string;
+    minutes_included?: number;
+    minutes_used?: number | null;
+    price?: number | null;
+    currency?: string | null;
+    cancelled_at?: string | null;
+    updated_at?: string;
+  };
+  Update: {
+    id?: string;
+    user_id?: string | null;
+    provider?: string | null;
+    provider_id?: string | null;
+    status?: string | null;
+    renewal_date?: string | null;
+    created_at?: string | null;
+    tier?: string;
+    minutes_included?: number;
+    minutes_used?: number | null;
+    price?: number | null;
+    currency?: string | null;
+    cancelled_at?: string | null;
+    updated_at?: string;
+  };
   Relationships: [];
 };

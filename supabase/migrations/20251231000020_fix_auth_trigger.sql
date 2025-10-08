@@ -49,12 +49,15 @@ CREATE TRIGGER on_auth_user_created
     EXECUTE FUNCTION public.handle_new_user();
 
 -- Create clean, simple RLS policies
+DROP POLICY IF EXISTS "Users can view own profile" ON public.user_profiles;
 CREATE POLICY "Users can view own profile" ON public.user_profiles
     FOR SELECT USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can update own profile" ON public.user_profiles;
 CREATE POLICY "Users can update own profile" ON public.user_profiles
     FOR UPDATE USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Allow profile creation via trigger" ON public.user_profiles;
 CREATE POLICY "Allow profile creation via trigger" ON public.user_profiles
     FOR INSERT WITH CHECK (auth.uid() = id);
 

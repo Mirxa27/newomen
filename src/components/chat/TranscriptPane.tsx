@@ -1,5 +1,5 @@
 // src/components/chat/TranscriptPane.tsx
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { User, Bot } from 'lucide-react';
 
 interface Message {
@@ -14,7 +14,7 @@ interface TranscriptPaneProps {
 }
 
 const TranscriptPane: React.FC<TranscriptPaneProps> = (props) => {
-  const messages = props.messages ?? [];
+  const messages = useMemo(() => props.messages ?? [], [props.messages]);
   const partialTranscript = props.partialTranscript ?? '';
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
