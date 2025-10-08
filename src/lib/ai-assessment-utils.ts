@@ -447,7 +447,7 @@ export async function updateUserProgress(
         .update({
           best_score: isNewBestScore ? score : currentProgress.best_score,
           best_attempt_id: isNewBestScore ? attemptId : currentProgress.best_attempt_id,
-          total_attempts: (Number(currentProgress.total_attempts) ?? 0) + 1,
+          total_attempts: Number(currentProgress.total_attempts ?? 0) + 1,
           last_attempt_at: new Date().toISOString(),
           is_completed: score >= 70 || currentProgress.is_completed,
           completion_date: score >= 70 && !currentProgress.is_completed ? new Date().toISOString() : currentProgress.completion_date

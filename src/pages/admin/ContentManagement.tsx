@@ -256,9 +256,9 @@ export default function ContentManagement() {
                   <TableBody>
                     {affirmations.map((affirmation) => (
                       <TableRow key={affirmation.id}>
-                        <TableCell>{affirmation.content}</TableCell>
+                        <TableCell>{String(affirmation.content)}</TableCell>
                         <TableCell><Badge variant="outline">{String(affirmation.category)}</Badge></TableCell>
-                        <TableCell>{affirmation.tone || "-"}</TableCell>
+                        <TableCell>{String(affirmation.tone) || "-"}</TableCell>
                         <TableCell>{affirmation.updated_at ? new Date(affirmation.updated_at as string).toLocaleDateString() : "-"}</TableCell>
                         <TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => setDialogState({ type: 'affirmation', id: String(affirmation.id) })}><Trash2 className="w-4 h-4" /></Button></TableCell>
                       </TableRow>

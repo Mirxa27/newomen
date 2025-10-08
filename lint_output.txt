@@ -1,0 +1,66 @@
+
+> newomen@1.0.0 lint
+> eslint .
+
+
+/Users/abdullahmirxa/dyad-apps/newomen/src/components/ui/button.tsx
+  22:18  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/Users/abdullahmirxa/dyad-apps/newomen/src/components/ui/toggle.tsx
+  9:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/Users/abdullahmirxa/dyad-apps/newomen/src/hooks/useAuth.tsx
+  64:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/Users/abdullahmirxa/dyad-apps/newomen/src/pages/NarrativeIdentityExploration.tsx
+  87:64  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/abdullahmirxa/dyad-apps/newomen/src/pages/admin/AIAssessmentManagement.tsx
+  227:81  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/abdullahmirxa/dyad-apps/newomen/src/pages/admin/AIPrompting.tsx
+  61:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/abdullahmirxa/dyad-apps/newomen/src/pages/admin/AIProviderManagement.tsx
+  363:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  400:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/abdullahmirxa/dyad-apps/newomen/src/pages/admin/Agents.tsx
+  132:36  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/abdullahmirxa/dyad-apps/newomen/src/pages/admin/ContentManagement.tsx
+  106:92  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/abdullahmirxa/dyad-apps/newomen/src/pages/admin/ProviderManagement.tsx
+  12:60  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  13:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/abdullahmirxa/dyad-apps/newomen/src/pages/admin/ProvidersManagement.tsx
+  58:60  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  79:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  80:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  81:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/abdullahmirxa/dyad-apps/newomen/src/pages/admin/SessionsHistory.tsx
+  137:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  191:14  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/abdullahmirxa/dyad-apps/newomen/src/pages/admin/SessionsLive.tsx
+  74:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/abdullahmirxa/dyad-apps/newomen/src/services/AssessmentServiceOptimized.ts
+  27:18  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/abdullahmirxa/dyad-apps/newomen/src/services/NewMeMemoryService.ts
+   47:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   69:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  135:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  215:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  281:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  356:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/abdullahmirxa/dyad-apps/newomen/src/types/assessment-types.ts
+  50:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 27 problems (24 errors, 3 warnings)
+

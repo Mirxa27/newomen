@@ -1,170 +1,292 @@
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useCouplesChallenge, createNewChallenge } from '@/hooks/useCouplesChallenge';
-import { useUserProfile } from '@/hooks/useUserProfile';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Copy, Check, Heart, ArrowLeft, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, ArrowLeft, Send, Heart, Users, Lock } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { trackCouplesChallengeCompletion } from "@/lib/gamification-events";
+import type { Tables } from "@/integrations/supabase/types";
 
-function ChallengeInterface() {
-  const { id } = useParams<{ id: string }>();
-  const { profile } = useUserProfile();
-  const { challenge, loading, error, submitResponse } = useCouplesChallenge(id);
-  const [currentResponse, setCurrentResponse] = useState('');
+type ChallengeTemplate = Tables<'challenge_templates'> & {
+  questions: string[];
+};
 
-  if (loading) return <div className="text-center p-10"><Loader2 className="w-8 h-8 animate-spin mx-auto" /></div>;
-  if (error) return <div className="text-center p-10 text-red-500">{error}</div>;
-  if (!challenge || !profile) return <div className="text-center p-10">Challenge not found.</div>;
+type Challenge = Tables<'user_challenges'>;
 
-  const questions = (challenge.question_set as any)?.questions || [];
-  const responses = (challenge.responses as any) || {};
-  const isInitiator = challenge.initiator_id === profile.id;
-
-  const handleResponseSubmit = (questionId: string) => {
-    if (!currentResponse.trim()) {
-      toast.warning("Please write a response before submitting.");
-      return;
-    }
-    submitResponse(questionId, currentResponse);
-    setCurrentResponse('');
-  };
-
-  return (
-    <div className="space-y-8">
-      <h2 className="text-3xl font-bold text-center gradient-text">Couple's Challenge</h2>
-      {questions.map((q: { id: string; text: string }, index: number) => {
-        const questionResponses = responses[q.id] || {};
-        const initiatorResponse = questionResponses.initiator_response;
-        const partnerResponse = questionResponses.partner_response;
-        const myResponse = isInitiator ? initiatorResponse : partnerResponse;
-        const partnerNickname = isInitiator ? "Partner's" : "Initiator's";
-        const bothAnswered = initiatorResponse && partnerResponse;
-
-        return (
-          <Card key={q.id} className="glass-card">
-            <CardHeader>
-              <CardTitle>Question {index + 1}</CardTitle>
-              <CardDescription className="text-lg pt-2">{q.text}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {bothAnswered ? (
-                <div className="space-y-4">
-                  <Alert className="glass">
-                    <Heart className="h-4 w-4" />
-                    <AlertTitle>Your Answer</AlertTitle>
-                    <AlertDescription>{myResponse}</AlertDescription>
-                  </Alert>
-                  <Alert className="glass">
-                    <Heart className="h-4 w-4" />
-                    <AlertTitle>{partnerNickname} Answer</AlertTitle>
-                    <AlertDescription>{isInitiator ? partnerResponse : initiatorResponse}</AlertDescription>
-                  </Alert>
-                  {challenge.ai_analysis && (challenge.ai_analysis as any)[q.id] && (
-                     <Alert variant="default" className="border-primary/50 glass">
-                        <AlertTitle className="font-semibold text-primary">AI Analysis</AlertTitle>
-                        <AlertDescription>
-                          {(challenge.ai_analysis as any)[q.id]}
-                        </AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-              ) : myResponse ? (
-                <div className="text-center p-6 glass rounded-lg">
-                  <p className="text-lg font-semibold">Your answer is submitted!</p>
-                  <p className="text-muted-foreground mt-2">Waiting for your partner to respond...</p>
-                  <Loader2 className="w-6 h-6 animate-spin mx-auto mt-4 text-primary" />
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <Textarea
-                    placeholder="Your thoughtful response..."
-                    value={currentResponse}
-                    onChange={(e) => setCurrentResponse(e.target.value)}
-                    rows={4}
-                    className="glass"
-                  />
-                  <Button onClick={() => handleResponseSubmit(q.id)} className="clay-button">Submit Answer</Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
-  );
-}
-
-export default function CouplesChallengePage() {
+export default function CouplesChallenge() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [inviteLink, setInviteLink] = useState('');
-  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
 
-  const handleCreateChallenge = async () => {
-    const newChallenge = await createNewChallenge();
-    if (newChallenge) {
-      const link = `${window.location.origin}/couples-challenge/${newChallenge.id}`;
-      setInviteLink(link);
-      navigate(`/couples-challenge/${newChallenge.id}`);
+  const [challenge, setChallenge] = useState<Challenge | null>(null);
+  const [template, setTemplate] = useState<ChallengeTemplate | null>(null);
+  const [responses, setResponses] = useState<Record<string, unknown>>({});
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  const loadChallenge = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/auth");
+        return;
+      }
+      setUserId(user.id);
+
+      const { data: challengeData, error: challengeError } = await supabase
+        .from("user_challenges")
+        .select("*, challenge_templates(*)")
+        .eq("id", id)
+        .single();
+
+      if (challengeError) throw challengeError;
+
+      setChallenge(challengeData as unknown as Challenge);
+      setTemplate(challengeData.challenge_templates as unknown as ChallengeTemplate);
+      setResponses((challengeData.responses as Record<string, unknown>) || {});
+    } catch (err) {
+      console.error("Error loading challenge:", err);
+      setError("Failed to load the challenge. It might not exist or you may not have access.");
+    } finally {
+      setLoading(false);
+    }
+  }, [id, navigate]);
+
+  useEffect(() => {
+    loadChallenge();
+  }, [loadChallenge]);
+
+  const handleResponseChange = (questionIndex: string, value: string) => {
+    const isInitiator = userId === challenge?.initiator_id;
+    const responseKey = isInitiator ? "initiator_response" : "partner_response";
+
+    setResponses(prev => ({
+      ...prev,
+      [questionIndex]: {
+        ...(prev[questionIndex] as Record<string, string> || {}),
+        [responseKey]: value,
+      },
+    }));
+  };
+
+  const handleSubmit = async () => {
+    if (!challenge) return;
+    setSubmitting(true);
+    try {
+      const { error: updateError } = await supabase
+        .from("user_challenges")
+        .update({ responses })
+        .eq("id", challenge.id);
+
+      if (updateError) throw updateError;
+
+      // Check if both partners have responded to all questions
+      const allAnswered = template?.questions.every((_q, index) => {
+        const res = responses[String(index)] as Record<string, string> | undefined;
+        return res?.initiator_response && res?.partner_response;
+      });
+
+      if (allAnswered && challenge.status !== 'completed') {
+        const { error: completeError } = await supabase
+          .from("user_challenges")
+          .update({ status: 'completed', completed_at: new Date().toISOString() })
+          .eq("id", challenge.id);
+        if (completeError) throw completeError;
+        
+        // Track completion for gamification
+        if (challenge.initiator_id) {
+          trackCouplesChallengeCompletion(challenge.initiator_id, challenge.id, 100);
+        }
+        if (challenge.partner_id) {
+          trackCouplesChallengeCompletion(challenge.partner_id, challenge.id, 100);
+        }
+
+        toast({
+          title: "Challenge Complete!",
+          description: "You've both answered all questions. Time to see the results!",
+        });
+        // Refresh data to show completion screen
+        loadChallenge();
+      } else {
+        toast({
+          title: "Responses Saved!",
+          description: "Your answers have been saved. Waiting for your partner.",
+        });
+      }
+    } catch (err) {
+      console.error("Error submitting responses:", err);
+      toast({
+        title: "Error",
+        description: "Failed to save your responses. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(inviteLink).then(() => {
-      setCopied(true);
-      toast.success("Link copied to clipboard!");
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
-  if (id) {
+  if (loading) {
     return (
-      <div className="min-h-screen p-6">
-        <div className="max-w-4xl mx-auto">
-          <Button variant="ghost" onClick={() => navigate("/dashboard")} className="mb-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Button>
-          <ChallengeInterface />
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error || !challenge || !template) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Error</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-destructive mb-4">{error}</p>
+            <Button onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const isInitiator = userId === challenge.initiator_id;
+  const progress = (Object.keys(responses).length / template.questions.length) * 100;
+
+  if (challenge.status === 'completed') {
+    return (
+      <div className="min-h-screen bg-background py-12 px-4">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <Card>
+            <CardHeader className="text-center">
+              <Heart className="w-12 h-12 mx-auto text-primary" />
+              <CardTitle className="text-3xl mt-4">Challenge Complete!</CardTitle>
+              <CardDescription>{template.title}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              {template.questions.map((question, index) => {
+                const questionResponses = (responses[String(index)] as { initiator_response?: string; partner_response?: string }) || {};
+                const initiatorResponse = questionResponses.initiator_response;
+                const partnerResponse = questionResponses.partner_response;
+
+                return (
+                  <div key={index}>
+                    <h3 className="font-semibold text-lg mb-4">
+                      {index + 1}. {question}
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Card className="bg-muted/50">
+                        <CardHeader>
+                          <CardTitle className="text-base">Your Answer</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-muted-foreground">
+                            {isInitiator ? initiatorResponse : partnerResponse}
+                          </p>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-muted/50">
+                        <CardHeader>
+                          <CardTitle className="text-base">Partner's Answer</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-muted-foreground">
+                            {isInitiator ? partnerResponse : initiatorResponse}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="text-center pt-4">
+                <Button onClick={() => navigate('/dashboard')}>
+                  Back to Dashboard
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <Card className="max-w-lg w-full glass-card">
-        <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold gradient-text">Couple's Challenge</CardTitle>
-          <CardDescription>
-            Connect with your partner on a deeper level.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-center space-y-6">
-          {!inviteLink ? (
-            <Button onClick={handleCreateChallenge} className="clay-button">Start a New Challenge</Button>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-muted-foreground">Share this link with your partner:</p>
-              <div className="flex items-center gap-2 p-2 rounded-lg glass">
-                <input
-                  type="text"
-                  readOnly
-                  value={inviteLink}
-                  className="bg-transparent w-full outline-none text-primary"
-                  aria-label="Couple's Challenge Invite Link"
-                />
-                <Button size="icon" variant="ghost" onClick={copyToClipboard}>
-                  {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                </Button>
+    <div className="min-h-screen bg-background py-12 px-4">
+      <div className="max-w-4xl mx-auto">
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle className="text-3xl">{template.title}</CardTitle>
+                <CardDescription>{template.description}</CardDescription>
               </div>
+              <Badge variant="secondary" className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Couples Challenge
+              </Badge>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <div className="pt-4">
+              <Progress value={progress} className="h-2" />
+              <p className="text-sm text-muted-foreground mt-2">
+                {Object.keys(responses).length} of {template.questions.length} questions answered.
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-8">
+            {template.questions.map((question, index) => {
+              const questionResponses = (responses[String(index)] as { initiator_response?: string; partner_response?: string }) || {};
+              const initiatorResponse = questionResponses.initiator_response;
+              const partnerResponse = questionResponses.partner_response;
+              const myResponse = isInitiator ? initiatorResponse : partnerResponse;
+              const partnerHasResponded = isInitiator ? !!partnerResponse : !!initiatorResponse;
+
+              return (
+                <div key={index}>
+                  <h3 className="font-semibold text-lg mb-2">
+                    {index + 1}. {question}
+                  </h3>
+                  <Textarea
+                    value={myResponse || ""}
+                    onChange={(e) => handleResponseChange(String(index), e.target.value)}
+                    placeholder="Your answer..."
+                    rows={4}
+                  />
+                  {!partnerHasResponded && (
+                    <Alert variant="default" className="mt-2">
+                      <Lock className="h-4 w-4" />
+                      <AlertDescription>
+                        Your partner hasn't answered this question yet. Your answers will be revealed to each other once you've both responded.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              );
+            })}
+            <div className="flex justify-end">
+              <Button onClick={handleSubmit} disabled={submitting}>
+                {submitting ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4 mr-2" />
+                )}
+                Save Responses
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

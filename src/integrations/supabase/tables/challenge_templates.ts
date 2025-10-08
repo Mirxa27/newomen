@@ -1,5 +1,5 @@
 export type ChallengeTemplates = {
-  Row: { [key: string]: any; id: string };
+  Row: { [key: string]: unknown; id: string };
   Insert: { [key: string]: unknown };
   Update: { [key: string]: unknown };
   Relationships: [];

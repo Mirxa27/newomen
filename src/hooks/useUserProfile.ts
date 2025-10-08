@@ -35,7 +35,7 @@ export function useUserProfile() {
       if (profileError || !profileData) {
         throw profileError || new Error('Profile not found');
       }
-      
+
       setProfile(profileData);
 
       const { data: thresholdsData, error: thresholdsError } = await supabase
@@ -73,7 +73,7 @@ export function useUserProfile() {
         .from('user_profiles')
         .update(updates)
         .eq('id', profile.id);
-      
+
       if (error) throw error;
 
       await loadProfile(); // Refresh data
@@ -101,7 +101,7 @@ export function useUserProfile() {
       if (uploadError) throw uploadError;
 
       const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
-      
+
       await updateProfile({ avatar_url: data.publicUrl });
 
     } catch (error) {
