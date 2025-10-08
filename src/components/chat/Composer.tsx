@@ -2,22 +2,26 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Mic, MicOff, Send, Phone, PhoneOff } from 'lucide-react';
+import { Mic, MicOff, Send, PhoneOff, Volume2, VolumeX } from 'lucide-react';
 
 interface ComposerProps {
   onSendText: (text: string) => void;
   onEndSession: () => void;
   isConnected: boolean;
-  isMuted: boolean;
-  onToggleMute: () => void;
+  isRecording: boolean;
+  onToggleRecording: () => void;
+  isSpeakerMuted: boolean;
+  onToggleSpeakerMute: () => void;
 }
 
 const Composer: React.FC<ComposerProps> = ({
   onSendText,
   onEndSession,
   isConnected,
-  isMuted,
-  onToggleMute,
+  isRecording,
+  onToggleRecording,
+  isSpeakerMuted,
+  onToggleSpeakerMute,
 }) => {
   const [text, setText] = useState('');
 
@@ -60,38 +64,49 @@ const Composer: React.FC<ComposerProps> = ({
       </div>
 
       {/* Controls */}
-      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+      <div className="flex items-center justify-between gap-2 sm:gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+            <Button
+                onClick={onToggleSpeakerMute}
+                variant="secondary"
+                size="icon"
+                disabled={!isConnected}
+                aria-label={isSpeakerMuted ? 'Unmute speaker' : 'Mute speaker'}
+                className="h-11 w-11"
+            >
+                {isSpeakerMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+            </Button>
+            <Button
+                onClick={onEndSession}
+                variant="destructive"
+                size="default"
+                disabled={!isConnected}
+                className="gap-2 min-h-[44px]"
+                aria-label="End conversation"
+            >
+                <PhoneOff className="h-5 w-5" />
+                <span className="hidden sm:inline">End Call</span>
+            </Button>
+        </div>
+        
         <Button
-          onClick={onToggleMute}
-          variant={isMuted ? 'destructive' : 'secondary'}
-          size="default"
-          disabled={!isConnected}
-          className="flex-1 sm:flex-none gap-2 min-h-[44px]"
-          aria-label={isMuted ? 'Unmute microphone' : 'Mute microphone'}
+            onClick={onToggleRecording}
+            size="lg"
+            disabled={!isConnected}
+            className={`gap-2 min-h-[44px] rounded-full px-6 transition-all duration-300 ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-primary hover:bg-primary/90'}`}
+            aria-label={isRecording ? 'Stop recording' : 'Start recording'}
         >
-          {isMuted ? (
-            <>
-              <MicOff className="h-5 w-5" />
-              <span className="hidden sm:inline">Unmute</span>
-            </>
-          ) : (
-            <>
-              <Mic className="h-5 w-5" />
-              <span className="hidden sm:inline">Mute</span>
-            </>
-          )}
-        </Button>
-
-        <Button
-          onClick={onEndSession}
-          variant="destructive"
-          size="default"
-          disabled={!isConnected}
-          className="flex-1 sm:flex-none gap-2 min-h-[44px]"
-          aria-label="End conversation"
-        >
-          <PhoneOff className="h-5 w-5" />
-          <span className="hidden sm:inline">End Call</span>
+            {isRecording ? (
+                <>
+                    <MicOff className="h-5 w-5" />
+                    <span>Stop</span>
+                </>
+            ) : (
+                <>
+                    <Mic className="h-5 w-5" />
+                    <span>Speak</span>
+                </>
+            )}
         </Button>
       </div>
     </div>

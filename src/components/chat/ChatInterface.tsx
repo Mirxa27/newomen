@@ -10,27 +10,31 @@ import type { Message } from "@/hooks/useChat";
 interface ChatInterfaceProps {
   isConnected: boolean;
   isSpeaking: boolean;
-  isMuted: boolean;
+  isRecording: boolean;
+  isSpeakerMuted: boolean;
   messages: Message[];
   partialTranscript: string;
   duration: number;
   audioLevel: number;
   endConversation: () => void;
   handleSendText: (text: string) => void;
-  toggleMute: () => void;
+  toggleRecording: () => void;
+  toggleSpeakerMute: () => void;
 }
 
 export const ChatInterface = ({
   isConnected,
   isSpeaking,
-  isMuted,
+  isRecording,
+  isSpeakerMuted,
   messages,
   partialTranscript,
   duration,
   audioLevel,
   endConversation,
   handleSendText,
-  toggleMute,
+  toggleRecording,
+  toggleSpeakerMute,
 }: ChatInterfaceProps) => {
   const navigate = useNavigate();
 
@@ -74,8 +78,10 @@ export const ChatInterface = ({
               onSendText={handleSendText}
               onEndSession={endConversation}
               isConnected={isConnected}
-              isMuted={isMuted}
-              onToggleMute={toggleMute}
+              isRecording={isRecording}
+              onToggleRecording={toggleRecording}
+              isSpeakerMuted={isSpeakerMuted}
+              onToggleSpeakerMute={toggleSpeakerMute}
             />
           </div>
         </main>

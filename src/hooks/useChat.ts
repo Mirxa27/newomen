@@ -53,7 +53,8 @@ export function useChat() {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [partialTranscript, setPartialTranscript] = useState("");
   const [duration, setDuration] = useState(0);
@@ -156,8 +157,9 @@ export function useChat() {
       }
 
       chatRef.current = new RealtimeChat(handleMessage, chatOptions);
-      await chatRef.current.init();
+      await chatRef.current.init(true); // Start with recorder paused
       setIsConnected(true);
+      setIsRecording(false); // User is not recording by default
 
       if (durationInterval.current) clearInterval(durationInterval.current);
       durationInterval.current = setInterval(() => setDuration(prev => prev + 1), 1000);
@@ -180,6 +182,7 @@ export function useChat() {
     chatRef.current?.disconnect();
     setIsConnected(false);
     setIsSpeaking(false);
+    setIsRecording(false);
     if (durationInterval.current) clearInterval(durationInterval.current);
 
     const activeConversationId = conversationIdRef.current;
@@ -208,7 +211,17 @@ export function useChat() {
     }
   }, [toast]);
 
-  const toggleMute = useCallback(() => setIsMuted(prev => !prev), []);
+  const toggleRecording = useCallback(() => {
+    const newRecordingState = !isRecording;
+    chatRef.current?.toggleRecording(newRecordingState);
+    setIsRecording(newRecordingState);
+  }, [isRecording]);
+
+  const toggleSpeakerMute = useCallback(() => {
+    const newMuteState = !isSpeakerMuted;
+    chatRef.current?.toggleSpeakerMute(newMuteState);
+    setIsSpeakerMuted(newMuteState);
+  }, [isSpeakerMuted]);
 
   useEffect(() => {
     return () => {
@@ -221,7 +234,8 @@ export function useChat() {
     isConnected,
     isConnecting,
     isSpeaking,
-    isMuted,
+    isRecording,
+    isSpeakerMuted,
     messages,
     partialTranscript,
     duration,
@@ -229,7 +243,8 @@ export function useChat() {
     startConversation,
     endConversation,
     handleSendText,
-    toggleMute,
+    toggleRecording,
+    toggleSpeakerMute,
     navigate,
   };
 }

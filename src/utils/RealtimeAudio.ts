@@ -17,11 +17,13 @@ export class AudioRecorder {
   private audioContext: AudioContext | null = null;
   private processor: ScriptProcessorNode | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
+  private isPaused = false;
 
   constructor(private onAudioData: (audioData: Float32Array) => void) {}
 
-  async start() {
+  async start(startPaused = false) {
     try {
+      this.isPaused = startPaused;
       console.log('AudioRecorder: Requesting microphone permissions...');
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -43,6 +45,7 @@ export class AudioRecorder {
       this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
 
       this.processor.onaudioprocess = (e) => {
+        if (this.isPaused) return;
         const inputData = e.inputBuffer.getChannelData(0);
         this.onAudioData(new Float32Array(inputData));
       };
@@ -74,6 +77,16 @@ export class AudioRecorder {
       this.audioContext = null;
     }
   }
+
+  pause() {
+    this.isPaused = true;
+    console.log('AudioRecorder: Paused');
+  }
+
+  resume() {
+    this.isPaused = false;
+    console.log('AudioRecorder: Resumed');
+  }
 }
 
 export class RealtimeChat {
@@ -82,6 +95,7 @@ export class RealtimeChat {
   private audioEl: HTMLAudioElement;
   private recorder: AudioRecorder | null = null;
   private options: RealtimeChatOptions;
+  private isRecording = false;
 
   constructor(
     private onMessage: (message: unknown) => void,
@@ -96,7 +110,7 @@ export class RealtimeChat {
     };
   }
 
-  async init() {
+  async init(startPaused = false) {
     try {
       console.log('Requesting ephemeral token...');
       const requestBody = Object.fromEntries(
@@ -200,13 +214,29 @@ export class RealtimeChat {
           this.options.onAudioLevel(Math.min(rms * 10, 1));
         }
       });
-      await this.recorder.start();
-      console.log('Audio recording started successfully');
+      await this.recorder.start(startPaused);
+      this.isRecording = !startPaused;
+      console.log(`Audio recording started ${startPaused ? 'in paused state' : 'successfully'}`);
 
     } catch (error) {
       console.error("Error initializing chat:", error);
       throw error;
     }
+  }
+
+  toggleRecording(forceState?: boolean) {
+    const shouldBeRecording = forceState ?? !this.isRecording;
+    if (shouldBeRecording) {
+      this.recorder?.resume();
+    } else {
+      this.recorder?.pause();
+    }
+    this.isRecording = shouldBeRecording;
+  }
+
+  toggleSpeakerMute(forceState?: boolean) {
+    const shouldBeMuted = forceState ?? !this.audioEl.muted;
+    this.audioEl.muted = shouldBeMuted;
   }
 
   updateOptions(options: Partial<RealtimeChatOptions>) {
