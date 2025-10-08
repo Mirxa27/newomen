@@ -18,10 +18,20 @@ type Model = { id: string; display_name: string };
 type UseCase = { id: string; name: string };
 type Behavior = { id: string; name: string };
 
+// Enhanced types for relations
+type AssessmentWithConfig = Assessment & {
+  ai_configurations: { name: string } | null;
+};
+
+type AttemptWithRelations = AssessmentAttempt & {
+  assessments_enhanced: { title: string } | null;
+  user_profiles: { nickname: string | null } | null;
+};
+
 export default function AIAssessmentManagement() {
   const [configs, setConfigs] = useState<AIConfiguration[]>([]);
-  const [assessments, setAssessments] = useState<Assessment[]>([]);
-  const [attempts, setAttempts] = useState<AssessmentAttempt[]>([]);
+  const [assessments, setAssessments] = useState<AssessmentWithConfig[]>([]);
+  const [attempts, setAttempts] = useState<AttemptWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formType, setFormType] = useState<"config" | "assessment">("config");
@@ -46,7 +56,7 @@ export default function AIAssessmentManagement() {
         behaviorsData,
       ] = await Promise.all([
         supabase.from("ai_configurations").select("*"),
-        supabase.from("assessments_enhanced").select("*, ai_configurations(name)"), // This join might still cause deep instantiation
+        supabase.from("assessments_enhanced").select("*, ai_configurations(name)"),
         supabase.from("assessment_attempts").select("*, assessments_enhanced(title), user_profiles(nickname)"),
         supabase.from("providers").select("id, name"),
         supabase.from("models").select("id, display_name"),
@@ -62,9 +72,9 @@ export default function AIAssessmentManagement() {
       if (useCasesData.error) throw useCasesData.error;
       if (behaviorsData.error) throw behaviorsData.error;
 
-      setConfigs((configsData.data as AIConfiguration[]) || []);
-      setAssessments((assessmentsData.data as any[]) || []);
-      setAttempts((assessmentAttemptsData.data as any[]) || []);
+      setConfigs(configsData.data || []);
+      setAssessments((assessmentsData.data as unknown as AssessmentWithConfig[]) || []);
+      setAttempts((assessmentAttemptsData.data as unknown as AttemptWithRelations[]) || []);
       setProviders(providersData.data || []);
       setModels(modelsData.data || []);
       setUseCases(useCasesData.data || []);
@@ -192,7 +202,7 @@ export default function AIAssessmentManagement() {
                     <TableRow key={assessment.id}>
                       <TableCell>{assessment.title}</TableCell>
                       <TableCell>{assessment.category}</TableCell>
-                      <TableCell>{(assessment as any).ai_configurations?.name}</TableCell>
+                      <TableCell>{assessment.ai_configurations?.name}</TableCell>
                       <TableCell>{assessment.is_public ? "Yes" : "No"}</TableCell>
                       <TableCell>
                         <Button variant="ghost" size="icon"><Edit className="w-4 h-4" /></Button>
