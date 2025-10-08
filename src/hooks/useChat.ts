@@ -16,7 +16,7 @@ export interface Message {
 }
 
 interface ChatEvent {
-  type: string;
+  type: 'response.text.delta' | 'response.text.done' | 'response.audio.started' | 'response.audio.ended' | 'response.audio_transcript.delta' | 'response.audio_transcript.done' | 'conversation.item.input_audio_transcription.completed' | 'error';
   delta?: string;
   transcript?: string;
   item?: { id: string; status: string };
@@ -65,30 +65,45 @@ export function useChat() {
   const { toast } = useToast();
 
   const handleMessage = useCallback((event: ChatEvent) => {
-    console.log('Event type:', event.type);
+    console.log('Event from AI:', event.type);
 
-    if (event.type === 'response.audio_transcript.delta') {
-      setPartialTranscript(prev => prev + (event.delta || ''));
-      setIsSpeaking(true);
-    } else if (event.type === 'response.audio_transcript.done') {
-      if (event.transcript) {
-        setMessages(prev => [...prev, { role: 'assistant', content: event.transcript!, timestamp: new Date() }]);
-        if (conversationIdRef.current) {
-          void newMeMemoryService.addMessage({ conversation_id: conversationIdRef.current, role: 'assistant', content: event.transcript });
+    switch (event.type) {
+      case 'response.text.delta':
+        setPartialTranscript(prev => prev + (event.delta || ''));
+        break;
+      
+      case 'response.audio.started':
+        setIsSpeaking(true);
+        break;
+
+      case 'response.audio.ended':
+        setIsSpeaking(false);
+        // Final message is handled by audio_transcript.done to ensure sync
+        break;
+
+      case 'response.audio_transcript.done':
+        if (event.transcript) {
+          setMessages(prev => [...prev, { role: 'assistant', content: event.transcript!, timestamp: new Date() }]);
+          if (conversationIdRef.current) {
+            void newMeMemoryService.addMessage({ conversation_id: conversationIdRef.current, role: 'assistant', content: event.transcript });
+          }
         }
-      }
-      setPartialTranscript("");
-      setIsSpeaking(false);
-    } else if (event.type === 'conversation.item.input_audio_transcription.completed') {
-      if (event.transcript) {
-        setMessages(prev => [...prev, { role: 'user', content: event.transcript!, timestamp: new Date() }]);
-        if (conversationIdRef.current) {
-          void newMeMemoryService.addMessage({ conversation_id: conversationIdRef.current, role: 'user', content: event.transcript });
+        setPartialTranscript(""); // Clear partial transcript after final message
+        break;
+
+      case 'conversation.item.input_audio_transcription.completed':
+        if (event.transcript) {
+          setMessages(prev => [...prev, { role: 'user', content: event.transcript!, timestamp: new Date() }]);
+          if (conversationIdRef.current) {
+            void newMeMemoryService.addMessage({ conversation_id: conversationIdRef.current, role: 'user', content: event.transcript });
+          }
         }
-      }
-    } else if (event.type === 'error') {
-      console.error('OpenAI error:', event);
-      toast({ title: "Error", description: event.error?.message || "An error occurred", variant: "destructive" });
+        break;
+
+      case 'error':
+        console.error('OpenAI error:', event);
+        toast({ title: "Error", description: event.error?.message || "An error occurred", variant: "destructive" });
+        break;
     }
   }, [toast]);
 

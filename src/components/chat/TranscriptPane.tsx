@@ -31,7 +31,7 @@ const TranscriptPane: React.FC<TranscriptPaneProps> = (props) => {
 
   if (messages.length === 0 && !partialTranscript) {
     return (
-  <div className="flex-1 glass flex items-center justify-center p-4 sm:p-6 md:p-8">
+  <div className="flex-1 glass flex items-center justify-center p-4 sm:p-6 md:p-8 min-h-0">
         <div className="text-center space-y-4 max-w-md">
           <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
             <Bot className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
@@ -49,7 +49,7 @@ const TranscriptPane: React.FC<TranscriptPaneProps> = (props) => {
 
   return (
     <div
-      className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 scroll-smooth"
+      className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 scroll-smooth min-h-0"
       aria-live="polite"
       aria-atomic="false"
     >

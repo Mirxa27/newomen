@@ -35,7 +35,7 @@ export const ChatInterface = ({
   const navigate = useNavigate();
 
   return (
-    <div className="app-page-shell h-screen flex flex-col">
+    <div className="app-page-shell h-dvh flex flex-col">
       {/* Header */}
       <header className="flex-shrink-0 glass p-3 sm:p-4 border-b border-white/10 sticky top-0 z-10">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
@@ -60,9 +60,9 @@ export const ChatInterface = ({
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0 max-w-7xl mx-auto w-full p-4 gap-4">
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0 max-w-7xl mx-auto w-full p-2 sm:p-4 gap-2 sm:gap-4">
         {/* Chat Area */}
-        <main className="flex-1 flex flex-col min-h-0 gap-4">
+        <main className="flex-1 flex flex-col min-h-0 gap-2 sm:gap-4">
           <div className="flex-1 glass rounded-3xl border border-white/10 flex flex-col overflow-hidden">
             <TranscriptPane messages={messages} partialTranscript={partialTranscript} />
           </div>

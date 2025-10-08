@@ -60,7 +60,7 @@ const Composer: React.FC<ComposerProps> = ({
       </div>
 
       {/* Controls */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
         <Button
           onClick={onToggleMute}
           variant={isMuted ? 'destructive' : 'secondary'}
