@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import type { Assessment } from "@/types/assessment-optimized";
 import { assessmentServiceOptimized } from "@/services/AssessmentServiceOptimized";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UserStats {
   total_assessments_completed: number;
@@ -30,20 +31,27 @@ export default function AssessmentsOptimized() {
     }
 
     try {
-      // Use optimized service to prevent type instantiation issues
-      const data = await assessmentServiceOptimized.getPublicAssessments({
-        // Add filters if needed
-      });
+      const [assessmentsData, statsResult] = await Promise.all([
+        assessmentServiceOptimized.getPublicAssessments(),
+        supabase
+          .from("user_assessment_stats")
+          .select("total_assessments_completed, average_assessment_score, current_streak")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+      ]);
 
-      setAssessments(data);
+      setAssessments(assessmentsData);
 
-      // NOTE: 'user_assessment_stats' table does not exist. Stats are mocked.
+      if (statsResult.error && statsResult.error.code !== "PGRST116") {
+        throw statsResult.error;
+      }
+
+      const stats = statsResult.data;
       setUserStats({
-        total_assessments_completed: 5,
-        average_assessment_score: 88,
-        current_streak: 3,
+        total_assessments_completed: stats?.total_assessments_completed ?? 0,
+        average_assessment_score: stats?.average_assessment_score ?? 0,
+        current_streak: stats?.current_streak ?? 0,
       });
-
     } catch (error) {
       console.error("Error loading assessments data:", error);
       toast.error("Failed to load assessments.");

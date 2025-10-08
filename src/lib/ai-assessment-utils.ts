@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
+import { aiService } from "@/services/ai/aiService";
+import type { AssessmentSubmission as AIServiceSubmission, AssessmentAnswers } from "@/types/ai-types";
 
 export interface AssessmentQuestion {
   id: string;
@@ -15,6 +17,8 @@ export interface AssessmentSubmission {
   user_id: string;
   responses: Record<string, unknown>;
   time_spent_minutes: number;
+  attempt_id?: string;
+  attempt_number?: number;
 }
 
 export interface AIAnalysisResult {
@@ -27,14 +31,6 @@ export interface AIAnalysisResult {
   areas_for_improvement: string[];
 }
 
-export interface EvaluationCriteria {
-  scoring_rubric?: string;
-  criteria?: string[];
-  weight?: Record<string, number>;
-  [key: string]: unknown;
-}
-
-
 export interface Assessment {
   id?: string;
   title: string;
@@ -45,12 +41,6 @@ export interface Assessment {
   difficulty_level?: string | null;
   max_attempts?: number | null;
   ai_config_id?: string | null;
-  [key: string]: unknown;
-}
-
-export interface UserProfile {
-  id: string;
-  nickname?: string;
   [key: string]: unknown;
 }
 
@@ -70,56 +60,6 @@ export interface AssessmentResults {
     type: string;
   };
   [key: string]: unknown;
-}
-
-export interface AIConfig {
-  id: string;
-  name: string;
-  provider_id: string;
-  model_id: string;
-  use_case_id: string;
-  behavior_id?: string;
-  temperature: number;
-  max_tokens: number;
-  system_prompt: string;
-  evaluation_criteria: EvaluationCriteria;
-  fallback_message: string;
-  is_active: boolean;
-}
-
-/**
- * Get AI configuration for a specific assessment
- */
-export async function getAIConfigForAssessment(assessmentId: string): Promise<AIConfig | null> {
-  try {
-    const result = await supabase
-      .from("assessments_enhanced")
-      .select(`
-        ai_assessment_configs (
-          id,
-          name,
-          provider_id,
-          model_id,
-          use_case_id,
-          behavior_id,
-          temperature,
-          max_tokens,
-          system_prompt,
-          evaluation_criteria,
-          fallback_message,
-          is_active
-        )
-      `)
-      .eq("id", assessmentId)
-      .eq("is_active", true)
-      .single();
-
-    if (result.error) throw result.error;
-    return result.data?.ai_assessment_configs as unknown as AIConfig;
-  } catch (error) {
-    console.error("Error fetching AI config:", error);
-    return null;
-  }
 }
 
 /**
@@ -164,94 +104,113 @@ export async function processAssessmentWithAI(
   submission: AssessmentSubmission
 ): Promise<AIAnalysisResult | null> {
   try {
-    // Get AI configuration
-    const aiConfig = await getAIConfigForAssessment(assessmentId);
-    if (!aiConfig) {
-      throw new Error("No AI configuration found for this assessment");
+    const runtimeConfig = await aiService.configService.getConfigurationForService(
+      "assessment_scoring",
+      assessmentId
+    );
+
+    if (!runtimeConfig) {
+      throw new Error("No active AI configuration available for this assessment");
     }
 
-    // Check rate limits
-    const withinRateLimit = await checkAIRateLimit(submission.user_id, "openai");
+    const providerName = runtimeConfig.provider ?? "openai";
+    const withinRateLimit = await checkAIRateLimit(submission.user_id, providerName);
     if (!withinRateLimit) {
       throw new Error("Rate limit exceeded. Please try again later.");
     }
 
-    // Get assessment details
-    const assessmentResult = await supabase
+    const { data: assessmentRow, error: assessmentError } = await supabase
       .from("assessments_enhanced")
-      .select("title, questions, scoring_rubric")
+      .select("passing_score")
       .eq("id", assessmentId)
       .single();
 
-    if (assessmentResult.error) throw assessmentResult.error;
+    if (assessmentError) throw assessmentError;
 
-    const assessmentData = assessmentResult.data as Record<string, unknown>;
-
-    // Convert Json questions to AssessmentQuestion array
-    const questions = Array.isArray(assessmentData.questions)
-      ? assessmentData.questions as AssessmentQuestion[]
-      : [];
-
-    // Get user profile for context
-    const userProfileResult = await supabase
-      .from("user_profiles")
-      .select("nickname, email")
-      .eq("user_id", submission.user_id)
-      .single();
-
-    if (userProfileResult.error) throw userProfileResult.error;
-
-    const userProfile = {
-      id: submission.user_id,
-      nickname: userProfileResult.data?.nickname || 'User'
+    const aiSubmission: AIServiceSubmission = {
+      assessment_id: assessmentId,
+      user_id: submission.user_id,
+      answers: submission.responses as AssessmentAnswers,
     };
 
-    // Prepare AI prompt
-    const assessmentInput = {
-      ...assessmentData,
-      questions,
-      title: assessmentData.title as string
-    } as Assessment;
-    const aiPrompt = prepareAIAssessmentPrompt(
-      assessmentInput,
-      submission.responses,
-      userProfile,
-      aiConfig
-    );
+    const aiResponse = await aiService.generateAssessmentResult(aiSubmission, runtimeConfig.id);
 
-    // Call AI provider
-    const aiResponse = await callAIProvider(aiConfig, aiPrompt);
+    if (!aiResponse.success || !aiResponse.content) {
+      throw new Error(aiResponse.error ?? "AI analysis did not return a response");
+    }
 
-    // Parse AI response
-    const analysisResult = parseAIResponse(aiResponse);
+    const analysisResult = parseAIResponse(aiResponse.content);
 
-    // Log AI usage
+    if (submission.attempt_id) {
+      await supabase
+        .from("assessment_attempts")
+        .update({
+          ai_analysis: analysisResult as unknown as Json,
+          ai_score: analysisResult.score,
+          ai_feedback: analysisResult.feedback,
+          is_ai_processed: true,
+          ai_processing_error: null,
+        })
+        .eq("id", submission.attempt_id);
+    }
+
+    const passingScore = assessmentRow?.passing_score ?? 70;
+
+    await supabase
+      .from("assessment_results")
+      .upsert(
+        {
+          assessment_id: assessmentId,
+          user_id: submission.user_id,
+          answers: submission.responses as unknown as Json,
+          raw_score: analysisResult.score,
+          percentage_score: analysisResult.score,
+          ai_feedback: analysisResult.feedback,
+          ai_insights: analysisResult.insights as unknown as Json,
+          ai_recommendations: analysisResult.recommendations.join("\n"),
+          strengths_identified: analysisResult.strengths as unknown as Json,
+          areas_for_improvement: analysisResult.areas_for_improvement as unknown as Json,
+          detailed_explanations: analysisResult.explanation
+            ? ({ explanation: analysisResult.explanation } as Json)
+            : null,
+          processing_time_ms: aiResponse.processing_time_ms,
+          ai_model_used: runtimeConfig.model,
+          attempt_number: submission.attempt_number ?? 1,
+          is_passed: analysisResult.score >= passingScore,
+        },
+        { onConflict: "assessment_id,user_id,attempt_number" }
+      );
+
+    if (submission.attempt_id) {
+      await updateUserProgress(submission.user_id, assessmentId, analysisResult.score, submission.attempt_id);
+    }
+
     await logAIUsage({
       user_id: submission.user_id,
       assessment_id: assessmentId,
-      ai_config_id: aiConfig.id,
-      provider_name: "openai",
-      model_name: "gpt-4",
-      tokens_used: estimateTokens(aiPrompt + aiResponse),
-      cost_usd: calculateCost(estimateTokens(aiPrompt + aiResponse)),
-      processing_time_ms: 0, // This would be measured in real implementation
-      success: true
+      attempt_id: submission.attempt_id ?? null,
+      ai_config_id: runtimeConfig.id,
+      provider_name: runtimeConfig.provider,
+      model_name: runtimeConfig.model,
+      tokens_used: aiResponse.usage?.total_tokens ?? 0,
+      cost_usd: aiResponse.cost_usd ?? 0,
+      processing_time_ms: aiResponse.processing_time_ms,
+      success: true,
     });
 
-    // Increment rate limit
-    await incrementAIRateLimit(submission.user_id, "openai");
+    await incrementAIRateLimit(submission.user_id, providerName);
 
     return analysisResult;
   } catch (error) {
     console.error("Error processing assessment with AI:", error);
 
-    // Log failed AI usage
     await logAIUsage({
       user_id: submission.user_id,
       assessment_id: assessmentId,
+      attempt_id: submission.attempt_id ?? null,
       ai_config_id: null,
       provider_name: "openai",
-      model_name: "gpt-4",
+      model_name: "unknown",
       tokens_used: 0,
       cost_usd: 0,
       processing_time_ms: 0,
@@ -261,76 +220,6 @@ export async function processAssessmentWithAI(
 
     return null;
   }
-}
-
-/**
- * Prepare AI prompt for assessment analysis
- */
-function prepareAIAssessmentPrompt(
-  assessment: Assessment,
-  responses: Record<string, unknown>,
-  userProfile: UserProfile,
-  aiConfig: AIConfig
-): string {
-  const questions = assessment.questions || [];
-  const scoringRubric = assessment.scoring_rubric || {};
-
-  let prompt = `${aiConfig.system_prompt}\n\n`;
-  prompt += `Assessment: ${assessment.title}\n`;
-  prompt += `User: ${userProfile.nickname}\n\n`;
-  prompt += `Questions and Responses:\n`;
-
-  questions.forEach((question: AssessmentQuestion, index: number) => {
-    prompt += `${index + 1}. ${question.question}\n`;
-    prompt += `Response: ${responses[question.id] || 'No response'}\n\n`;
-  });
-
-  prompt += `Scoring Criteria: ${JSON.stringify(scoringRubric)}\n\n`;
-  prompt += `Please provide a comprehensive analysis including:\n`;
-  prompt += `1. Overall score (0-100)\n`;
-  prompt += `2. Detailed feedback\n`;
-  prompt += `3. Explanation of scoring\n`;
-  prompt += `4. Key insights\n`;
-  prompt += `5. Recommendations\n`;
-  prompt += `6. Strengths identified\n`;
-  prompt += `7. Areas for improvement\n\n`;
-  prompt += `Format your response as JSON with the following structure:\n`;
-  prompt += `{"score": number, "feedback": "string", "explanation": "string", "insights": ["string"], "recommendations": ["string"], "strengths": ["string"], "areas_for_improvement": ["string"]}`;
-
-  return prompt;
-}
-
-/**
- * Call AI provider with the prepared prompt
- */
-async function callAIProvider(aiConfig: AIConfig, prompt: string): Promise<string> {
-  // This would integrate with the AI provider system we created earlier
-  // For now, we'll simulate an AI response
-  return JSON.stringify({
-    score: Math.floor(Math.random() * 40) + 60, // 60-100
-    feedback: "Based on your responses, you show strong self-awareness and emotional intelligence. Your answers demonstrate good understanding of personal growth principles.",
-    explanation: "Your responses indicate a balanced approach to personal development with particular strength in emotional regulation and interpersonal skills.",
-    insights: [
-      "High emotional intelligence",
-      "Strong self-reflection skills",
-      "Good interpersonal awareness"
-    ],
-    recommendations: [
-      "Continue developing emotional regulation techniques",
-      "Practice active listening in relationships",
-      "Set specific personal growth goals"
-    ],
-    strengths: [
-      "Self-awareness",
-      "Empathy",
-      "Communication skills"
-    ],
-    areas_for_improvement: [
-      "Stress management",
-      "Boundary setting",
-      "Conflict resolution"
-    ]
-  });
 }
 
 /**
@@ -368,6 +257,7 @@ function parseAIResponse(response: string): AIAnalysisResult {
 async function logAIUsage(logData: {
   user_id: string;
   assessment_id: string;
+  attempt_id: string | null;
   ai_config_id: string | null;
   provider_name: string;
   model_name: string;
@@ -383,7 +273,7 @@ async function logAIUsage(logData: {
       .insert({
         user_id: logData.user_id,
         assessment_id: logData.assessment_id,
-        attempt_id: null, // This would be set when we have the attempt ID
+        attempt_id: logData.attempt_id,
         ai_config_id: logData.ai_config_id,
         provider_name: logData.provider_name,
         model_name: logData.model_name,
@@ -398,23 +288,6 @@ async function logAIUsage(logData: {
   } catch (error) {
     console.error("Error logging AI usage:", error);
   }
-}
-
-/**
- * Estimate token count for cost calculation
- */
-function estimateTokens(text: string): number {
-  // Rough estimation: 1 token ≈ 4 characters for English text
-  return Math.ceil(text.length / 4);
-}
-
-/**
- * Calculate cost based on token usage
- */
-function calculateCost(tokens: number): number {
-  // GPT-4 pricing: $0.03 per 1K tokens for input, $0.06 per 1K tokens for output
-  // This is a simplified calculation
-  return (tokens / 1000) * 0.03;
 }
 
 /**
@@ -446,7 +319,7 @@ export async function createAssessmentAttempt(
         user_id: userId,
         attempt_number: attemptNumber,
         status: 'in_progress',
-        raw_responses: {}
+        raw_responses: {} as Json
       })
       .select("id")
       .single();
@@ -568,7 +441,7 @@ export async function updateUserProgress(
         .update({
           best_score: isNewBestScore ? score : currentProgress.best_score,
           best_attempt_id: isNewBestScore ? attemptId : currentProgress.best_attempt_id,
-          total_attempts: currentProgress.total_attempts + 1,
+          total_attempts: (currentProgress.total_attempts ?? 0) + 1,
           last_attempt_at: new Date().toISOString(),
           is_completed: score >= 70 || currentProgress.is_completed,
           completion_date: score >= 70 && !currentProgress.is_completed ? new Date().toISOString() : currentProgress.completion_date

@@ -22,9 +22,10 @@ CREATE POLICY "Admins can view API configurations"
   TO authenticated
   USING (
     EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-      AND profiles.role = 'admin'
+      SELECT 1
+      FROM user_profiles
+      WHERE (user_profiles.user_id = auth.uid() OR user_profiles.id = auth.uid())
+        AND user_profiles.role IN ('admin', 'ADMIN')
     )
   );
 
@@ -34,9 +35,10 @@ CREATE POLICY "Admins can insert API configurations"
   TO authenticated
   WITH CHECK (
     EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-      AND profiles.role = 'admin'
+      SELECT 1
+      FROM user_profiles
+      WHERE (user_profiles.user_id = auth.uid() OR user_profiles.id = auth.uid())
+        AND user_profiles.role IN ('admin', 'ADMIN')
     )
   );
 
@@ -46,16 +48,18 @@ CREATE POLICY "Admins can update API configurations"
   TO authenticated
   USING (
     EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-      AND profiles.role = 'admin'
+      SELECT 1
+      FROM user_profiles
+      WHERE (user_profiles.user_id = auth.uid() OR user_profiles.id = auth.uid())
+        AND user_profiles.role IN ('admin', 'ADMIN')
     )
   )
   WITH CHECK (
     EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-      AND profiles.role = 'admin'
+      SELECT 1
+      FROM user_profiles
+      WHERE (user_profiles.user_id = auth.uid() OR user_profiles.id = auth.uid())
+        AND user_profiles.role IN ('admin', 'ADMIN')
     )
   );
 

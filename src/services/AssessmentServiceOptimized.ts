@@ -26,7 +26,7 @@ export class AssessmentServiceOptimized {
       // Use Supabase's query builder directly and let TypeScript infer the type
       let query: any = supabase
         .from(this.assessmentsTable)
-        .select("id, title, type, category, description, status, is_public, created_at, updated_at, questions, scoring_logic, outcome_descriptions");
+        .select("id, title, type, category, description, status, is_public, difficulty_level, time_limit_minutes, max_attempts, created_at, updated_at, questions, scoring_logic, outcome_descriptions");
 
       // Apply filters
       if (filters?.is_public !== undefined) {
@@ -71,6 +71,9 @@ export class AssessmentServiceOptimized {
           description,
           status,
           is_public,
+          difficulty_level,
+          time_limit_minutes,
+          max_attempts,
           created_at,
           updated_at,
           questions,

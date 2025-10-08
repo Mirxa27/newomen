@@ -8,7 +8,6 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ArrowLeft, Brain, Clock, Target, Trophy, BookOpen, Star, TrendingUp, Award } from "lucide-react";
-import { aiService } from "@/services/ai/aiService";
 
 interface Assessment {
   id: string;
@@ -20,32 +19,6 @@ interface Assessment {
   time_limit_minutes: number;
   is_public: boolean;
   is_active: boolean;
-}
-
-interface Quiz {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  difficulty_level: string;
-  time_limit_minutes?: number;
-  is_public: boolean;
-  is_active: boolean;
-}
-
-interface Challenge {
-  id: string;
-  title: string;
-  description: string;
-  challenge_type: string;
-  category: string;
-  difficulty_level: string;
-  duration_days: number;
-  reward_crystals: number;
-  is_public: boolean;
-  is_active: boolean;
-  start_date?: string;
-  end_date?: string;
 }
 
 interface UserStats {
@@ -63,8 +36,6 @@ export default function AIAssessments() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-  const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [activeTab, setActiveTab] = useState("assessments");
 
@@ -76,138 +47,31 @@ export default function AIAssessments() {
         return;
       }
 
-      // Load assessments
-      let assessmentsData;
-      try {
-        const { data } = await supabase
+      const [
+        { data: assessmentRows, error: assessmentsError },
+        statsResult,
+      ] = await Promise.all([
+        supabase
           .from("assessments_enhanced")
           .select("*")
           .eq("is_public", true)
           .eq("is_active", true)
+          .eq("type", "assessment")
           .order("created_at", { ascending: false })
-          .limit(20);
-        assessmentsData = data;
-      } catch (error) {
-        console.warn("Assessments table not available yet, using sample data");
-        assessmentsData = [
-          {
-            id: "1",
-            title: "Personality Assessment",
-            description: "Discover your personality traits and behavioral patterns",
-            type: "personality",
-            category: "Self-Discovery",
-            difficulty_level: "medium",
-            time_limit_minutes: 15,
-            is_public: true,
-            is_active: true
-          },
-          {
-            id: "2",
-            title: "Emotional Intelligence Test",
-            description: "Evaluate your emotional awareness and social skills",
-            type: "emotional",
-            category: "Emotional Health",
-            difficulty_level: "medium",
-            time_limit_minutes: 20,
-            is_public: true,
-            is_active: true
-          }
-        ];
-      }
-      setAssessments(assessmentsData as Assessment[] || []);
-
-      // Load quizzes
-      let quizzesData;
-      try {
-        const { data } = await (supabase as any)
-          .from("quizzes")
-          .select("*")
-          .eq("is_public", true)
-          .eq("is_active", true)
-          .order("created_at", { ascending: false })
-          .limit(20);
-        quizzesData = data;
-      } catch (error) {
-        console.warn("Quizzes table not available yet, using sample data");
-        quizzesData = [
-          {
-            id: "1",
-            title: "Mindfulness Knowledge Quiz",
-            description: "Test your understanding of mindfulness concepts",
-            category: "Wellness",
-            difficulty_level: "easy",
-            time_limit_minutes: 10,
-            is_public: true,
-            is_active: true
-          },
-          {
-            id: "2",
-            title: "Psychology Fundamentals",
-            description: "Basic concepts in psychology and human behavior",
-            category: "Psychology",
-            difficulty_level: "medium",
-            time_limit_minutes: 15,
-            is_public: true,
-            is_active: true
-          }
-        ];
-      }
-      setQuizzes(quizzesData || []);
-
-      // Load challenges
-      let challengesData;
-      try {
-        const { data } = await (supabase as any)
-          .from("challenges")
-          .select("*")
-          .eq("is_public", true)
-          .eq("is_active", true)
-          .order("created_at", { ascending: false })
-          .limit(20);
-        challengesData = data;
-      } catch (error) {
-        console.warn("Challenges table not available yet, using sample data");
-        challengesData = [
-          {
-            id: "1",
-            title: "7-Day Mindfulness Challenge",
-            description: "Build a daily mindfulness practice over one week",
-            challenge_type: "habit_formation",
-            category: "Wellness",
-            difficulty_level: "easy",
-            duration_days: 7,
-            reward_crystals: 50,
-            is_public: true,
-            is_active: true
-          },
-          {
-            id: "2",
-            title: "Gratitude Journal Challenge",
-            description: "Write down three things you're grateful for each day",
-            challenge_type: "daily",
-            category: "Personal Growth",
-            difficulty_level: "easy",
-            duration_days: 30,
-            reward_crystals: 100,
-            is_public: true,
-            is_active: true
-          }
-        ];
-      }
-      setChallenges(challengesData || []);
-
-      // Load user stats
-      let statsData;
-      try {
-        const { data } = await (supabase as any)
+          .limit(20),
+        supabase
           .from("user_assessment_stats")
           .select("*")
           .eq("user_id", user.id)
-          .single();
-        statsData = data;
-      } catch (error) {
-        console.warn("User assessment stats not available yet");
-        statsData = {
+          .maybeSingle(),
+      ]);
+
+      if (assessmentsError) throw assessmentsError;
+      if (statsResult.error && statsResult.error.code !== "PGRST116") throw statsResult.error;
+
+      setAssessments((assessmentRows ?? []) as Assessment[]);
+      setUserStats(
+        statsResult.data ?? {
           total_assessments_completed: 0,
           total_quizzes_completed: 0,
           total_challenges_completed: 0,
@@ -215,10 +79,9 @@ export default function AIAssessments() {
           average_quiz_score: 0,
           current_streak: 0,
           longest_streak: 0,
-          total_ai_interactions: 0
-        };
-      }
-      setUserStats(statsData);
+          total_ai_interactions: 0,
+        }
+      );
 
     } catch (error) {
       console.error("Error loading data:", error);
@@ -234,14 +97,6 @@ export default function AIAssessments() {
 
   const startAssessment = (assessment: Assessment) => {
     navigate(`/assessment/${assessment.id}`);
-  };
-
-  const startQuiz = (quiz: Quiz) => {
-    navigate(`/quiz/${quiz.id}`);
-  };
-
-  const joinChallenge = (challenge: Challenge) => {
-    navigate(`/challenge/${challenge.id}`);
   };
 
   const getDifficultyColor = (level: string) => {
@@ -343,18 +198,10 @@ export default function AIAssessments() {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-1">
             <TabsTrigger value="assessments">
               <Brain className="w-4 h-4 mr-2" />
               Assessments
-            </TabsTrigger>
-            <TabsTrigger value="quizzes">
-              <Target className="w-4 h-4 mr-2" />
-              Quizzes
-            </TabsTrigger>
-            <TabsTrigger value="challenges">
-              <Trophy className="w-4 h-4 mr-2" />
-              Challenges
             </TabsTrigger>
           </TabsList>
 
@@ -405,118 +252,6 @@ export default function AIAssessments() {
                             className="w-full clay-button bg-gradient-to-r from-primary to-accent"
                           >
                             Start Assessment
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="quizzes" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Interactive Quizzes</CardTitle>
-                <CardDescription>
-                  Test your knowledge with AI-graded quizzes and instant feedback
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {quizzes.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Target className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                    <p>No quizzes available yet</p>
-                  </div>
-                ) : (
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {quizzes.map((quiz) => (
-                      <Card key={quiz.id} className="hover:shadow-lg transition-all cursor-pointer border-2 border-accent/20">
-                        <CardHeader>
-                          <div className="flex items-start justify-between mb-2">
-                            <Badge variant="outline" className="capitalize">
-                              {quiz.category}
-                            </Badge>
-                            <Badge className={getDifficultyColor(quiz.difficulty_level)}>
-                              {quiz.difficulty_level}
-                            </Badge>
-                          </div>
-                          <CardTitle className="text-lg">{quiz.title}</CardTitle>
-                          <CardDescription>{quiz.description}</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="flex items-center justify-between text-sm text-muted-foreground">
-                            {quiz.time_limit_minutes && (
-                              <div className="flex items-center gap-1">
-                                <Clock className="w-4 h-4" />
-                                <span>{quiz.time_limit_minutes} min limit</span>
-                              </div>
-                            )}
-                          </div>
-
-                          <Button
-                            onClick={() => startQuiz(quiz)}
-                            className="w-full clay-button bg-gradient-to-r from-accent to-primary"
-                          >
-                            Start Quiz
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="challenges" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Growth Challenges</CardTitle>
-                <CardDescription>
-                  Participate in guided challenges with AI-powered coaching and feedback
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {challenges.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Trophy className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                    <p>No challenges available yet</p>
-                  </div>
-                ) : (
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {challenges.map((challenge) => (
-                      <Card key={challenge.id} className="hover:shadow-lg transition-all cursor-pointer border-2 border-purple-500/20">
-                        <CardHeader>
-                          <div className="flex items-start justify-between mb-2">
-                            <Badge variant="outline" className="capitalize">
-                              {challenge.challenge_type.replace('_', ' ')}
-                            </Badge>
-                            <Badge className={getDifficultyColor(challenge.difficulty_level)}>
-                              {challenge.difficulty_level}
-                            </Badge>
-                          </div>
-                          <CardTitle className="text-lg">{challenge.title}</CardTitle>
-                          <CardDescription>{challenge.description}</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="flex items-center justify-between text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
-                              <span>{challenge.duration_days} days</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Star className="w-4 h-4 text-yellow-500" />
-                              <span>{challenge.reward_crystals} crystals</span>
-                            </div>
-                          </div>
-
-                          <Button
-                            onClick={() => joinChallenge(challenge)}
-                            className="w-full clay-button bg-gradient-to-r from-purple-500 to-pink-500"
-                          >
-                            Join Challenge
                           </Button>
                         </CardContent>
                       </Card>

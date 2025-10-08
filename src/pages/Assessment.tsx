@@ -136,6 +136,8 @@ export default function Assessment() {
         throw new Error("Failed to submit assessment");
       }
 
+      let completedScore = 0;
+
       // Process with AI if configured
       if (assessment.ai_config_id) {
         setAiProcessing(true);
@@ -143,11 +145,14 @@ export default function Assessment() {
           assessment_id: assessment.id,
           user_id: attempt.user_id,
           responses,
-          time_spent_minutes: Math.floor(timeSpent / 60)
+          time_spent_minutes: Math.floor(timeSpent / 60),
+          attempt_id: attempt.id,
+          attempt_number: attempt.attempt_number,
         });
 
         if (aiResult) {
-          setAiResults(aiResult as AIAnalysisResult); // Cast to AIAnalysisResult
+          completedScore = aiResult.score ?? 0;
+          setAiResults(aiResult as AIAnalysisResult);
           toast({
             title: "Assessment completed!",
             description: "AI analysis has been generated for your responses.",
@@ -168,7 +173,7 @@ export default function Assessment() {
 
       // Track assessment completion for gamification
       if (attempt && assessment) {
-        void trackAssessmentCompletion(attempt.user_id, assessment.id, 0); // Assuming score is calculated server-side or not directly needed here
+        void trackAssessmentCompletion(attempt.user_id, assessment.id, completedScore);
       }
 
     } catch (error: unknown) {

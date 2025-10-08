@@ -8,9 +8,11 @@ export * from './tables/ai_use_cases';
 export * from './tables/api_integrations';
 export * from './tables/assessment_attempts';
 export * from './tables/assessments_enhanced';
+export * from './tables/assessment_results';
 export * from './tables/challenge_templates';
 export * from './tables/community_connections';
 export * from './tables/couples_challenges';
+export * from './tables/gamification_settings';
 export * from './tables/level_thresholds';
 export * from './tables/models';
 export * from './tables/newme_assessment_tracking';
@@ -33,6 +35,7 @@ export * from './tables/messages';
 export * from './tables/ai_assessment_configs';
 export * from './tables/prompt_templates';
 export * from './tables/achievements';
+export * from './tables/user_assessment_stats';
 
 
 export type Json =
@@ -55,9 +58,11 @@ export type Database = {
       api_integrations: import('./tables/api_integrations').ApiIntegrations;
       assessment_attempts: import('./tables/assessment_attempts').AssessmentAttempts;
       assessments_enhanced: import('./tables/assessments_enhanced').AssessmentsEnhanced;
+      assessment_results: import('./tables/assessment_results').AssessmentResults;
       challenge_templates: import('./tables/challenge_templates').ChallengeTemplates;
       community_connections: import('./tables/community_connections').CommunityConnections;
       couples_challenges: import('./tables/couples_challenges').CouplesChallenges;
+      gamification_settings: import('./tables/gamification_settings').GamificationSettings;
       level_thresholds: import('./tables/level_thresholds').LevelThresholds;
       models: import('./tables/models').Models;
       newme_assessment_tracking: import('./tables/newme_assessment_tracking').NewmeAssessmentTracking;
@@ -70,6 +75,7 @@ export type Database = {
       subscriptions: import('./tables/subscriptions').Subscriptions;
       user_achievements: import('./tables/user_achievements').UserAchievements;
       user_assessment_progress: import('./tables/user_assessment_progress').UserAssessmentProgress;
+      user_assessment_stats: import('./tables/user_assessment_stats').UserAssessmentStats;
       user_memory_profiles: import('./tables/user_memory_profiles').UserMemoryProfiles;
       user_profiles: import('./tables/user_profiles').UserProfiles;
       voices: import('./tables/voices').Voices;

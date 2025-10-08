@@ -2,163 +2,200 @@
 -- This completes the RLS policies and adds missing functionality
 
 -- Complete RLS Policies for AI Configurations
+DROP POLICY IF EXISTS "AI configurations are viewable by authenticated users" ON ai_configurations;
 CREATE POLICY "AI configurations are viewable by authenticated users" ON ai_configurations
     FOR SELECT USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Only admins can manage AI configurations" ON ai_configurations;
 CREATE POLICY "Only admins can manage AI configurations" ON ai_configurations
     FOR ALL USING (
         EXISTS (
             SELECT 1 FROM user_profiles 
-            WHERE user_profiles.id = auth.uid() 
-            AND user_profiles.subscription_tier = 'admin'
+            WHERE (user_profiles.user_id = auth.uid() OR user_profiles.id = auth.uid())
+            AND COALESCE(user_profiles.role, user_profiles.subscription_tier) IN ('admin', 'ADMIN')
         )
     );
 
 -- RLS Policies for Assessments
+DROP POLICY IF EXISTS "Assessments are viewable by everyone" ON assessments;
 CREATE POLICY "Assessments are viewable by everyone" ON assessments
     FOR SELECT USING (is_public = true OR is_active = true);
 
+DROP POLICY IF EXISTS "Assessments are viewable by authenticated users" ON assessments;
 CREATE POLICY "Assessments are viewable by authenticated users" ON assessments
     FOR SELECT USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Only admins can manage assessments" ON assessments;
 CREATE POLICY "Only admins can manage assessments" ON assessments
     FOR ALL USING (
         EXISTS (
             SELECT 1 FROM user_profiles 
-            WHERE user_profiles.id = auth.uid() 
-            AND user_profiles.subscription_tier = 'admin'
+            WHERE (user_profiles.user_id = auth.uid() OR user_profiles.id = auth.uid())
+            AND COALESCE(user_profiles.role, user_profiles.subscription_tier) IN ('admin', 'ADMIN')
         )
     );
 
 -- RLS Policies for Quizzes
+DROP POLICY IF EXISTS "Quizzes are viewable by everyone" ON quizzes;
 CREATE POLICY "Quizzes are viewable by everyone" ON quizzes
     FOR SELECT USING (is_public = true OR is_active = true);
 
+DROP POLICY IF EXISTS "Quizzes are viewable by authenticated users" ON quizzes;
 CREATE POLICY "Quizzes are viewable by authenticated users" ON quizzes
     FOR SELECT USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Only admins can manage quizzes" ON quizzes;
 CREATE POLICY "Only admins can manage quizzes" ON quizzes
     FOR ALL USING (
         EXISTS (
             SELECT 1 FROM user_profiles 
-            WHERE user_profiles.id = auth.uid() 
-            AND user_profiles.subscription_tier = 'admin'
+            WHERE (user_profiles.user_id = auth.uid() OR user_profiles.id = auth.uid())
+            AND COALESCE(user_profiles.role, user_profiles.subscription_tier) IN ('admin', 'ADMIN')
         )
     );
 
 -- RLS Policies for Challenges
+DROP POLICY IF EXISTS "Challenges are viewable by everyone" ON challenges;
 CREATE POLICY "Challenges are viewable by everyone" ON challenges
     FOR SELECT USING (is_public = true OR is_active = true);
 
+DROP POLICY IF EXISTS "Challenges are viewable by authenticated users" ON challenges;
 CREATE POLICY "Challenges are viewable by authenticated users" ON challenges
     FOR SELECT USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Only admins can manage challenges" ON challenges;
 CREATE POLICY "Only admins can manage challenges" ON challenges
     FOR ALL USING (
         EXISTS (
             SELECT 1 FROM user_profiles 
-            WHERE user_profiles.id = auth.uid() 
-            AND user_profiles.subscription_tier = 'admin'
+            WHERE (user_profiles.user_id = auth.uid() OR user_profiles.id = auth.uid())
+            AND COALESCE(user_profiles.role, user_profiles.subscription_tier) IN ('admin', 'ADMIN')
         )
     );
 
 -- RLS Policies for Assessment Results
+DROP POLICY IF EXISTS "Users can view their own assessment results" ON assessment_results;
 CREATE POLICY "Users can view their own assessment results" ON assessment_results
     FOR SELECT USING (user_id = (
         SELECT id FROM user_profiles WHERE user_profiles.user_id = auth.uid()
     ));
 
+DROP POLICY IF EXISTS "Users can insert their own assessment results" ON assessment_results;
 CREATE POLICY "Users can insert their own assessment results" ON assessment_results
     FOR INSERT WITH CHECK (user_id = (
         SELECT id FROM user_profiles WHERE user_profiles.user_id = auth.uid()
     ));
 
+DROP POLICY IF EXISTS "Admins can view all assessment results" ON assessment_results;
 CREATE POLICY "Admins can view all assessment results" ON assessment_results
     FOR SELECT USING (
         EXISTS (
             SELECT 1 FROM user_profiles 
-            WHERE user_profiles.id = auth.uid() 
-            AND user_profiles.subscription_tier = 'admin'
+            WHERE (user_profiles.user_id = auth.uid() OR user_profiles.id = auth.uid())
+            AND COALESCE(user_profiles.role, user_profiles.subscription_tier) IN ('admin', 'ADMIN')
         )
     );
 
 -- RLS Policies for Quiz Results
+DROP POLICY IF EXISTS "Users can view their own quiz results" ON quiz_results;
 CREATE POLICY "Users can view their own quiz results" ON quiz_results
     FOR SELECT USING (user_id = (
         SELECT id FROM user_profiles WHERE user_profiles.user_id = auth.uid()
     ));
 
+DROP POLICY IF EXISTS "Users can insert their own quiz results" ON quiz_results;
 CREATE POLICY "Users can insert their own quiz results" ON quiz_results
     FOR INSERT WITH CHECK (user_id = (
         SELECT id FROM user_profiles WHERE user_profiles.user_id = auth.uid()
     ));
 
+DROP POLICY IF EXISTS "Admins can view all quiz results" ON quiz_results;
 CREATE POLICY "Admins can view all quiz results" ON quiz_results
     FOR SELECT USING (
         EXISTS (
             SELECT 1 FROM user_profiles 
-            WHERE user_profiles.id = auth.uid() 
-            AND user_profiles.subscription_tier = 'admin'
+            WHERE (user_profiles.user_id = auth.uid() OR user_profiles.id = auth.uid())
+            AND COALESCE(user_profiles.role, user_profiles.subscription_tier) IN ('admin', 'ADMIN')
         )
     );
 
 -- RLS Policies for Challenge Progress
+DROP POLICY IF EXISTS "Users can view their own challenge progress" ON challenge_progress;
 CREATE POLICY "Users can view their own challenge progress" ON challenge_progress
     FOR SELECT USING (user_id = (
         SELECT id FROM user_profiles WHERE user_profiles.user_id = auth.uid()
     ));
 
+DROP POLICY IF EXISTS "Users can manage their own challenge progress" ON challenge_progress;
 CREATE POLICY "Users can manage their own challenge progress" ON challenge_progress
     FOR ALL USING (user_id = (
         SELECT id FROM user_profiles WHERE user_profiles.user_id = auth.uid()
     ));
 
+DROP POLICY IF EXISTS "Admins can view all challenge progress" ON challenge_progress;
 CREATE POLICY "Admins can view all challenge progress" ON challenge_progress
     FOR SELECT USING (
         EXISTS (
             SELECT 1 FROM user_profiles 
-            WHERE user_profiles.id = auth.uid() 
-            AND user_profiles.subscription_tier = 'admin'
+            WHERE (user_profiles.user_id = auth.uid() OR user_profiles.id = auth.uid())
+            AND COALESCE(user_profiles.role, user_profiles.subscription_tier) IN ('admin', 'ADMIN')
         )
     );
 
 -- RLS Policies for AI Usage Logs
+DROP POLICY IF EXISTS "Users can view their own AI usage logs" ON ai_usage_logs;
 CREATE POLICY "Users can view their own AI usage logs" ON ai_usage_logs
     FOR SELECT USING (user_id = (
         SELECT id FROM user_profiles WHERE user_profiles.user_id = auth.uid()
     ));
 
+DROP POLICY IF EXISTS "Admins can view all AI usage logs" ON ai_usage_logs;
 CREATE POLICY "Admins can view all AI usage logs" ON ai_usage_logs
     FOR SELECT USING (
         EXISTS (
             SELECT 1 FROM user_profiles 
-            WHERE user_profiles.id = auth.uid() 
-            AND user_profiles.subscription_tier = 'admin'
+            WHERE (user_profiles.user_id = auth.uid() OR user_profiles.id = auth.uid())
+            AND COALESCE(user_profiles.role, user_profiles.subscription_tier) IN ('admin', 'ADMIN')
         )
     );
 
 -- RLS Policies for User Assessment Stats
+DROP POLICY IF EXISTS "Users can view their own assessment stats" ON user_assessment_stats;
 CREATE POLICY "Users can view their own assessment stats" ON user_assessment_stats
     FOR SELECT USING (user_id = (
         SELECT id FROM user_profiles WHERE user_profiles.user_id = auth.uid()
     ));
 
+DROP POLICY IF EXISTS "Users can update their own assessment stats" ON user_assessment_stats;
 CREATE POLICY "Users can update their own assessment stats" ON user_assessment_stats
     FOR UPDATE USING (user_id = (
         SELECT id FROM user_profiles WHERE user_profiles.user_id = auth.uid()
     ));
 
+DROP POLICY IF EXISTS "Admins can view all assessment stats" ON user_assessment_stats;
 CREATE POLICY "Admins can view all assessment stats" ON user_assessment_stats
     FOR SELECT USING (
         EXISTS (
             SELECT 1 FROM user_profiles 
-            WHERE user_profiles.id = auth.uid() 
-            AND user_profiles.subscription_tier = 'admin'
+            WHERE (user_profiles.user_id = auth.uid() OR user_profiles.id = auth.uid())
+            AND COALESCE(user_profiles.role, user_profiles.subscription_tier) IN ('admin', 'ADMIN')
         )
     );
 
 -- Create additional indexes for performance
-CREATE INDEX IF NOT EXISTS idx_assessments_type_category ON assessments(assessment_type, category);
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'assessments'
+      AND column_name = 'assessment_type'
+  ) THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_assessments_type_category ON assessments(assessment_type, category)';
+  ELSE
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_assessments_type_category ON assessments(type, category)';
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_assessments_difficulty ON assessments(difficulty_level);
 CREATE INDEX IF NOT EXISTS idx_assessments_created ON assessments(created_at);
 

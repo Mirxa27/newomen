@@ -23,7 +23,10 @@ export interface AssessmentBase {
   is_public: boolean | null;
   created_at: string | null;
   updated_at: string | null;
-  duration?: string | null; // Added duration
+  difficulty_level?: string | null;
+  time_limit_minutes?: number | null;
+  max_attempts?: number | null;
+  duration?: string | null;
 }
 
 // Full assessment interface for create/update operations

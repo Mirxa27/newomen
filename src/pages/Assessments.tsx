@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { assessmentServiceOptimized } from "@/services/AssessmentServiceOptimized";
 import type { Assessment } from "@/types/assessment-optimized"; // Use optimized type
+import { supabase } from "@/integrations/supabase/client";
 
 interface UserStats {
   total_assessments_completed: number;
@@ -30,21 +31,30 @@ export default function Assessments() {
     }
 
     try {
-      // Use optimized service to prevent type instantiation issues
-      const data = await assessmentServiceOptimized.getAssessments({
-        is_public: true,
-        status: 'active'
-      });
+      const [assessmentsData, statsResult] = await Promise.all([
+        assessmentServiceOptimized.getAssessments({
+          is_public: true,
+          status: "active",
+        }),
+        supabase
+          .from("user_assessment_stats")
+          .select("total_assessments_completed, average_assessment_score, current_streak")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+      ]);
 
-      setAssessments(data);
+      setAssessments(assessmentsData);
 
-      // NOTE: 'user_assessment_stats' table does not exist. Stats are mocked.
+      if (statsResult.error && statsResult.error.code !== "PGRST116") {
+        throw statsResult.error;
+      }
+
+      const stats = statsResult.data;
       setUserStats({
-        total_assessments_completed: 5,
-        average_assessment_score: 88,
-        current_streak: 3,
+        total_assessments_completed: stats?.total_assessments_completed ?? 0,
+        average_assessment_score: stats?.average_assessment_score ?? 0,
+        current_streak: stats?.current_streak ?? 0,
       });
-
     } catch (error) {
       console.error("Error loading assessments data:", error);
       toast.error("Failed to load assessments.");
@@ -128,7 +138,7 @@ export default function Assessments() {
                   </Badge>
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Clock className="w-4 h-4 mr-1" />
-                    {assessment.duration}
+                    {assessment.time_limit_minutes ? `${assessment.time_limit_minutes} min` : 'Self-paced'}
                   </div>
                 </div>
                 <CardTitle className="text-xl">{assessment.title}</CardTitle>

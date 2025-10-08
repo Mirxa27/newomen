@@ -205,7 +205,20 @@ CREATE TABLE IF NOT EXISTS user_assessment_stats (
 CREATE INDEX IF NOT EXISTS idx_ai_configurations_provider ON ai_configurations(provider);
 CREATE INDEX IF NOT EXISTS idx_ai_configurations_active ON ai_configurations(is_active);
 
-CREATE INDEX IF NOT EXISTS idx_assessments_type ON assessments(assessment_type);
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'assessments'
+      AND column_name = 'assessment_type'
+  ) THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_assessments_type ON assessments(assessment_type)';
+  ELSE
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_assessments_type ON assessments(type)';
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_assessments_category ON assessments(category);
 CREATE INDEX IF NOT EXISTS idx_assessments_public ON assessments(is_public, is_active);
 CREATE INDEX IF NOT EXISTS idx_assessments_ai ON assessments(is_ai_powered, ai_configuration_id);

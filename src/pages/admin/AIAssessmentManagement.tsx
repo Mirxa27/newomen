@@ -19,9 +19,7 @@ type UseCase = { id: string; name: string };
 type Behavior = { id: string; name: string };
 
 // Enhanced types for relations
-type AssessmentWithConfig = Assessment & {
-  ai_configurations: { name: string } | null;
-};
+type AssessmentWithConfig = Assessment;
 
 type AttemptWithRelations = AssessmentAttempt & {
   assessments_enhanced: { title: string } | null;
@@ -36,7 +34,7 @@ export default function AIAssessmentManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formType, setFormType] = useState<"config" | "assessment">("config");
   const [formData, setFormData] = useState<Partial<AIConfiguration>>({});
-  
+
   // Data for dropdowns
   const [providers, setProviders] = useState<Provider[]>([]);
   const [models, setModels] = useState<Model[]>([]);
@@ -56,7 +54,7 @@ export default function AIAssessmentManagement() {
         behaviorsData,
       ] = await Promise.all([
         supabase.from("ai_configurations").select("*"),
-        supabase.from("assessments_enhanced").select("*, ai_configurations(name)"),
+        supabase.from("assessments_enhanced").select("*"),
         supabase.from("assessment_attempts").select("*, assessments_enhanced(title), user_profiles(nickname)"),
         supabase.from("providers").select("id, name"),
         supabase.from("models").select("id, display_name"),
@@ -107,19 +105,24 @@ export default function AIAssessmentManagement() {
   };
 
   const handleSaveConfig = async () => {
-    const newConfig: Partial<AIConfiguration> = {
+    if (!formData.name || !formData.provider || !formData.model_name) {
+      toast.error("Please fill in all required fields (Name, Provider, Model)");
+      return;
+    }
+
+    const newConfig = {
       name: formData.name,
-      description: formData.description,
+      description: formData.description || "",
       provider: formData.provider,
       model_name: formData.model_name,
-      temperature: Number(formData.temperature),
-      max_tokens: Number(formData.max_tokens),
-      system_prompt: formData.system_prompt,
-      is_active: formData.is_active,
+      temperature: Number(formData.temperature) || 0.7,
+      max_tokens: Number(formData.max_tokens) || 1000,
+      system_prompt: formData.system_prompt || "",
+      is_active: formData.is_active ?? true,
     };
 
     try {
-      const { error } = await supabase.from("ai_configurations").insert(newConfig as any);
+      const { error } = await supabase.from("ai_configurations").insert(newConfig);
       if (error) throw error;
       toast.success("AI Config saved successfully!");
       setDialogOpen(false);
@@ -202,7 +205,7 @@ export default function AIAssessmentManagement() {
                     <TableRow key={assessment.id}>
                       <TableCell>{assessment.title}</TableCell>
                       <TableCell>{assessment.category}</TableCell>
-                      <TableCell>{assessment.ai_configurations?.name}</TableCell>
+                      <TableCell>{assessment.ai_config_id || 'No AI Config'}</TableCell>
                       <TableCell>{assessment.is_public ? "Yes" : "No"}</TableCell>
                       <TableCell>
                         <Button variant="ghost" size="icon"><Edit className="w-4 h-4" /></Button>
