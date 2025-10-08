@@ -17,6 +17,26 @@ export interface AIConfiguration {
   is_active: boolean | null;
 }
 
+export interface QuestionOption {
+  text: string;
+  value: string | number;
+}
+
+export interface Question {
+  id: string;
+  text: string;
+  type: string;
+  options?: QuestionOption[];
+  required?: boolean;
+  points?: number;
+}
+
+export interface ScoringCriterion {
+  criterion: string;
+  weight: number;
+  description?: string;
+}
+
 export interface Assessment {
   id: string;
   title: string;
@@ -29,8 +49,8 @@ export interface Assessment {
   passing_score: number | null;
   is_ai_powered: boolean | null;
   ai_configuration_id: string | null;
-  questions: any;
-  scoring_rubric: any | null;
+  questions: Question[];
+  scoring_rubric: ScoringCriterion[] | null;
   is_public: boolean | null;
   is_active: boolean | null;
 }
@@ -46,10 +66,16 @@ export interface Quiz {
   passing_score: number | null;
   is_ai_powered: boolean | null;
   ai_configuration_id: string | null;
-  questions: any;
+  questions: Question[];
   ai_grading_prompt: string | null;
   is_public: boolean | null;
   is_active: boolean | null;
+}
+
+export interface SuccessCriterion {
+  criterion: string;
+  required: boolean;
+  description?: string;
 }
 
 export interface Challenge {
@@ -64,7 +90,7 @@ export interface Challenge {
   is_ai_powered: boolean | null;
   ai_configuration_id: string | null;
   instructions: string;
-  success_criteria: any | null;
+  success_criteria: SuccessCriterion[] | null;
   ai_evaluation_prompt: string | null;
   reward_crystals: number | null;
   is_public: boolean | null;
@@ -73,17 +99,57 @@ export interface Challenge {
   end_date: string | null;
 }
 
+export interface ChallengeProgressData {
+  completedTasks?: string[];
+  milestones?: Record<string, boolean>;
+  reflections?: string[];
+  userNotes?: string;
+  daysActive?: number;
+  [key: string]: unknown;
+}
+
+export interface AIInsight {
+  key: string;
+  value: string | number;
+  confidence?: number;
+}
+
+export interface PersonalityTrait {
+  trait: string;
+  score: number;
+  description?: string;
+}
+
+export interface Strength {
+  name: string;
+  description: string;
+  examples?: string[];
+}
+
+export interface ImprovementArea {
+  area: string;
+  description: string;
+  suggestions?: string[];
+}
+
+export interface DetailedExplanation {
+  question_id: string;
+  answer: string;
+  evaluation: string;
+  score?: number;
+}
+
 export interface AIProcessingResult {
   success: boolean;
   score?: number;
   percentage_score?: number;
   feedback?: string;
-  insights?: any;
+  insights?: AIInsight[];
   recommendations?: string;
-  personality_traits?: any;
-  strengths_identified?: any;
-  areas_for_improvement?: any;
-  detailed_explanations?: any;
+  personality_traits?: PersonalityTrait[];
+  strengths_identified?: Strength[];
+  areas_for_improvement?: ImprovementArea[];
+  detailed_explanations?: DetailedExplanation[];
   processing_time_ms?: number;
   ai_model_used?: string;
   error_message?: string;
@@ -103,12 +169,31 @@ export interface AIUsageLog {
   cost_usd: number | null;
   success: boolean | null;
   error_message: string | null;
-  request_payload: any | null;
-  response_data: any | null;
+  request_payload: Record<string, unknown> | null;
+  response_data: Record<string, unknown> | null;
+}
+
+export interface AIPromptPayload {
+  model: string;
+  messages: Array<{
+    role: string;
+    content: string;
+  }>;
+  temperature?: number;
+  max_tokens?: number;
+}
+
+export interface AIAPIResponse {
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+  [key: string]: unknown;
 }
 
 class AIAssessmentService {
-  private cache = new Map<string, any>();
+  private cache = new Map<string, { data: unknown; timestamp: number }>();
   private cacheTimeout = 5 * 60 * 1000; // 5 minutes
 
   // AI Configuration Management
@@ -153,7 +238,7 @@ class AIAssessmentService {
       
       const { data, error } = await supabase
         .from("ai_configurations")
-        .insert(config as any)
+        .insert(config as Omit<AIConfiguration, 'id'>)
         .select()
         .single();
 
@@ -204,7 +289,7 @@ class AIAssessmentService {
   async processAssessmentWithAI(
     assessmentId: string,
     userId: string,
-    answers: Record<string, any>
+    answers: Record<string, string | number | boolean>
   ): Promise<AIProcessingResult> {
     const startTime = Date.now();
     let configuration: AIConfiguration | null = null;
@@ -294,7 +379,7 @@ class AIAssessmentService {
   async processQuizWithAI(
     quizId: string,
     userId: string,
-    answers: Record<string, any>,
+    answers: Record<string, string | number | boolean>,
     timeTakenSeconds?: number
   ): Promise<AIProcessingResult> {
     const startTime = Date.now();
@@ -384,7 +469,7 @@ class AIAssessmentService {
   async processChallengeWithAI(
     challengeId: string,
     userId: string,
-    progressData: any
+    progressData: ChallengeProgressData
   ): Promise<AIProcessingResult> {
     const startTime = Date.now();
     let configuration: AIConfiguration | null = null;
@@ -520,9 +605,9 @@ class AIAssessmentService {
 
   private buildAssessmentPrompt(
     assessment: Assessment,
-    answers: Record<string, any>,
+    answers: Record<string, string | number | boolean>,
     config: AIConfiguration
-  ): any {
+  ): AIPromptPayload {
     const basePrompt = config.user_prompt_template || config.scoring_prompt_template || 
       "Analyze the following assessment responses and provide detailed feedback.";
 
@@ -575,10 +660,10 @@ Respond in JSON format with the following structure:
 
   private buildQuizPrompt(
     quiz: Quiz,
-    answers: Record<string, any>,
+    answers: Record<string, string | number | boolean>,
     timeTakenSeconds: number | undefined,
     config: AIConfiguration
-  ): any {
+  ): AIPromptPayload {
     const basePrompt = config.user_prompt_template || quiz.ai_grading_prompt || 
       "Grade the following quiz and provide detailed explanations.";
 
@@ -629,9 +714,9 @@ Respond in JSON format with the following structure:
 
   private buildChallengePrompt(
     challenge: Challenge,
-    progressData: any,
+    progressData: ChallengeProgressData,
     config: AIConfiguration
-  ): any {
+  ): AIPromptPayload {
     const basePrompt = config.user_prompt_template || challenge.ai_evaluation_prompt || 
       "Evaluate challenge progress and provide coaching feedback.";
 
@@ -681,7 +766,7 @@ Respond in JSON format with the following structure:
     };
   }
 
-  private async callAIAPI(prompt: any, config: AIConfiguration): Promise<any> {
+  private async callAIAPI(prompt: AIPromptPayload, config: AIConfiguration): Promise<AIAPIResponse> {
     const apiKey = this.getAPIKey(config.provider);
     if (!apiKey) {
       throw new Error(`No API key configured for provider: ${config.provider}`);
@@ -732,7 +817,7 @@ Respond in JSON format with the following structure:
     }
   }
 
-  private parseAIResponse(response: any, type: string): AIProcessingResult {
+  private parseAIResponse(response: AIAPIResponse, type: string): AIProcessingResult {
     try {
       const content = response.choices?.[0]?.message?.content;
       if (!content) {
@@ -786,7 +871,7 @@ Respond in JSON format with the following structure:
         .insert({
           ...log,
           created_at: new Date().toISOString()
-        } as any);
+        });
     } catch (error) {
       console.error("Error logging AI usage:", error);
     }
