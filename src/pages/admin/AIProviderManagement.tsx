@@ -197,6 +197,7 @@ export default function AIProviderManagement() {
               <Label htmlFor="model-provider">Provider</Label>
               <select
                 id="model-provider"
+                aria-label="Select model provider"
                 value={modelState.provider_id || ""}
                 onChange={(e) => setFormState({ ...formState, provider_id: e.target.value })}
                 className="w-full p-2 border rounded"
@@ -236,6 +237,7 @@ export default function AIProviderManagement() {
               <Label htmlFor="voice-provider">Provider</Label>
               <select
                 id="voice-provider"
+                aria-label="Select voice provider"
                 value={voiceState.provider_id || ""}
                 onChange={(e) => setFormState({ ...formState, provider_id: e.target.value })}
                 className="w-full p-2 border rounded"
@@ -268,6 +270,7 @@ export default function AIProviderManagement() {
               <Label htmlFor="voice-gender">Gender</Label>
               <select
                 id="voice-gender"
+                aria-label="Select voice gender"
                 value={voiceState.gender || "female"}
                 onChange={(e) => setFormState({ ...formState, gender: e.target.value })}
                 className="w-full p-2 border rounded"

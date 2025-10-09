@@ -170,7 +170,7 @@ const logError = (message: string, error?: any) => {
   console.error(`[REALTIME-TOKEN-ERROR] ${message}`, error instanceof Error ? error.stack : error);
 };
 
-const fetchUserProfile = async (supabase: SupabaseClient, userId: string): Promise<UserProfile | null> => {
+const fetchUserProfile = async (supabase: any, userId: string): Promise<UserProfile | null> => {
   try {
     const { data: profileByUserId, error: profileByUserIdError } = await supabase
       .from('user_profiles')
@@ -182,7 +182,7 @@ const fetchUserProfile = async (supabase: SupabaseClient, userId: string): Promi
       throw profileByUserIdError;
     }
     if (profileByUserId) {
-      return profileByUserId;
+      return profileByUserId as UserProfile;
     }
 
     const { data: profileById, error: profileByIdError } = await supabase
@@ -194,7 +194,7 @@ const fetchUserProfile = async (supabase: SupabaseClient, userId: string): Promi
     if (profileByIdError && profileByIdError.code !== 'PGRST116') {
       throw profileByIdError;
     }
-    return profileById;
+    return profileById as UserProfile;
   } catch (error) {
     logError('Failed to fetch user profile', error);
     throw error;
@@ -220,7 +220,7 @@ const isSubscriptionActive = (subscription: Subscription): boolean => {
   return true;
 };
 
-const checkSubscriptionAccess = async (supabase: SupabaseClient, userId: string) => {
+const checkSubscriptionAccess = async (supabase: any, userId: string) => {
   const profile = await fetchUserProfile(supabase, userId);
   if (!profile) {
     return {
@@ -254,10 +254,10 @@ const checkSubscriptionAccess = async (supabase: SupabaseClient, userId: string)
 
   if (subscriptions && subscriptions.length > 0) {
     const subscriptionRows = subscriptions;
-    const activeSubscriptions = subscriptionRows.filter((sub: Subscription) => isSubscriptionActive(sub));
+    const activeSubscriptions = subscriptionRows.filter((sub: any) => isSubscriptionActive(sub as Subscription));
 
     if (activeSubscriptions.length > 0) {
-      const bestSubscription = activeSubscriptions.reduce((acc: { row: Subscription | null; remaining: number }, current: Subscription) => {
+      const bestSubscription = activeSubscriptions.reduce((acc: { row: any | null; remaining: number }, current: any) => {
         const included = current.minutes_included;
         const used = current.minutes_used ?? 0;
         const remaining = included == null ? Number.POSITIVE_INFINITY : Math.max(0, included - used);
@@ -372,7 +372,7 @@ const buildInstructionString = (parts: any[]): string => {
 };
 
 // Safe database query with error handling
-const fetchAgent = async (supabase: SupabaseClient, agentId?: string) => {
+const fetchAgent = async (supabase: any, agentId?: string) => {
   try {
     // Simplified query to avoid relation projection errors
     const baseQuery = supabase
@@ -500,7 +500,7 @@ const getTierConfiguration = (tier?: string) => {
 };
 
 // Usage tracking function
-const trackSessionUsage = async (supabase: SupabaseClient, userId: string, sessionId: string, estimatedMinutes = 1) => {
+const trackSessionUsage = async (supabase: any, userId: string, sessionId: string, estimatedMinutes = 1) => {
   try {
     // Update subscription usage
     const { error: updateError } = await supabase
@@ -544,7 +544,7 @@ const trackSessionUsage = async (supabase: SupabaseClient, userId: string, sessi
 };
 
 // Subscription validation function
-const validateUserSubscription = async (supabase: SupabaseClient, userId: string) => {
+const validateUserSubscription = async (supabase: any, userId: string) => {
   try {
     const profile = await fetchUserProfile(supabase, userId);
     const { data: subscription, error: subError } = await supabase
@@ -785,7 +785,7 @@ serve(async (req) => {
       );
     }
 
-    const subscriptionCheck = await checkSubscriptionAccess(supabase, body.userId);
+    const subscriptionCheck = await checkSubscriptionAccess(supabase as any, body.userId);
     logRequest('Subscription check result', {
       allowed: subscriptionCheck.allowed,
       reason: subscriptionCheck.reason,
@@ -817,7 +817,7 @@ serve(async (req) => {
     let userSubscription = null;
     if (body.userId) {
       try {
-        userSubscription = await validateUserSubscription(supabase, body.userId);
+        userSubscription = await validateUserSubscription(supabase as any, body.userId);
         if (!userSubscription.isValid) {
           logError('Subscription validation failed', {
             userId: body.userId,
@@ -867,7 +867,7 @@ serve(async (req) => {
     // Fetch agent data with error handling
     let agent = null;
     try {
-      agent = await fetchAgent(supabase, body.agentId);
+      agent = await fetchAgent(supabase as any, body.agentId);
       logRequest('Agent fetched successfully', {
         agentId: agent?.id,
         agentName: agent?.name,
@@ -998,7 +998,7 @@ serve(async (req) => {
 
     // Track usage for billing purposes (async, don't wait)
     if (body.userId && data.id) {
-      trackSessionUsage(supabase, body.userId, data.id).catch((error) => {
+      trackSessionUsage(supabase as any, body.userId, data.id).catch((error) => {
         logError('Failed to track session usage', error);
       });
     }

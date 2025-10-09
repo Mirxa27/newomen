@@ -198,7 +198,7 @@ export class AuthMiddleware {
       }
 
       const token = parts[1];
-      const payload = JWTUtil.verify(token, this.config.secretKey) as JwtPayload;
+      const payload = JWTUtil.verify(token, this.config.secretKey) as unknown as JwtPayload;
 
       if (!payload || !payload.userId) {
         return null;
@@ -536,7 +536,7 @@ export class JwtUtils {
 
   static isTokenExpired(token: string): boolean {
     try {
-      const payload = JWTUtil.verify(token, defaultAuthConfig.secretKey) as JwtPayload;
+      const payload = JWTUtil.verify(token, defaultAuthConfig.secretKey) as unknown as JwtPayload;
       return payload.exp && payload.exp < Date.now() / 1000;
     } catch {
       return true;

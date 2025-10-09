@@ -110,11 +110,35 @@ export function useChat() {
 
   const setupConversation = async (user: User) => {
     const [profileRes, memoryContext] = await Promise.all([
-      supabase.from('user_profiles').select('nickname').eq('user_id', user.id).single(),
+      supabase.from('user_profiles').select('nickname, user_id, role, subscription_tier, remaining_minutes').eq('user_id', user.id).single(),
       newMeMemoryService.getUserContext(user.id)
     ]);
 
-    if (profileRes.error) throw profileRes.error;
+    if (profileRes.error && profileRes.error.code !== 'PGRST116') throw profileRes.error;
+
+    // If there's no profile row yet, create a minimal one so realtime-token can validate subscriptions
+    if (!profileRes.data) {
+      try {
+        const insertPayload = {
+          user_id: user.id,
+          email: user.email!,
+          nickname: user.user_metadata?.full_name || null,
+          role: 'member',
+          subscription_tier: 'discovery',
+          remaining_minutes: 10
+        };
+
+        const { data: upserted, error: upsertError } = await supabase.from('user_profiles').upsert(insertPayload, { onConflict: 'user_id' }).select().single();
+        if (upsertError) {
+          console.warn('Failed to upsert user_profiles for user, continuing without it', upsertError);
+        } else {
+          // Replace profileRes.data with the inserted row so downstream logic has it
+          profileRes.data = upserted;
+        }
+      } catch (e) {
+        console.warn('Unexpected error upserting user_profiles, continuing', e);
+      }
+    }
 
     let finalContext = memoryContext;
     const profileNickname = profileRes.data?.nickname;
