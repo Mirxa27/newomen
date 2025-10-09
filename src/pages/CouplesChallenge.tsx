@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, ArrowLeft, Send, Heart, Users, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { trackCouplesChallengeCompletion } from "@/lib/gamification-events";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Tables, Json } from "@/integrations/supabase/types";
 
 type ChallengeTemplate = Tables<'challenge_templates'> & {
   questions: string[];
@@ -85,7 +85,7 @@ export default function CouplesChallenge() {
     try {
       const { error: updateError } = await supabase
         .from("couples_challenges")
-        .update({ responses })
+        .update({ responses: responses as Json })
         .eq("id", challenge.id);
 
       if (updateError) throw updateError;

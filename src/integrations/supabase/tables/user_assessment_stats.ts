@@ -1,3 +1,5 @@
+import type { Json } from "../types";
+
 export type UserAssessmentStats = {
   Row: {
     id: string;
@@ -10,9 +12,9 @@ export type UserAssessmentStats = {
     current_streak: number | null;
     longest_streak: number | null;
     total_ai_interactions: number | null;
-    favorite_categories: import('../types').Json | null;
-    strengths_by_category: import('../types').Json | null;
-    improvement_areas: import('../types').Json | null;
+    favorite_categories: Json | null;
+    strengths_by_category: Json | null;
+    improvement_areas: Json | null;
     last_activity_date: string | null;
     created_at: string | null;
     updated_at: string | null;
@@ -28,9 +30,9 @@ export type UserAssessmentStats = {
     current_streak?: number | null;
     longest_streak?: number | null;
     total_ai_interactions?: number | null;
-    favorite_categories?: import('../types').Json | null;
-    strengths_by_category?: import('../types').Json | null;
-    improvement_areas?: import('../types').Json | null;
+    favorite_categories?: Json | null;
+    strengths_by_category?: Json | null;
+    improvement_areas?: Json | null;
     last_activity_date?: string | null;
     created_at?: string | null;
     updated_at?: string | null;
@@ -46,9 +48,9 @@ export type UserAssessmentStats = {
     current_streak?: number | null;
     longest_streak?: number | null;
     total_ai_interactions?: number | null;
-    favorite_categories?: import('../types').Json | null;
-    strengths_by_category?: import('../types').Json | null;
-    improvement_areas?: import('../types').Json | null;
+    favorite_categories?: Json | null;
+    strengths_by_category?: Json | null;
+    improvement_areas?: Json | null;
     last_activity_date?: string | null;
     created_at?: string | null;
     updated_at?: string | null;

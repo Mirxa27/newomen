@@ -1,6 +1,36 @@
 export type Affirmations = {
-  Row: { [key: string]: unknown; id: string };
-  Insert: { [key: string]: unknown };
-  Update: { [key: string]: unknown };
+  Row: {
+    id: string;
+    content: string;
+    category: string;
+    tone: string | null;
+    tags: string[] | null;
+    is_active: boolean;
+    created_by: string | null;
+    created_at: string;
+    updated_at: string;
+  };
+  Insert: {
+    id?: string;
+    content: string;
+    category?: string;
+    tone?: string | null;
+    tags?: string[] | null;
+    is_active?: boolean;
+    created_by?: string | null;
+    created_at?: string;
+    updated_at?: string;
+  };
+  Update: {
+    id?: string;
+    content?: string;
+    category?: string;
+    tone?: string | null;
+    tags?: string[] | null;
+    is_active?: boolean;
+    created_by?: string | null;
+    created_at?: string;
+    updated_at?: string;
+  };
   Relationships: [];
 };

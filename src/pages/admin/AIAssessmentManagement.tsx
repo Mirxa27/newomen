@@ -202,7 +202,7 @@ export default function AIAssessmentManagement() {
     const providerLabel =
       providerOptions.find((option) => option.value === formData.provider)?.label ?? formData.provider;
 
-    const payload: Partial<AIConfiguration> = {
+    const payload: Database["public"]["Tables"]["ai_configurations"]["Insert"] = {
       name: formData.name.trim(),
       description: (formData.description ?? "").trim() || null,
       provider: formData.provider,
@@ -224,7 +224,7 @@ export default function AIAssessmentManagement() {
       if (editingConfigId) {
         ({ error } = await supabase.from("ai_configurations").update(payload).eq("id", editingConfigId));
       } else {
-        ({ error } = await supabase.from("ai_configurations").insert(payload as any));
+        ({ error } = await supabase.from("ai_configurations").insert(payload));
       }
 
       if (error) throw error;

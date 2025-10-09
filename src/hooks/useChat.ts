@@ -200,6 +200,26 @@ export function useChat() {
       }
       let errorMessage = error instanceof Error ? error.message : 'Failed to start conversation';
       if (errorMessage.includes('Permission denied')) errorMessage = 'Microphone access denied. Please allow microphone access and try again.';
+
+      // Enhanced error logging
+      console.error("Full connection error object:", error);
+      if (error && typeof error === 'object' && 'context' in error) {
+        const err = error as { context?: { response?: Response } };
+        if (err.context?.response) {
+          const clonedResponse = err.context.response.clone();
+          clonedResponse.json().then((json: { error?: string; code?: string }) => {
+            console.error("Connection failed response body:", json);
+            if (json.error) {
+              errorMessage = `${json.error} (Code: ${json.code || 'N/A'})`;
+            }
+          }).catch(() => {
+            clonedResponse.text().then((text: string) => {
+              console.error("Connection failed response text:", text);
+            });
+          });
+        }
+      }
+
       toast({ title: "Connection Failed", description: errorMessage, variant: "destructive" });
     } finally {
       setIsConnecting(false);
