@@ -281,13 +281,13 @@ DECLARE
   window_start TIMESTAMPTZ;
 BEGIN
   window_start := NOW() - INTERVAL '1 minute' * p_window_minutes;
-  
+
   SELECT COALESCE(SUM(requests_count), 0) INTO current_count
   FROM public.ai_rate_limits
-  WHERE user_id = p_user_id 
+  WHERE user_id = p_user_id
     AND provider_name = p_provider_name
     AND window_start >= window_start;
-  
+
   RETURN current_count < p_max_requests;
 END;
 $$ LANGUAGE plpgsql;
@@ -299,16 +299,10 @@ CREATE OR REPLACE FUNCTION increment_ai_rate_limit(
   p_max_requests INTEGER DEFAULT 100,
   p_window_minutes INTEGER DEFAULT 60
 ) RETURNS VOID AS $$
-DECLARE
-  current_window TIMESTAMPTZ;
 BEGIN
-  current_window := date_trunc('minute', NOW());
-  
   INSERT INTO public.ai_rate_limits (user_id, provider_name, requests_count, window_start, max_requests, window_duration_minutes)
-  VALUES (p_user_id, p_provider_name, 1, current_window, p_max_requests, p_window_minutes)
+  VALUES (p_user_id, p_provider_name, 1, NOW(), p_max_requests, p_window_minutes)
   ON CONFLICT (user_id, provider_name, window_start)
-  DO UPDATE SET 
-    requests_count = ai_rate_limits.requests_count + 1,
-    updated_at = NOW();
+  DO UPDATE SET requests_count = ai_rate_limits.requests_count + 1;
 END;
 $$ LANGUAGE plpgsql;

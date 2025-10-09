@@ -6,36 +6,24 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Clock, Lock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { aiAssessmentService } from "@/services/AIAssessmentService";
-import type { Assessment } from "@/types/assessment-optimized";
+import { memberAssessments } from "@/data/memberAssessments";
 
 export default function MemberAssessments() {
-  const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(() => {
     if (!user) {
       toast.error("You must be logged in to view member assessments.");
       navigate("/auth");
       return;
     }
-
-    try {
-      const data = await aiAssessmentService.getMemberAssessments();
-      setAssessments(data);
-    } catch (error) {
-      console.error("Error loading member assessments data:", error);
-      toast.error("Failed to load member assessments.");
-    } finally {
-      setLoading(false);
-    }
+    setLoading(false);
   }, [user, navigate]);
 
   useEffect(() => {
-    setLoading(true);
-    void loadData();
+    loadData();
   }, [loadData]);
 
   if (loading) {
@@ -59,7 +47,7 @@ export default function MemberAssessments() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {assessments.map((assessment, index) => (
+          {memberAssessments.map((assessment, index) => (
             <Card
               key={assessment.id}
               className="glass-card hover:shadow-lg transition-all duration-300 cursor-pointer animate-fade-in"
@@ -72,27 +60,24 @@ export default function MemberAssessments() {
                     <Lock className="w-3 h-3 mr-1.5" />
                     Member Exclusive
                   </Badge>
-                  {assessment.category && (
-                    <Badge variant="secondary" className="capitalize">
-                      {assessment.category}
-                    </Badge>
-                  )}
+                  <Badge variant="secondary" className="capitalize">
+                    {assessment.category}
+                  </Badge>
                 </div>
                 <CardTitle className="text-xl">{assessment.title}</CardTitle>
-                {assessment.description && (
-                  <CardDescription className="line-clamp-2">
-                    {assessment.description}
-                  </CardDescription>
-                )}
+                <CardDescription className="line-clamp-2">
+                  {assessment.description}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
-                  {assessment.duration && (
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      <span>{assessment.duration}</span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    <span>10-15 min</span>
+                  </div>
+                  <Badge variant={assessment.tier === 'transformation' ? 'outline' : 'default'} className={assessment.tier === 'transformation' ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30' : ''}>
+                    {assessment.tier}
+                  </Badge>
                 </div>
                 <Button className="w-full group clay-button">
                   Start Assessment
@@ -102,17 +87,6 @@ export default function MemberAssessments() {
             </Card>
           ))}
         </div>
-
-        {assessments.length === 0 && !loading && (
-          <div className="text-center py-20">
-            <p className="text-muted-foreground mb-4 text-lg">
-              No member-exclusive assessments available at the moment.
-            </p>
-            <Button onClick={() => navigate('/assessments')}>
-              Explore Public Assessments
-            </Button>
-          </div>
-        )}
       </div>
     </div>
   );

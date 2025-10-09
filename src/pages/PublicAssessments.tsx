@@ -1,7 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -12,8 +10,6 @@ import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Clock, CheckCircle } from "lucide-react";
 import { publicAssessments } from "@/data/publicAssessments";
 
-type SupabaseAssessmentRow = Tables<"assessments_enhanced">;
-
 interface AssessmentQuestion {
   text: string;
   options: string[];
@@ -22,143 +18,36 @@ interface AssessmentQuestion {
 interface SelectedAssessment {
   id: string;
   title: string;
-  description?: string;
-  category?: string;
-  duration?: string;
-  assessmentType?: string;
+  description: string;
+  category: string;
+  duration: string;
   questions: AssessmentQuestion[];
 }
 
-const normalizeQuestions = (value: SupabaseAssessmentRow["questions"]): AssessmentQuestion[] => {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .map((entry) => {
-      if (
-        entry &&
-        typeof entry === 'object' &&
-        ('text' in entry || 'question' in entry) &&
-        'options' in entry &&
-        Array.isArray((entry as Record<string, unknown>).options)
-      ) {
-        const record = entry as Record<string, unknown>;
-        const options = (record.options as unknown[]).map((option) => String(option ?? ''));
-        const text = 'text' in record ? record.text : record.question;
-        return {
-          text: String(text ?? ''),
-          options,
-        };
-      }
-      return null;
-    })
-    .filter((question): question is AssessmentQuestion => Boolean(question));
-};
-
-const convertSupabaseAssessment = (record: SupabaseAssessmentRow): SelectedAssessment | null => {
-  const questions = normalizeQuestions(record.questions);
-  if (questions.length === 0) {
-    return null;
-  }
-
-  return {
-    id: record.id,
-    title: record.title,
-    description: record.description ?? undefined,
-    assessmentType: record.type,
-    questions,
-    category: record.category ?? undefined,
-  };
-};
-
-const convertStaticAssessment = (assessment: typeof publicAssessments[number]): SelectedAssessment => ({
-  id: assessment.id,
-  title: assessment.title,
-  description: assessment.description,
-  category: assessment.category,
-  duration: assessment.duration,
-  questions: assessment.questions.map((question) => ({
-    text: question.text,
-    options: [...question.options],
-  })),
-});
-
 export default function PublicAssessments() {
   const { assessmentId } = useParams();
-  const [assessments, setAssessments] = useState<SelectedAssessment[]>([]);
   const [selectedAssessment, setSelectedAssessment] = useState<SelectedAssessment | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
-  const [loading, setLoading] = useState(true);
-  const [assessmentsFetched, setAssessmentsFetched] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const navigate = useNavigate();
 
-  const loadPublicAssessments = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from("assessments_enhanced")
-        .select(
-          "id, title, type, questions, is_public, description, category"
-        )
-        .eq("is_public", true);
-
-      if (error) {
-        throw error;
+  useEffect(() => {
+    if (assessmentId) {
+      const assessment = publicAssessments.find(a => a.id === assessmentId);
+      if (assessment) {
+        setSelectedAssessment(assessment);
+      } else {
+        toast.error("Assessment not found");
+        navigate("/assessments");
       }
-
-      const normalized = (data ?? [])
-        .map((record) => convertSupabaseAssessment(record as SupabaseAssessmentRow))
-        .filter((assessment): assessment is SelectedAssessment => Boolean(assessment));
-
-      setAssessments(normalized);
-    } catch (error) {
-      console.error("Error loading assessments:", error);
-      toast.error("Failed to load assessments");
-      setAssessments([]);
-    } finally {
-      setAssessmentsFetched(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    setLoading(true);
-    void loadPublicAssessments();
-  }, [loadPublicAssessments]);
-
-  useEffect(() => {
-    if (!assessmentId) {
+    } else {
       setSelectedAssessment(null);
+      setCurrentQuestion(0);
+      setAnswers({});
       setShowResults(false);
-      if (assessmentsFetched) {
-        setLoading(false);
-      }
-      return;
     }
-
-    setShowResults(false);
-    setLoading(true);
-
-    const staticAssessment = publicAssessments.find((assessment) => assessment.id === assessmentId);
-    if (staticAssessment) {
-      setSelectedAssessment(convertStaticAssessment(staticAssessment));
-      setLoading(false);
-      return;
-    }
-
-    const supabaseAssessment = assessments.find((assessment) => assessment.id === assessmentId);
-    if (supabaseAssessment) {
-      setSelectedAssessment(supabaseAssessment);
-      setLoading(false);
-      return;
-    }
-
-    if (assessmentsFetched) {
-      toast.error("Assessment not found");
-      setLoading(false);
-    }
-  }, [assessmentId, assessments, assessmentsFetched]);
+  }, [assessmentId, navigate]);
 
   const handleAnswerChange = (value: string) => {
     setAnswers({ ...answers, [currentQuestion]: value });
@@ -192,20 +81,8 @@ export default function PublicAssessments() {
     setCurrentQuestion(0);
     setAnswers({});
     setShowResults(false);
-    setLoading(false);
     navigate('/assessments');
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
-          <p className="mt-4 text-muted-foreground">Loading assessments...</p>
-        </div>
-      </div>
-    );
-  }
 
   if (!selectedAssessment) {
     return (
@@ -247,24 +124,6 @@ export default function PublicAssessments() {
                       Start Assessment
                       <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </Button>
-                  </CardContent>
-                </Card>
-              ))}
-
-              {assessments.map((assessment) => (
-                <Card key={assessment.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setSelectedAssessment(assessment)}>
-                  <CardHeader>
-                    <Badge variant="outline" className="w-fit mb-2">AI Generated</Badge>
-                    <CardTitle>{assessment.title}</CardTitle>
-                    {assessment.assessmentType && (
-                      <CardDescription>{assessment.assessmentType}</CardDescription>
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      {assessment.questions.length} questions
-                    </p>
-                    <Button className="w-full">Start Assessment</Button>
                   </CardContent>
                 </Card>
               ))}
@@ -366,7 +225,7 @@ export default function PublicAssessments() {
             <div>
               <h3 className="text-lg font-semibold mb-6">{question.text}</h3>
               <RadioGroup value={answers[currentQuestion] || ""} onValueChange={handleAnswerChange}>
-                {question.options.map((option: string, idx: number) => (
+                {question.options.map((option, idx) => (
                   <div key={idx} className="flex items-center space-x-3 p-4 rounded-lg border hover:border-primary hover:bg-primary/5 transition-all cursor-pointer">
                     <RadioGroupItem value={option} id={`option-${idx}`} />
                     <Label htmlFor={`option-${idx}`} className="flex-1 cursor-pointer font-medium">{option}</Label>

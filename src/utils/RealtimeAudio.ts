@@ -105,7 +105,7 @@ export class RealtimeChat {
     this.audioEl.autoplay = true;
     this.options = {
       modalities: ["audio", "text"],
-      voice: "verse",
+      voice: "merin",
       ...options,
     };
   }
@@ -131,7 +131,32 @@ export class RealtimeChat {
 
       if (error) {
         console.error('Error getting ephemeral token:', error);
-        throw error;
+        let errorMessage = error.message ?? 'Failed to get ephemeral token';
+        const response = (error as { context?: { response?: Response } }).context?.response;
+
+        if (response) {
+          try {
+            const cloned = response.clone();
+            const details = await cloned.json();
+            if (details && typeof details === 'object') {
+              const serverMessage = (details as { error?: string; code?: string }).error;
+              if (serverMessage) {
+                errorMessage = serverMessage;
+              }
+            }
+          } catch {
+            try {
+              const fallbackText = await response.clone().text();
+              if (fallbackText) {
+                errorMessage = fallbackText;
+              }
+            } catch {
+              // ignore parsing errors
+            }
+          }
+        }
+
+        throw new Error(errorMessage);
       }
       if (!data?.client_secret?.value) {
         console.error('No client_secret in response:', data);
@@ -185,7 +210,7 @@ export class RealtimeChat {
 
       // Connect to OpenAI's Realtime API
       const baseUrl = "https://api.openai.com/v1/realtime";
-      const model = "gpt-4o-realtime-preview-2024-12-17";
+      const model = "gpt-realtime-mini-2025-10-06";
 
       console.log('Connecting to OpenAI Realtime API...');
       const sdpResponse = await fetch(`${baseUrl}?model=${model}`, {

@@ -27,7 +27,9 @@ const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const NarrativeIdentityExploration = lazy(() => import("./pages/NarrativeIdentityExploration"));
 const FeatureTests = lazy(() => import("./pages/FeatureTests"));
-const Assessments = lazy(() => import("./pages/Assessments"));
+const PublicAssessments = lazy(() => import("./pages/PublicAssessments"));
+const MemberAssessments = lazy(() => import("./pages/MemberAssessments"));
+const Assessment = lazy(() => import("./pages/Assessment"));
 
 // Admin Pages
 const AdminAnalytics = lazy(() => import("./pages/admin/Analytics"));
@@ -72,8 +74,8 @@ const App = () => (
           <Route path="/privacy-policy" element={<MainLayout><PrivacyPolicy /></MainLayout>} />
           <Route path="/terms" element={<MainLayout><TermsOfService /></MainLayout>} />
           <Route path="/terms-of-service" element={<MainLayout><TermsOfService /></MainLayout>} />
-          <Route path="/assessments" element={<MainLayout><Assessments /></MainLayout>} />
-          <Route path="/assessments/:assessmentId" element={<MainLayout><Assessments /></MainLayout>} />
+          <Route path="/assessments" element={<MainLayout><PublicAssessments /></MainLayout>} />
+          <Route path="/assessments/:assessmentId" element={<MainLayout><PublicAssessments /></MainLayout>} />
           <Route path="/onboarding" element={
             <ProtectedRoute>
               <MainLayout><Onboarding /></MainLayout>
@@ -112,6 +114,16 @@ const App = () => (
           <Route path="/couples-challenge/:challengeId?" element={
             <ProtectedRoute>
               <MainLayout><CouplesChallenge /></MainLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/member-assessments" element={
+            <ProtectedRoute>
+              <MainLayout><MemberAssessments /></MainLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/assessment/:id" element={
+            <ProtectedRoute>
+              <MainLayout><Assessment /></MainLayout>
             </ProtectedRoute>
           } />
           <Route path="/admin" element={

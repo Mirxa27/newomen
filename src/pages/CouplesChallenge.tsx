@@ -16,7 +16,7 @@ type ChallengeTemplate = Tables<'challenge_templates'> & {
   questions: string[];
 };
 
-type Challenge = Tables<'user_challenges'>;
+type Challenge = Tables<'couples_challenges'>;
 
 export default function CouplesChallenge() {
   const { id } = useParams<{ id: string }>();
@@ -43,7 +43,7 @@ export default function CouplesChallenge() {
       setUserId(user.id);
 
       const { data: challengeData, error: challengeError } = await supabase
-        .from("user_challenges")
+        .from("couples_challenges")
         .select("*, challenge_templates(*)")
         .eq("id", id)
         .single();
@@ -66,7 +66,8 @@ export default function CouplesChallenge() {
   }, [loadChallenge]);
 
   const handleResponseChange = (questionIndex: string, value: string) => {
-    const isInitiator = userId === challenge?.initiator_id;
+    if (!challenge) return;
+    const isInitiator = userId === challenge.initiator_id;
     const responseKey = isInitiator ? "initiator_response" : "partner_response";
 
     setResponses(prev => ({
@@ -83,7 +84,7 @@ export default function CouplesChallenge() {
     setSubmitting(true);
     try {
       const { error: updateError } = await supabase
-        .from("user_challenges")
+        .from("couples_challenges")
         .update({ responses })
         .eq("id", challenge.id);
 
@@ -97,17 +98,17 @@ export default function CouplesChallenge() {
 
       if (allAnswered && challenge.status !== 'completed') {
         const { error: completeError } = await supabase
-          .from("user_challenges")
+          .from("couples_challenges")
           .update({ status: 'completed', completed_at: new Date().toISOString() })
           .eq("id", challenge.id);
         if (completeError) throw completeError;
         
         // Track completion for gamification
         if (challenge.initiator_id) {
-          trackCouplesChallengeCompletion(challenge.initiator_id, challenge.id, 100);
+          trackCouplesChallengeCompletion(challenge.initiator_id, challenge.id);
         }
         if (challenge.partner_id) {
-          trackCouplesChallengeCompletion(challenge.partner_id, challenge.id, 100);
+          trackCouplesChallengeCompletion(challenge.partner_id, challenge.id);
         }
 
         toast({
@@ -172,7 +173,7 @@ export default function CouplesChallenge() {
             <CardHeader className="text-center">
               <Heart className="w-12 h-12 mx-auto text-primary" />
               <CardTitle className="text-3xl mt-4">Challenge Complete!</CardTitle>
-              <CardDescription>{template.title}</CardDescription>
+              <CardDescription>{String(template.title)}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-8">
               {template.questions.map((question, index) => {
@@ -229,8 +230,8 @@ export default function CouplesChallenge() {
           <CardHeader>
             <div className="flex justify-between items-start">
               <div>
-                <CardTitle className="text-3xl">{template.title}</CardTitle>
-                <CardDescription>{template.description}</CardDescription>
+                <CardTitle className="text-3xl">{String(template.title)}</CardTitle>
+                <CardDescription>{String(template.description)}</CardDescription>
               </div>
               <Badge variant="secondary" className="flex items-center gap-2">
                 <Users className="w-4 h-4" />
@@ -265,7 +266,7 @@ export default function CouplesChallenge() {
                   />
                   {!partnerHasResponded && (
                     <Alert variant="default" className="mt-2">
-                      <Lock className="h-4 w-4" />
+                      <Lock className="h-4 h-4" />
                       <AlertDescription>
                         Your partner hasn't answered this question yet. Your answers will be revealed to each other once you've both responded.
                       </AlertDescription>

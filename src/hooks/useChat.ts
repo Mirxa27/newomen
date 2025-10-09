@@ -73,7 +73,7 @@ export function useChat() {
       case 'response.text.delta':
         setPartialTranscript(prev => prev + (event.delta || ''));
         break;
-      
+
       case 'response.audio.started':
         setIsSpeaking(true);
         break;
@@ -115,7 +115,7 @@ export function useChat() {
     ]);
 
     if (profileRes.error) throw profileRes.error;
-    
+
     let finalContext = memoryContext;
     const profileNickname = profileRes.data?.nickname;
 
@@ -156,12 +156,19 @@ export function useChat() {
       setIsSpeaking(false);
 
       const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user?.id) {
+        toast({ title: "Sign in required", description: "Please sign in to continue your voice session.", variant: "destructive" });
+        setIsConnecting(false);
+        return;
+      }
+
       const chatOptions: RealtimeChatOptions = {
         systemPrompt: NEWME_SYSTEM_PROMPT,
-        voice: "marin",
+        voice: "merin",
         modalities: ["audio", "text"],
         onAudioLevel: setAudioLevel,
-        userId: user?.id,
+        userId: user.id,
       };
 
       const { data: activeAgentData } = await supabase.from('agents').select('id, voices:voices(voice_id, name), models:models(model_id)').eq('status', 'active').order('created_at', { ascending: false }).limit(1).maybeSingle();
@@ -173,13 +180,9 @@ export function useChat() {
         if (activeAgent.models?.model_id) chatOptions.model = activeAgent.models.model_id;
       }
 
-      if (user) {
-        const { greeting, sessionContext } = await setupConversation(user);
-        chatOptions.initialGreeting = greeting;
-        chatOptions.memoryContext = sessionContext;
-      } else {
-        chatOptions.initialGreeting = "Hey there... I'm NewMe. I'm so glad you're here. I've been waiting to meet you.";
-      }
+      const { greeting, sessionContext } = await setupConversation(user);
+      chatOptions.initialGreeting = greeting;
+      chatOptions.memoryContext = sessionContext;
 
       chatRef.current = new RealtimeChat(handleMessage, chatOptions);
       await chatRef.current.init(true);

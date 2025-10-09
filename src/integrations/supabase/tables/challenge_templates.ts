@@ -1,6 +1,38 @@
+import type { Json } from "../types";
+
 export type ChallengeTemplates = {
-  Row: { [key: string]: unknown; id: string };
-  Insert: { [key: string]: unknown };
-  Update: { [key: string]: unknown };
+  Row: {
+    id: string;
+    title: string;
+    description: string | null;
+    category: string;
+    questions: Json;
+    is_active: boolean;
+    created_by: string | null;
+    created_at: string;
+    updated_at: string;
+  };
+  Insert: {
+    id?: string;
+    title: string;
+    description?: string | null;
+    category?: string;
+    questions: Json;
+    is_active?: boolean;
+    created_by?: string | null;
+    created_at?: string;
+    updated_at?: string;
+  };
+  Update: {
+    id?: string;
+    title?: string;
+    description?: string | null;
+    category?: string;
+    questions?: Json;
+    is_active?: boolean;
+    created_by?: string | null;
+    created_at?: string;
+    updated_at?: string;
+  };
   Relationships: [];
 };

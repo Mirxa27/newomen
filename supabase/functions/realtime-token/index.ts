@@ -1,6 +1,15 @@
+// @ts-expect-error - Supabase edge functions run in a Deno runtime with remote module imports.
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+// @ts-expect-error - Supabase edge functions run in a Deno runtime with remote module imports.
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
+// @ts-expect-error - Supabase edge functions run in a Deno runtime with remote module imports.
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+declare const Deno: {
+  env: {
+    get(key: string): string | undefined;
+  };
+};
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -55,6 +64,34 @@ interface RealtimeTokenRequest {
   modalities?: Array<"audio" | "text">;
 }
 
+interface SubscriptionRow {
+  id: string;
+  status: string | null;
+  renewal_date: string | null;
+  cancelled_at: string | null;
+  minutes_included: number | null;
+  minutes_used: number | null;
+  tier: string | null;
+}
+
+interface UserProfileRow {
+  id: string;
+  user_id: string | null;
+  role: string | null;
+  subscription_tier: string | null;
+  remaining_minutes: number | null;
+}
+
+interface SubscriptionCheckResult {
+  allowed: boolean;
+  reason?: string;
+  profile: UserProfileRow | null;
+  isAdmin: boolean;
+  unlimited: boolean;
+  remainingMinutes: number;
+  subscription: SubscriptionRow | null;
+}
+
 interface OpenAISessionRequest {
   model: string;
   voice: string;
@@ -68,6 +105,9 @@ interface OpenAISessionRequest {
     agent_id?: string | null;
     agent_name?: string | null;
     user_id?: string | null;
+    subscription_tier?: string;
+    minutes_remaining?: number;
+    max_session_duration?: number;
   };
 }
 
@@ -182,6 +222,145 @@ const logError = (message: string, error?: unknown) => {
   console.error(`[REALTIME-TOKEN-ERROR] ${message}`, error instanceof Error ? error.stack : error);
 };
 
+const fetchUserProfile = async (supabase: SupabaseClient, userId: string): Promise<UserProfileRow | null> => {
+  try {
+    const { data: profileByUserId, error: profileByUserIdError } = await supabase
+      .from('user_profiles')
+      .select('id, user_id, role, subscription_tier, remaining_minutes')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (profileByUserIdError && profileByUserIdError.code !== 'PGRST116') {
+      throw profileByUserIdError;
+    }
+
+    if (profileByUserId) {
+      return profileByUserId as UserProfileRow;
+    }
+
+    const { data: profileById, error: profileByIdError } = await supabase
+      .from('user_profiles')
+      .select('id, user_id, role, subscription_tier, remaining_minutes')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (profileByIdError && profileByIdError.code !== 'PGRST116') {
+      throw profileByIdError;
+    }
+
+    return profileById as UserProfileRow | null;
+  } catch (error) {
+    logError('Failed to fetch user profile', error);
+    throw error;
+  }
+};
+
+const isSubscriptionActive = (subscription: SubscriptionRow | null): boolean => {
+  if (!subscription) return false;
+  const status = (subscription.status ?? '').toLowerCase();
+  if (status !== 'active' && status !== 'trialing') return false;
+
+  const now = Date.now();
+  if (subscription.cancelled_at) {
+    const cancelledAt = Date.parse(subscription.cancelled_at);
+    if (!Number.isNaN(cancelledAt) && cancelledAt <= now) return false;
+  }
+
+  if (subscription.renewal_date) {
+    const renewal = Date.parse(subscription.renewal_date);
+    if (!Number.isNaN(renewal) && renewal < now) return false;
+  }
+
+  return true;
+};
+
+const checkSubscriptionAccess = async (supabase: SupabaseClient, userId: string): Promise<SubscriptionCheckResult> => {
+  const profile = await fetchUserProfile(supabase, userId);
+
+  if (!profile) {
+    return {
+      allowed: false,
+      reason: 'PROFILE_NOT_FOUND',
+      profile: null,
+      isAdmin: false,
+      unlimited: false,
+      remainingMinutes: 0,
+      subscription: null,
+    };
+  }
+
+  const role = (profile.role ?? '').toLowerCase();
+  const tier = (profile.subscription_tier ?? '').toLowerCase();
+  const isAdmin = role === 'admin' || role === 'superadmin' || tier === 'admin';
+
+  let remainingMinutes = typeof profile.remaining_minutes === 'number' ? profile.remaining_minutes : 0;
+  let subscriptionRow: SubscriptionRow | null = null;
+  let unlimited = false;
+
+  const { data: subscriptions, error: subscriptionsError } = await supabase
+    .from('subscriptions')
+    .select('id, status, renewal_date, cancelled_at, minutes_included, minutes_used, tier')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(5);
+
+  if (subscriptionsError) {
+    throw subscriptionsError;
+  }
+
+  if (subscriptions && subscriptions.length > 0) {
+    const subscriptionRows = subscriptions as SubscriptionRow[];
+    const activeSubscriptions = subscriptionRows.filter((sub) => isSubscriptionActive(sub));
+
+    if (activeSubscriptions.length > 0) {
+      const bestSubscription = activeSubscriptions.reduce<{ row: SubscriptionRow | null; remaining: number }>((acc, current) => {
+        const included = current.minutes_included;
+        const used = current.minutes_used ?? 0;
+        const remaining = included == null ? Number.POSITIVE_INFINITY : Math.max(0, included - used);
+
+        if (!acc.row) {
+          return { row: current, remaining };
+        }
+
+        return remaining > acc.remaining ? { row: current, remaining } : acc;
+      }, { row: null, remaining: -1 });
+
+      if (bestSubscription.row) {
+        subscriptionRow = bestSubscription.row;
+        if (bestSubscription.remaining === Number.POSITIVE_INFINITY) {
+          unlimited = true;
+          remainingMinutes = Number.MAX_SAFE_INTEGER;
+        } else {
+          remainingMinutes = Math.max(remainingMinutes, bestSubscription.remaining);
+        }
+      }
+    }
+  }
+
+  const allowed = isAdmin || unlimited || remainingMinutes > 0;
+
+  if (!allowed) {
+    return {
+      allowed: false,
+      reason: 'NO_MINUTES_REMAINING',
+      profile,
+      isAdmin,
+      unlimited,
+      remainingMinutes,
+      subscription: subscriptionRow,
+    };
+  }
+
+  return {
+    allowed: true,
+    profile,
+    isAdmin,
+    unlimited,
+    remainingMinutes,
+    subscription: subscriptionRow,
+  };
+};
+
 // Enhanced prompt parsing with better error handling
 const parsePromptContent = (content: unknown): { sections: string[] } => {
   try {
@@ -283,7 +462,7 @@ const createOpenAISession = async (
 ): Promise<Response> => {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const response = await fetch("https://api.openai.com/v1/realtime/sessions", {
+      const response = await fetch("https://api.openai.com/v1/realtime/ephemeral_keys", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${apiKey}`,
@@ -291,7 +470,12 @@ const createOpenAISession = async (
           "OpenAI-Beta": "realtime=v1",
           "User-Agent": "NewMe-Realtime-Token/1.0",
         },
-        body: JSON.stringify(sessionRequest),
+        body: JSON.stringify({
+          model: sessionRequest.model,
+          voice: sessionRequest.voice,
+          instructions: sessionRequest.instructions,
+          modalities: sessionRequest.modalities
+        }),
         signal: AbortSignal.timeout(30000), // 30 second timeout
       });
 
@@ -324,7 +508,280 @@ const createOpenAISession = async (
   throw new Error('Failed to create OpenAI session after all retries');
 };
 
-serve(async (req) => {
+// Subscription validation interfaces
+interface SubscriptionValidationResult {
+  isValid: boolean;
+  reason?: string;
+  code?: string;
+  httpStatus: number;
+  status?: string;
+  tier?: string;
+  minutesUsed?: number;
+  minutesIncluded?: number;
+  minutesRemaining?: number;
+}
+
+// Tier configuration
+interface TierConfig {
+  allowsRealtimeAI: boolean;
+  bufferMinutes: number;
+  maxSessionDuration: number;
+  upgradeMessage: string;
+  features: string[];
+}
+
+const getTierConfiguration = (tier: string): TierConfig => {
+  const normalized = tier?.toLowerCase() ?? '';
+
+  switch (normalized) {
+    case 'discovery':
+    case 'starter':
+    case 'trial':
+    case 'free':
+      return {
+        allowsRealtimeAI: true,
+        bufferMinutes: 1,
+        maxSessionDuration: 15,
+        upgradeMessage: 'Upgrade to Growth for longer conversations and additional minutes.',
+        features: ['Complimentary real-time sessions', 'Core memory features', '10 minutes included']
+      };
+
+    case 'growth':
+    case 'explorer':
+    case 'basic':
+      return {
+        allowsRealtimeAI: true,
+        bufferMinutes: 2,
+        maxSessionDuration: 45,
+        upgradeMessage: 'Upgrade to Transformation for unlimited conversations and deeper insights.',
+        features: ['Real-time AI conversations', 'Memory persistence', '60 minutes/month']
+      };
+
+    case 'transformation':
+    case 'transformer':
+    case 'premium':
+    case 'pro':
+      return {
+        allowsRealtimeAI: true,
+        bufferMinutes: 5,
+        maxSessionDuration: 120,
+        upgradeMessage: 'Consider our Enterprise plan for custom integrations and concierge support.',
+        features: ['Unlimited conversations', 'Advanced memory', 'Priority support']
+      };
+
+    case 'enterprise':
+    case 'unlimited':
+      return {
+        allowsRealtimeAI: true,
+        bufferMinutes: 10,
+        maxSessionDuration: 240,
+        upgradeMessage: 'You have our highest tier with all features included.',
+        features: ['Everything included', 'Custom integrations', '24/7 support']
+      };
+
+    default:
+      return {
+        allowsRealtimeAI: true,
+        bufferMinutes: 1,
+        maxSessionDuration: 15,
+        upgradeMessage: 'Tier not recognized. Granting starter access—please verify your subscription.',
+        features: ['Starter access', 'Basic memory support']
+      };
+  }
+};
+
+// Usage tracking function
+const trackSessionUsage = async (
+  supabase: SupabaseClient,
+  userId: string,
+  sessionId: string,
+  estimatedMinutes = 1
+): Promise<void> => {
+  try {
+    // Update subscription usage
+    const { error: updateError } = await supabase
+      .from('subscriptions')
+      .update({
+        minutes_used: supabase.raw(`COALESCE(minutes_used, 0) + ${estimatedMinutes}`),
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId)
+      .in('status', ['active', 'trialing', 'past_due']);
+
+    if (updateError) {
+      logError('Failed to update subscription usage', {
+        userId,
+        sessionId,
+        error: updateError
+      });
+    } else {
+      logRequest('Usage tracked successfully', {
+        userId,
+        sessionId,
+        minutesAdded: estimatedMinutes
+      });
+    }
+
+    const { error: profileMinutesError } = await supabase
+      .from('user_profiles')
+      .update({
+        remaining_minutes: supabase.raw(`GREATEST(COALESCE(remaining_minutes, 0) - ${estimatedMinutes}, 0)`)
+      })
+      .or(`id.eq.${userId},user_id.eq.${userId}`);
+
+    if (profileMinutesError) {
+      logError('Failed to decrement profile minutes', {
+        userId,
+        sessionId,
+        error: profileMinutesError
+      });
+    }
+
+    // Optional: Log usage to ai_usage_logs table for detailed tracking
+    await supabase
+      .from('ai_usage_logs')
+      .insert({
+        user_id: userId,
+        session_id: sessionId,
+        usage_type: 'realtime_conversation',
+        minutes_used: estimatedMinutes,
+        created_at: new Date().toISOString()
+      });
+
+  } catch (error) {
+    logError('Usage tracking error', { userId, sessionId, error });
+    // Don't throw - usage tracking shouldn't block the session creation
+  }
+};
+
+// Subscription validation function
+const validateUserSubscription = async (
+  supabase: SupabaseClient,
+  userId: string
+): Promise<SubscriptionValidationResult> => {
+  try {
+    const profile = await fetchUserProfile(supabase, userId);
+
+    const { data: subscription, error: subError } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('user_id', userId)
+      .in('status', ['active', 'trialing', 'past_due'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (subError && subError.code !== 'PGRST116') {
+      throw subError;
+    }
+
+    if (!subscription) {
+      const fallbackTier = profile?.subscription_tier ?? 'discovery';
+      const tierConfig = getTierConfiguration(fallbackTier);
+      const profileMinutes = typeof profile?.remaining_minutes === 'number' ? profile.remaining_minutes : 0;
+      const minutesRemaining = Math.max(0, profileMinutes);
+
+      if (!tierConfig.allowsRealtimeAI) {
+        return {
+          isValid: false,
+          reason: `Real-time AI conversations are not available in your ${fallbackTier} plan. ${tierConfig.upgradeMessage}`,
+          code: 'FEATURE_NOT_AVAILABLE',
+          httpStatus: 403,
+          status: 'inactive',
+          tier: fallbackTier,
+          minutesRemaining
+        };
+      }
+
+      if (minutesRemaining <= tierConfig.bufferMinutes) {
+        return {
+          isValid: false,
+          reason: `You have used all complimentary minutes included in your ${fallbackTier} plan. ${tierConfig.upgradeMessage}`,
+          code: 'USAGE_LIMIT_EXCEEDED',
+          httpStatus: 429,
+          status: 'inactive',
+          tier: fallbackTier,
+          minutesUsed: Math.max(0, tierConfig.bufferMinutes - minutesRemaining),
+          minutesIncluded: minutesRemaining + tierConfig.bufferMinutes,
+          minutesRemaining
+        };
+      }
+
+      return {
+        isValid: true,
+        httpStatus: 200,
+        status: 'active',
+        tier: fallbackTier,
+        minutesUsed: 0,
+        minutesIncluded: minutesRemaining,
+        minutesRemaining
+      };
+    }
+
+    // Check if subscription is expired
+    if (subscription.renewal_date) {
+      const renewalDate = new Date(subscription.renewal_date);
+      const now = new Date();
+
+      if (now > renewalDate && subscription.status !== 'active') {
+        return {
+          isValid: false,
+          reason: 'Subscription has expired. Please renew to continue using real-time features.',
+          code: 'SUBSCRIPTION_EXPIRED',
+          httpStatus: 403,
+          status: subscription.status,
+          tier: subscription.tier
+        };
+      }
+    }
+
+    const tierConfig = getTierConfiguration(subscription.tier);
+    const minutesUsed = subscription.minutes_used || 0;
+    const minutesIncluded = subscription.minutes_included || 0;
+    const minutesRemaining = Math.max(0, minutesIncluded - minutesUsed);
+
+    if (minutesRemaining <= tierConfig.bufferMinutes) {
+      return {
+        isValid: false,
+        reason: `You have used ${minutesUsed} of ${minutesIncluded} minutes included in your ${subscription.tier} plan. ${tierConfig.upgradeMessage}`,
+        code: 'USAGE_LIMIT_EXCEEDED',
+        httpStatus: 429,
+        status: subscription.status,
+        tier: subscription.tier,
+        minutesUsed,
+        minutesIncluded,
+        minutesRemaining
+      };
+    }
+
+    if (!tierConfig.allowsRealtimeAI) {
+      return {
+        isValid: false,
+        reason: `Real-time AI conversations are not available in your ${subscription.tier} plan. ${tierConfig.upgradeMessage}`,
+        code: 'FEATURE_NOT_AVAILABLE',
+        httpStatus: 403,
+        status: subscription.status,
+        tier: subscription.tier
+      };
+    }
+
+    return {
+      isValid: true,
+      httpStatus: 200,
+      status: subscription.status,
+      tier: subscription.tier,
+      minutesUsed,
+      minutesIncluded,
+      minutesRemaining
+    };
+
+  } catch (error) {
+    logError('Subscription validation error', error);
+    throw error;
+  }
+};
+
+serve(async (req: Request) => {
   const startTime = Date.now();
 
   // Handle CORS preflight
@@ -434,6 +891,90 @@ serve(async (req) => {
       requestedModalities: body.modalities
     });
 
+    if (!body.userId || typeof body.userId !== 'string') {
+      return new Response(JSON.stringify({
+        error: 'Missing required userId',
+        code: 'MISSING_USER_ID'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const subscriptionCheck = await checkSubscriptionAccess(supabase, body.userId);
+
+    logRequest('Subscription check result', {
+      allowed: subscriptionCheck.allowed,
+      reason: subscriptionCheck.reason,
+      isAdmin: subscriptionCheck.isAdmin,
+      unlimited: subscriptionCheck.unlimited,
+      remainingMinutes: subscriptionCheck.unlimited ? 'unlimited' : subscriptionCheck.remainingMinutes,
+      subscriptionTier: subscriptionCheck.subscription?.tier ?? subscriptionCheck.profile?.subscription_tier ?? null,
+      hasProfile: !!subscriptionCheck.profile,
+    });
+
+    if (!subscriptionCheck.allowed) {
+      const status = subscriptionCheck.reason === 'PROFILE_NOT_FOUND' ? 404 : 402;
+      return new Response(JSON.stringify({
+        error: subscriptionCheck.reason === 'PROFILE_NOT_FOUND'
+          ? 'User profile not found'
+          : 'An active subscription or minutes are required to start a new session.',
+        code: subscriptionCheck.reason ?? 'SUBSCRIPTION_REQUIRED'
+      }), {
+        status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Validate subscription and usage limits
+    let userSubscription: SubscriptionValidationResult | null = null;
+    if (body.userId) {
+      try {
+        userSubscription = await validateUserSubscription(supabase, body.userId);
+
+        if (!userSubscription.isValid) {
+          logError('Subscription validation failed', {
+            userId: body.userId,
+            reason: userSubscription.reason,
+            status: userSubscription.status
+          });
+
+          return new Response(JSON.stringify({
+            error: userSubscription.reason,
+            code: userSubscription.code,
+            details: {
+              status: userSubscription.status,
+              minutesUsed: userSubscription.minutesUsed,
+              minutesIncluded: userSubscription.minutesIncluded,
+              tier: userSubscription.tier
+            }
+          }), {
+            status: userSubscription.httpStatus,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        logRequest('Subscription validated successfully', {
+          userId: body.userId,
+          tier: userSubscription.tier,
+          minutesRemaining: userSubscription.minutesRemaining
+        });
+
+      } catch (subscriptionError) {
+        logError('Subscription validation error', subscriptionError);
+        return new Response(JSON.stringify({
+          error: 'Unable to validate subscription status',
+          code: 'SUBSCRIPTION_CHECK_FAILED'
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    // Session tracking variables (for future enhancement)
+    const minutesRemainingBefore = userSubscription?.minutesRemaining ?? 0;
+
     // Fetch agent data with error handling
     let agent: Agent | null = null;
     try {
@@ -496,6 +1037,9 @@ serve(async (req) => {
         agent_id: agent?.id ?? null,
         agent_name: agent?.name ?? null,
         user_id: body.userId ?? null,
+        subscription_tier: userSubscription?.tier ?? 'unknown',
+        minutes_remaining: userSubscription?.minutesRemaining ?? 0,
+        max_session_duration: userSubscription?.tier ? getTierConfiguration(userSubscription.tier).maxSessionDuration : 15,
       },
     };
 
@@ -561,6 +1105,13 @@ serve(async (req) => {
       model: selectedModel,
       agentId: agent?.id
     });
+
+    // Track usage for billing purposes (async, don't wait)
+    if (body.userId && data.id) {
+      trackSessionUsage(supabase, body.userId, data.id).catch(error => {
+        logError('Failed to track session usage', error);
+      });
+    }
 
     return new Response(JSON.stringify({
       ...data,
