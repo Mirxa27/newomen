@@ -10,39 +10,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 import { toast } from "sonner";
 import { Loader2, Edit, Search, Users, Shield, Crown } from "lucide-react";
+import { Tables } from "@/integrations/supabase/types";
 
-interface UserProfile {
-  id: string;
-  user_id: string;
-  email: string;
-  nickname: string | null;
-  frontend_name: string | null;
-  role: string;
-  subscription_tier: string | null;
-  remaining_minutes: number | null;
-  current_level: number | null;
-  crystal_balance: number | null;
-  daily_streak: number | null;
-  created_at: string;
-  updated_at: string | null;
-}
+type UserProfile = Tables<'user_profiles'>;
 
 interface EditUserForm {
   role: string;
   subscription_tier: string;
   remaining_minutes: number;
   nickname: string;
-  frontend_name: string;
-}
-
-// Type for RPC parameters to avoid TypeScript errors
-interface RpcParams {
-  [key: string]: unknown;
-}
-
-// Type for Supabase RPC function with proper typing
-interface TypedSupabaseClient {
-  rpc: (fn: string, params?: RpcParams) => Promise<{ data: unknown; error: unknown }>;
 }
 
 export default function AdminUserManagement() {
@@ -53,17 +29,16 @@ export default function AdminUserManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [formData, setFormData] = useState<EditUserForm>({
-    role: 'member',
+    role: 'user',
     subscription_tier: 'discovery',
     remaining_minutes: 10,
     nickname: '',
-    frontend_name: ''
   });
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await (supabase as unknown as TypedSupabaseClient).rpc('admin_get_user_profiles', {
+      const { data, error } = await supabase.rpc('admin_get_user_profiles', {
         limit_count: 100,
         offset_count: 0,
         search_term: searchTerm || null
@@ -90,7 +65,6 @@ export default function AdminUserManagement() {
       subscription_tier: user.subscription_tier || 'discovery',
       remaining_minutes: user.remaining_minutes || 0,
       nickname: user.nickname || '',
-      frontend_name: user.frontend_name || ''
     });
     setDialogOpen(true);
   };
@@ -100,13 +74,12 @@ export default function AdminUserManagement() {
     setSaving(true);
 
     try {
-      const { data, error } = await (supabase as unknown as TypedSupabaseClient).rpc('admin_update_user_profile', {
+      const { data, error } = await supabase.rpc('admin_update_user_profile', {
         target_user_id: selectedUser.user_id,
         new_role: formData.role,
         new_subscription_tier: formData.subscription_tier,
         new_remaining_minutes: formData.remaining_minutes,
         new_nickname: formData.nickname || null,
-        new_frontend_name: formData.frontend_name || null
       });
 
       if (error) throw error;
@@ -163,7 +136,6 @@ export default function AdminUserManagement() {
         </div>
       </div>
 
-      {/* Search */}
       <Card className="glass-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -186,7 +158,6 @@ export default function AdminUserManagement() {
         </CardContent>
       </Card>
 
-      {/* Users Table */}
       <Card className="glass-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -221,11 +192,8 @@ export default function AdminUserManagement() {
                     <TableRow key={user.id}>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{user.frontend_name || user.nickname || 'No display name'}</div>
+                          <div className="font-medium">{user.nickname || 'No display name'}</div>
                           <div className="text-sm text-muted-foreground">{user.email}</div>
-                          {user.frontend_name && user.nickname && user.frontend_name !== user.nickname && (
-                            <div className="text-xs text-gray-500">Original: {user.nickname}</div>
-                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -264,7 +232,6 @@ export default function AdminUserManagement() {
         </CardContent>
       </Card>
 
-      {/* Edit User Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="glass-card max-w-md">
           <DialogHeader>
@@ -286,26 +253,13 @@ export default function AdminUserManagement() {
             </div>
 
             <div>
-              <Label htmlFor="frontend_name">Frontend Display Name</Label>
-              <Input
-                id="frontend_name"
-                value={formData.frontend_name}
-                onChange={(e) => setFormData({ ...formData, frontend_name: e.target.value })}
-                placeholder="Custom display name for frontend (optional)"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                If set, this will be shown instead of the nickname throughout the app
-              </p>
-            </div>
-
-            <div>
               <Label htmlFor="role">Role</Label>
               <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="member">Member</SelectItem>
+                  <SelectItem value="user">User</SelectItem>
                   <SelectItem value="premium">Premium</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="superadmin">Super Admin</SelectItem>

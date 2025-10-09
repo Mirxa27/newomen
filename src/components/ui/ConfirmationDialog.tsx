@@ -17,13 +17,13 @@ interface ConfirmationDialogProps {
   description: string;
 }
 
-export const ConfirmationDialog = ({
+export function ConfirmationDialog({
   open,
   onOpenChange,
   onConfirm,
   title,
   description,
-}: ConfirmationDialogProps) => {
+}: ConfirmationDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -38,4 +38,4 @@ export const ConfirmationDialog = ({
       </AlertDialogContent>
     </AlertDialog>
   );
-};
+}

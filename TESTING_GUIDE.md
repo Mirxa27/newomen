@@ -13,6 +13,7 @@ After starting the dev server (`bun run dev`), test these URLs:
 | **Community** | `/community` | User search, send connection request |
 | **Account Settings** | `/account-settings` | Edit account, view subscription, privacy toggles |
 | **Narrative Exploration** ⭐ | `/narrative-exploration` | Complete 10 questions, view AI analysis |
+| **Advanced Therapies (Gallery)** | `/member-assessments` | Start any of the 10 guided journeys under the gallery |
 | **About Us** | `/about` | Company info, mission, contact |
 | **Privacy Policy** | `/privacy` | Legal disclosure |
 | **Terms of Service** | `/terms` | Legal terms |
@@ -26,6 +27,20 @@ After starting the dev server (`bun run dev`), test these URLs:
 | **AI Content Builder** | `/admin` → AI Builder tab | Generate assessments with narrative analysis |
 
 ## 🎯 Priority Testing Scenarios
+
+### Advanced Exploration Therapies Gallery
+
+Steps:
+1. Log in and navigate to `/member-assessments`.
+2. In the "Advanced Exploration Therapies Gallery" section, pick one journey (e.g., Grief Alchemist).
+3. Complete all 4–5 stage prompts (text or choice as applicable).
+4. Submit. If AI config is not set, expect a saved submission with a message that AI analysis failed; otherwise, view AI analysis.
+
+Expected Result:
+- Answers save and attempt completes.
+- Progress bar advances each question.
+- On completion: either AI analysis appears or a success message indicates responses were saved.
+- You can navigate back to Dashboard.
 
 ### 1. Narrative Identity Exploration (⭐ Core Feature)
 

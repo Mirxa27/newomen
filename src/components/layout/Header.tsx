@@ -22,7 +22,6 @@ import {
 import { navigationMenuTriggerStyle } from "@/lib/ui-variants";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { 
-  Loader2, 
   LogOut, 
   Settings, 
   User, 
@@ -38,6 +37,7 @@ import {
   Brain,
   Info,
   DollarSign,
+  Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -108,15 +108,13 @@ export default function Header() {
   const displayName = getDisplayName();
 
   const renderLogo = (href: string) => (
-    <Link to={href} aria-label="Newomen" className="mr-6 group">
-      <div className="glass rounded-xl p-1 glow-primary transition-transform duration-200 group-hover:scale-105">
-        <img
-          src="/Newomen%20logo.svg"
-          alt="Newomen Logo"
-          className="h-8 w-auto select-none"
-          draggable={false}
-        />
-      </div>
+    <Link to={href} aria-label="Newomen" className="mr-6">
+      <img
+        src="/Newomen%20logo.svg"
+        alt="Newomen Logo"
+        className="h-12 md:h-14 w-auto select-none"
+        draggable={false}
+      />
     </Link>
   );
 
@@ -190,10 +188,10 @@ export default function Header() {
             <SheetContent side="left" className="pr-0">
               <Link
                 to={profile ? "/dashboard" : "/"}
-                className="inline-flex items-center rounded-xl glass p-2"
+                className="inline-flex items-center"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                <img src="/Newomen%20logo.svg" alt="Newomen Logo" className="h-6 w-auto" />
+                <img src="/Newomen%20logo.svg" alt="Newomen Logo" className="h-10 w-auto" />
               </Link>
               <div className="my-4 h-[calc(100vh-8rem)] pb-10 pl-6">
                 <div className="flex flex-col space-y-3">
@@ -245,7 +243,7 @@ export default function Header() {
 
         <div className="hidden md:flex flex-1 items-center justify-end space-x-4">
           {profileLoading ? (
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <img src="/Newomen%20icon.svg" alt="Loading" className="h-6 w-6 logo-fade" />
           ) : profile ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
