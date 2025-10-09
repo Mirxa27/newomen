@@ -1,33 +1,35 @@
+import type { Json } from "../types";
+
 export type LevelThresholds = {
   Row: {
     id: string;
     level: number;
     crystals_required: number;
-    title: string | null;
+    title: string;
     description: string | null;
-    rewards: import('../types').Json | null;
-    created_at: string | null;
-    updated_at: string | null;
+    rewards: Json | null;
+    created_at: string;
+    updated_at: string;
   };
   Insert: {
     id?: string;
     level: number;
     crystals_required: number;
-    title?: string | null;
+    title: string;
     description?: string | null;
-    rewards?: import('../types').Json | null;
-    created_at?: string | null;
-    updated_at?: string | null;
+    rewards?: Json | null;
+    created_at?: string;
+    updated_at?: string;
   };
   Update: {
     id?: string;
     level?: number;
     crystals_required?: number;
-    title?: string | null;
+    title?: string;
     description?: string | null;
-    rewards?: import('../types').Json | null;
-    created_at?: string | null;
-    updated_at?: string | null;
+    rewards?: Json | null;
+    created_at?: string;
+    updated_at?: string;
   };
   Relationships: [];
 };

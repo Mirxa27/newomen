@@ -1,245 +1,201 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import GamificationDisplay from "@/components/GamificationDisplay";
-import {
-  Sparkles,
-  MessageSquare,
-  Target,
-  Users,
-  BookOpen,
-  Heart,
-  LogOut,
-  Zap,
-} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import type { Database } from "@/integrations/supabase/types";
 import { trackDailyLogin } from "@/lib/gamification-events";
+import { Loader2, Brain, Heart, Users, Award, TrendingUp, BookOpen, MessageCircle, Zap } from "lucide-react";
+import type { Database } from "@/integrations/supabase/types";
 
-const AFFIRMATIONS = [
-  "You are capable of amazing things. Every step forward is progress.",
-  "Your journey is unique and beautiful.",
-  "Today is filled with possibilities for growth.",
-  "You have the strength to overcome any challenge.",
-  "Your potential is limitless.",
-];
+type LevelThreshold = Database["public"]["Tables"]["level_thresholds"];
 
-const Dashboard = () => {
-  const navigate = useNavigate();
+export default function Dashboard() {
   const { toast } = useToast();
   const { profile, loading, getDisplayName } = useUserProfile();
-  const [levelThresholds, setLevelThresholds] = useState<Database["public"]["Tables"]["level_thresholds"]["Row"][]>([]);
+  const [levelThresholds, setLevelThresholds] = useState<LevelThreshold['Row'][]>([]);
   const [affirmation, setAffirmation] = useState("");
+  const navigate = useNavigate();
+
+  const fetchLevelThresholds = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("level_thresholds")
+      .select("*")
+      .order("level", { ascending: true });
+    if (error) {
+      console.error("Error fetching level thresholds:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load level thresholds.",
+        variant: "destructive",
+      });
+    } else {
+      setLevelThresholds(data || []);
+    }
+  }, [toast]);
+
+  const fetchAffirmation = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("affirmations")
+      .select("content")
+      .limit(1)
+      .single();
+    if (error) {
+      console.error("Error fetching affirmation:", error);
+    } else {
+      setAffirmation(data?.content || "You are capable of amazing things!");
+    }
+  }, []);
 
   useEffect(() => {
-    const loadGamificationData = async () => {
-      if (!profile) return;
-
-      try {
-        const { data: thresholdsData, error: thresholdsError } = await supabase
-          .from("level_thresholds")
-          .select("*")
-          .order("level", { ascending: true });
-
-        if (thresholdsError) {
-          throw thresholdsError;
-        }
-
-        setLevelThresholds(thresholdsData);
-        // Track daily login after profile is loaded
-        void trackDailyLogin(profile.user_id!);
-      } catch (error) {
-        console.error("Error loading gamification data:", error);
-        toast({
-          title: "Unable to load gamification data",
-          description: "Some features may not work correctly.",
-          variant: "destructive",
-        });
-      }
-    };
-
-    if (profile) {
-      void loadGamificationData();
+    if (profile && profile.user_id) {
+      // Track daily login after profile is loaded
+      void trackDailyLogin(profile.user_id);
     }
-    setAffirmation(AFFIRMATIONS[Math.floor(Math.random() * AFFIRMATIONS.length)]);
-  }, [profile, toast]);
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    navigate("/");
-  };
+    void fetchLevelThresholds();
+    void fetchAffirmation();
+  }, [profile, fetchLevelThresholds, fetchAffirmation]);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="glass-card p-8">
-          <p>Loading your journey...</p>
-        </div>
+        <Loader2 className="w-8 h-8 animate-spin" />
       </div>
     );
   }
 
-  const currentCrystalBalance = profile?.crystal_balance || 0;
-  const currentLevel = profile?.current_level || 1;
-  const dailyStreak = profile?.daily_streak || 0;
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 text-center">
+        <h1 className="text-3xl font-bold mb-4">Welcome to NewMe</h1>
+        <p className="text-muted-foreground mb-6">Please log in or sign up to continue your journey.</p>
+        <Button onClick={() => navigate("/auth")}>Get Started</Button>
+      </div>
+    );
+  }
+
+  const currentCrystalBalance = profile.crystal_balance || 0;
+  const currentLevel = profile.current_level || 1;
+  const dailyStreak = profile.daily_streak || 0;
 
   const nextLevelThreshold = levelThresholds.find(
     (threshold) => threshold.level === currentLevel + 1
   );
-  const currentLevelThreshold = levelThresholds.find(
-    (threshold) => threshold.level === currentLevel
-  );
-
-  const crystalsNeededForNextLevel = nextLevelThreshold
-    ? nextLevelThreshold.crystals_required - currentCrystalBalance
-    : 0;
-
-  const crystalsEarnedInCurrentLevel = currentCrystalBalance - (currentLevelThreshold?.crystals_required || 0);
-  const crystalsRequiredForCurrentLevelUp = (nextLevelThreshold?.crystals_required || 0) - (currentLevelThreshold?.crystals_required || 0);
-
-  const levelProgressPercentage =
-    crystalsRequiredForCurrentLevelUp > 0
-      ? (crystalsEarnedInCurrentLevel / crystalsRequiredForCurrentLevelUp) * 100
-      : 0;
-
-
-  const displayName = getDisplayName();
+  const progressToNextLevel = nextLevelThreshold
+    ? (currentCrystalBalance / nextLevelThreshold.crystals_required) * 100
+    : 100;
 
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto space-y-8">
-        <div className="flex justify-between items-center">
-          <div className="space-y-1">
-            <h1 className="text-4xl font-bold gradient-text">
-              Welcome back, {displayName}!
-            </h1>
-            <p className="text-xl text-muted-foreground flex items-center gap-2">
-              <Zap className="w-5 h-5 text-accent" />
-              <span>{affirmation}</span>
-            </p>
-          </div>
-          <Button variant="outline" className="glass" onClick={handleSignOut}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
+        <div className="flex items-center justify-between">
+          <h1 className="text-4xl font-bold gradient-text">Welcome, {getDisplayName()}!</h1>
+          <Button variant="outline" onClick={() => navigate("/chat")}>
+            <MessageCircle className="w-4 h-4 mr-2" />
+            Start Chat
           </Button>
         </div>
 
-        <GamificationDisplay
-          crystalBalance={currentCrystalBalance}
-          currentLevel={currentLevel}
-          dailyStreak={dailyStreak}
-          crystalsToNextLevel={crystalsNeededForNextLevel}
-          levelProgressPercentage={levelProgressPercentage}
-        />
-
-        {/* Featured: Narrative Identity Exploration */}
-        <Card
-          className="glass-card hover:shadow-lg transition-all cursor-pointer border-2 border-accent bg-gradient-to-br from-primary/10 to-accent/10"
-          onClick={() => navigate("/narrative-exploration")}
-        >
+        {/* Daily Affirmation */}
+        <Card className="glass-card">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="clay w-16 h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-primary to-accent">
-                  <Sparkles className="w-8 h-8 text-white" />
-                </div>
-                <div>
-                  <CardTitle className="text-2xl gradient-text">Discover Your Narrative Identity</CardTitle>
-                  <CardDescription className="text-base mt-1">
-                    Take a guided journey through 10 questions to understand your personal story
-                  </CardDescription>
-                </div>
-              </div>
-              <Button className="clay-button bg-gradient-to-r from-primary to-accent">Begin Journey</Button>
-            </div>
+            <CardTitle className="text-2xl">Daily Affirmation</CardTitle>
           </CardHeader>
+          <CardContent>
+            <p className="text-lg italic text-muted-foreground">"{affirmation}"</p>
+          </CardContent>
         </Card>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card
-            className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
-            onClick={() => navigate("/chat")}
-          >
-            <CardHeader>
-              <div className="clay w-12 h-12 rounded-2xl flex items-center justify-center mb-4">
-                <MessageSquare className="w-6 h-6 text-primary" />
-              </div>
-              <CardTitle>Start Conversation</CardTitle>
-              <CardDescription>Talk with your AI companion</CardDescription>
+        {/* Gamification Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="glass-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Crystals</CardTitle>
+              <Zap className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{currentCrystalBalance}</div>
+              <p className="text-xs text-muted-foreground">Earned through activities</p>
+            </CardContent>
           </Card>
-
-          <Card
-            className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
-            onClick={() => navigate("/member-assessments")}
-          >
-            <CardHeader>
-              <div className="clay w-12 h-12 rounded-2xl flex items-center justify-center mb-4">
-                <Target className="w-6 h-6 text-primary" />
-              </div>
-              <CardTitle>Assessments</CardTitle>
-              <CardDescription>Explore your personality and growth areas</CardDescription>
+          <Card className="glass-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Level</CardTitle>
+              <Award className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">Level {currentLevel}</div>
+              <Progress value={progressToNextLevel} className="h-2 mt-2" />
+              {nextLevelThreshold && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {nextLevelThreshold.crystals_required - currentCrystalBalance} crystals to next level
+                </p>
+              )}
+            </CardContent>
           </Card>
-
-          <Card
-            className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
-            onClick={() => navigate("/couples-challenge")}
-          >
-            <CardHeader>
-              <div className="clay w-12 h-12 rounded-2xl flex items-center justify-center mb-4">
-                <Heart className="w-6 h-6 text-primary" />
-              </div>
-              <CardTitle>Couple's Challenge</CardTitle>
-              <CardDescription>Connect deeper with your partner</CardDescription>
+          <Card className="glass-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Daily Streak</CardTitle>
+              <Heart className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-          </Card>
-
-          <Card
-            className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
-            onClick={() => navigate("/community")}
-          >
-            <CardHeader>
-              <div className="clay w-12 h-12 rounded-2xl flex items-center justify-center mb-4">
-                <Users className="w-6 h-6 text-primary" />
-              </div>
-              <CardTitle>Community</CardTitle>
-              <CardDescription>Connect with others on the same journey</CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card
-            className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
-            onClick={() => navigate("/wellness-library")}
-          >
-            <CardHeader>
-              <div className="clay w-12 h-12 rounded-2xl flex items-center justify-center mb-4">
-                <BookOpen className="w-6 h-6 text-primary" />
-              </div>
-              <CardTitle>Wellness Library</CardTitle>
-              <CardDescription>Access guided meditations and more</CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card
-            className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
-            onClick={() => navigate("/profile")}
-          >
-            <CardHeader>
-              <div className="clay w-12 h-12 rounded-2xl flex items-center justify-center mb-4">
-                <Sparkles className="w-6 h-6 text-primary" />
-              </div>
-              <CardTitle>My Profile</CardTitle>
-              <CardDescription>View achievements and progress</CardDescription>
-            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{dailyStreak} days</div>
+              <p className="text-xs text-muted-foreground">Keep coming back!</p>
+            </CardContent>
           </Card>
         </div>
+
+        {/* Quick Access */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Link to="/assessments">
+            <Card className="glass-card hover:shadow-lg transition-all">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-lg font-medium">AI Assessments</CardTitle>
+                <Brain className="h-5 w-5 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <CardDescription>Discover insights about yourself with AI-generated analysis.</CardDescription>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link to="/couples-challenge">
+            <Card className="glass-card hover:shadow-lg transition-all">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-lg font-medium">Couples Challenges</CardTitle>
+                <Users className="h-5 w-5 text-pink-500" />
+              </CardHeader>
+              <CardContent>
+                <CardDescription>Strengthen your relationship with guided interactive challenges.</CardDescription>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link to="/wellness-library">
+            <Card className="glass-card hover:shadow-lg transition-all">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-lg font-medium">Wellness Library</CardTitle>
+                <BookOpen className="h-5 w-5 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <CardDescription>Access guided meditations, audio content, and resources.</CardDescription>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+
+        {/* Recent Activity / Recommendations (Placeholder) */}
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle>Your Journey</CardTitle>
+            <CardDescription>Recent activities and personalized recommendations.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">No recent activity yet. Start exploring!</p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
-};
-
-export default Dashboard;
+}

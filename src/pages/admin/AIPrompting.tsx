@@ -1,45 +1,52 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import type { Json, Tables } from "@/integrations/supabase/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import ResponsiveTable from "@/components/ui/ResponsiveTable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Loader2, Edit, Trash2, Plus } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Plus, Edit, Trash2, Save } from "lucide-react";
+import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
+import { Prompts } from "@/integrations/supabase/tables/prompts";
+import { Json } from "@/integrations/supabase/types";
 
-type Prompt = Tables<"prompts">;
+type Prompt = Prompts;
 
-interface PromptContent {
-  system_prompt: string;
-  user_prompt_template?: string;
-  scoring_prompt_template?: string;
-  feedback_prompt_template?: string;
+interface PromptFormState {
+  id?: string;
+  name: string;
+  content: string; // JSON string
+  status: 'draft' | 'published' | 'archived';
+  version: number;
+  hosted_prompt_id?: string;
 }
-
-const emptyPromptContent: PromptContent = {
-  system_prompt: "You are a helpful AI assistant.",
-  user_prompt_template: "",
-  scoring_prompt_template: "",
-  feedback_prompt_template: "",
-};
 
 export default function AIPrompting() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formState, setFormState] = useState<PromptFormState>({
+    name: "",
+    content: "{}",
+    status: "draft",
+    version: 1,
+  });
   const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [promptToDelete, setPromptToDelete] = useState<Prompt | null>(null);
+  const [dialogState, setDialogState] = useState<{ open: boolean; promptId: string | null }>({ open: false, promptId: null });
 
-  const loadPrompts = useCallback(async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from("prompts")
         .select("*")
         .order("created_at", { ascending: false });
+
       if (error) throw error;
       setPrompts(data || []);
     } catch (error) {
@@ -51,46 +58,26 @@ export default function AIPrompting() {
   }, []);
 
   useEffect(() => {
-    void loadPrompts();
-  }, [loadPrompts]);
+    void loadData();
+  }, [loadData]);
 
-  const handleNewPrompt = () => {
-    setEditingPrompt({
-      id: "", // Temporary ID for new prompt
-      name: "New Prompt",
-      content: emptyPromptContent as any,
-      created_at: new Date().toISOString(),
-      hosted_prompt_id: "",
-      status: "draft",
-      version: 1,
-    });
+  const handleFormChange = (field: keyof PromptFormState, value: any) => {
+    setFormState((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSelectPrompt = (prompt: Prompt) => {
-    setEditingPrompt(prompt);
-  };
-
-  const handleContentChange = (field: keyof PromptContent, value: string) => {
-    if (!editingPrompt) return;
-    const currentContent = (editingPrompt.content as unknown as PromptContent) || emptyPromptContent;
-    setEditingPrompt({
-      ...editingPrompt,
-      content: { ...currentContent, [field]: value },
-    });
-  };
-
-  const handleSavePrompt = async () => {
-    if (!editingPrompt) return;
-    setSaving(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
     try {
-      const isNew = !prompts.some(p => p.id === editingPrompt.id);
-      const payload = {
-        name: editingPrompt.name,
-        content: editingPrompt.content as unknown as Json,
-        status: editingPrompt.status,
-        version: editingPrompt.version,
-        hosted_prompt_id: editingPrompt.hosted_prompt_id,
+      const payload: Prompts['Insert'] = {
+        name: formState.name,
+        content: JSON.parse(formState.content) as Json,
+        status: formState.status,
+        version: formState.version,
+        hosted_prompt_id: formState.hosted_prompt_id || null,
       };
+
+      const isNew = !editingPrompt;
 
       if (isNew) {
         const { error } = await supabase.from("prompts").insert(payload);
@@ -101,165 +88,175 @@ export default function AIPrompting() {
         if (error) throw error;
         toast.success("Prompt updated successfully!");
       }
+      setFormState({
+        name: "",
+        content: "{}",
+        status: "draft",
+        version: 1,
+      });
       setEditingPrompt(null);
-      void loadPrompts();
+      await loadData();
     } catch (error) {
       console.error("Error saving prompt:", error);
       toast.error("Failed to save prompt.");
     } finally {
-      setSaving(false);
+      setIsSubmitting(false);
     }
   };
 
-  const confirmDelete = (prompt: Prompt) => {
-    setPromptToDelete(prompt);
-    setDeleteDialogOpen(true);
+  const handleEdit = (prompt: Prompt) => {
+    setEditingPrompt(prompt);
+    setFormState({
+      id: prompt.id,
+      name: prompt.name,
+      content: JSON.stringify(prompt.content, null, 2),
+      status: prompt.status as 'draft' | 'published' | 'archived',
+      version: prompt.version || 1,
+      hosted_prompt_id: prompt.hosted_prompt_id || undefined,
+    });
   };
 
-  const handleDeletePrompt = async () => {
-    if (!promptToDelete) return;
+  const handleDelete = async () => {
+    if (!dialogState.promptId) return;
     try {
-      const { error } = await supabase.from("prompts").delete().eq("id", promptToDelete.id);
+      const { error } = await supabase.from("prompts").delete().eq("id", dialogState.promptId);
       if (error) throw error;
-      toast.success(`Prompt "${promptToDelete.name}" deleted.`);
-      if (editingPrompt?.id === promptToDelete.id) {
-        setEditingPrompt(null);
-      }
-      setPromptToDelete(null);
-      setDeleteDialogOpen(false);
-      void loadPrompts();
+      toast.success("Prompt deleted successfully!");
+      await loadData();
     } catch (error) {
       console.error("Error deleting prompt:", error);
       toast.error("Failed to delete prompt.");
+    } finally {
+      setDialogState({ open: false, promptId: null });
     }
   };
 
-  const renderEditor = () => {
-    if (!editingPrompt) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
-          <p className="text-lg">Select a prompt to edit or create a new one.</p>
-          <Button onClick={handleNewPrompt} className="mt-4">
-            <Plus className="w-4 h-4 mr-2" />
-            Create New Prompt
-          </Button>
-        </div>
-      );
-    }
-
-    const content = (editingPrompt.content as unknown as PromptContent) || emptyPromptContent;
-
+  if (loading) {
     return (
-      <div className="p-6 space-y-6 h-full overflow-y-auto">
-        <div className="flex items-center justify-between">
-          <Input
-            value={editingPrompt.name}
-            onChange={(e) => setEditingPrompt({ ...editingPrompt, name: e.target.value })}
-            className="text-2xl font-bold border-none shadow-none p-0 focus-visible:ring-0"
-          />
-          <div className="flex gap-2">
-            <Button onClick={handleSavePrompt} disabled={saving}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              <span className="ml-2">Save</span>
-            </Button>
-            <Button variant="outline" onClick={() => setEditingPrompt(null)}>Cancel</Button>
-          </div>
-        </div>
-        <div className="space-y-4">
-          <div>
-            <label className="font-semibold">System Prompt</label>
-            <Textarea
-              value={content.system_prompt}
-              onChange={(e) => handleContentChange("system_prompt", e.target.value)}
-              className="min-h-[200px] font-mono text-sm"
-            />
-          </div>
-          <div>
-            <label className="font-semibold">User Prompt Template</label>
-            <Textarea
-              value={content.user_prompt_template || ""}
-              onChange={(e) => handleContentChange("user_prompt_template", e.target.value)}
-              className="min-h-[100px] font-mono text-sm"
-            />
-          </div>
-          <div>
-            <label className="font-semibold">Scoring Prompt Template</label>
-            <Textarea
-              value={content.scoring_prompt_template || ""}
-              onChange={(e) => handleContentChange("scoring_prompt_template", e.target.value)}
-              className="min-h-[100px] font-mono text-sm"
-            />
-          </div>
-          <div>
-            <label className="font-semibold">Feedback Prompt Template</label>
-            <Textarea
-              value={content.feedback_prompt_template || ""}
-              onChange={(e) => handleContentChange("feedback_prompt_template", e.target.value)}
-              className="min-h-[100px] font-mono text-sm"
-            />
-          </div>
-        </div>
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
       </div>
     );
-  };
+  }
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex gap-6">
-      <Card className="w-1/3 glass-card flex flex-col">
+    <div className="space-y-6">
+      <Card className="glass-card">
         <CardHeader>
-          <CardTitle>Prompts</CardTitle>
-          <CardDescription>Manage all AI prompts</CardDescription>
+          <CardTitle>{editingPrompt ? "Edit Prompt" : "Create New Prompt"}</CardTitle>
+          <CardDescription>Design and manage AI prompt templates.</CardDescription>
         </CardHeader>
-        <CardContent className="flex-1 overflow-y-auto">
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {prompts.map((prompt) => (
-                <div
-                  key={prompt.id}
-                  onClick={() => handleSelectPrompt(prompt)}
-                  className={`p-3 rounded-lg cursor-pointer flex justify-between items-center group ${
-                    editingPrompt?.id === prompt.id ? "bg-primary/20" : "hover:bg-primary/10"
-                  }`}
-                >
-                  <span>{prompt.name}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 opacity-0 group-hover:opacity-100"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      confirmDelete(prompt);
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              placeholder="Prompt Name"
+              value={formState.name}
+              onChange={(e) => handleFormChange("name", e.target.value)}
+              required
+              className="glass"
+            />
+            <Textarea
+              placeholder="Prompt Content (JSON)"
+              value={formState.content}
+              onChange={(e) => handleFormChange("content", e.target.value)}
+              required
+              className="glass"
+              rows={10}
+            />
+            <Input
+              type="number"
+              placeholder="Version"
+              value={formState.version}
+              onChange={(e) => handleFormChange("version", parseInt(e.target.value))}
+              required
+              className="glass"
+            />
+            <Input
+              placeholder="Hosted Prompt ID (Optional)"
+              value={formState.hosted_prompt_id || ""}
+              onChange={(e) => handleFormChange("hosted_prompt_id", e.target.value)}
+              className="glass"
+            />
+            <Select
+              value={formState.status}
+              onValueChange={(value) => handleFormChange("status", value)}
+            >
+              <SelectTrigger className="glass">
+                <SelectValue placeholder="Select Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="published">Published</SelectItem>
+                <SelectItem value="archived">Archived</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button type="submit" disabled={isSubmitting} className="clay-button">
+              {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              {editingPrompt ? "Update Prompt" : "Create Prompt"}
+            </Button>
+            {editingPrompt && (
+              <Button variant="outline" onClick={() => { setEditingPrompt(null); setFormState({ name: "", content: "{}", status: "draft", version: 1 }); }} className="ml-2">
+                Cancel Edit
+              </Button>
+            )}
+          </form>
         </CardContent>
-        <div className="p-4 border-t">
-          <Button onClick={handleNewPrompt} className="w-full">
-            <Plus className="w-4 h-4 mr-2" />
-            New Prompt
-          </Button>
-        </div>
       </Card>
 
-      <Card className="w-2/3 glass-card flex flex-col">
-        {renderEditor()}
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle>Existing Prompts</CardTitle>
+          <CardDescription>Manage your AI prompt templates.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveTable>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Version</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Hosted ID</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {prompts.map((prompt) => (
+                  <TableRow key={prompt.id}>
+                    <TableCell className="font-medium">{prompt.name}</TableCell>
+                    <TableCell>{prompt.version}</TableCell>
+                    <TableCell>{prompt.status}</TableCell>
+                    <TableCell>{prompt.hosted_prompt_id || "N/A"}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(prompt)}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setDialogState({ open: true, promptId: prompt.id })}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {prompts.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                      No prompts found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </ResponsiveTable>
+        </CardContent>
       </Card>
-
       <ConfirmationDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        title="Delete Prompt"
-        description={`Are you sure you want to delete "${promptToDelete?.name}"? This action cannot be undone.`}
-        onConfirm={handleDeletePrompt}
+        open={dialogState.open}
+        onOpenChange={(open) => setDialogState({ ...dialogState, open })}
+        onConfirm={handleDelete}
+        title="Delete Prompt?"
+        description="This action cannot be undone. The prompt will be permanently removed."
       />
     </div>
   );

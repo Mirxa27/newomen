@@ -1,26 +1,24 @@
-import type { Json } from "../types";
-
 export type UserAchievements = {
   Row: {
     id: string;
-    user_id: string | null;
-    achievement_id: string | null;
-    earned_at: string | null;
-    progress_data: Json | null;
+    user_id: string;
+    achievement_id: string;
+    earned_at: string;
+    created_at: string;
   };
   Insert: {
     id?: string;
-    user_id?: string | null;
-    achievement_id?: string | null;
-    earned_at?: string | null;
-    progress_data?: Json | null;
+    user_id: string;
+    achievement_id: string;
+    earned_at?: string;
+    created_at?: string;
   };
   Update: {
     id?: string;
-    user_id?: string | null;
-    achievement_id?: string | null;
-    earned_at?: string | null;
-    progress_data?: Json | null;
+    user_id?: string;
+    achievement_id?: string;
+    earned_at?: string;
+    created_at?: string;
   };
   Relationships: [];
 };

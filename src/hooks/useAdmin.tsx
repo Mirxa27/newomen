@@ -1,69 +1,55 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "./useAuth";
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { UserProfiles } from '@/integrations/supabase/tables/user_profiles';
 
-export const useAdmin = () => {
-  const { user, loading: authLoading } = useAuth();
+type UserRole = UserProfiles['Row']['role']; // Access 'role' from 'Row' type
+
+export function useAdmin() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let isActive = true;
-
-    const loadRole = async () => {
+  const checkAdminStatus = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        if (isActive) {
-          setIsAdmin(false);
-          setLoading(false);
-        }
+        setIsAdmin(false);
+        setLoading(false);
         return;
       }
 
-      setLoading(true);
-      
-      // First check if user email is admin email (fallback method)
-      const isAdminByEmail = user.email === 'admin@newomen.me';
-      
-      try {
-        // Try to get role from user_profiles table
-        const { data, error } = await supabase
-          .from("user_profiles")
-          .select("role")
-          .eq("user_id", user.id)
-          .maybeSingle();
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('role, email')
+        .eq('user_id', user.id)
+        .single();
 
-        if (!isActive) return;
-
-        if (error) {
-          console.error("Failed to load admin role from database:", error);
-          // Fall back to email-based admin check
-          setIsAdmin(isAdminByEmail);
-        } else {
-          // Check both role column and email for admin access
-          const isAdminByRole = (data?.role ?? "user") === "admin";
-          setIsAdmin(isAdminByRole || isAdminByEmail);
-        }
-      } catch (error) {
-        console.error("Error checking admin status:", error);
-        // Fall back to email-based admin check
-        if (isActive) {
-          setIsAdmin(isAdminByEmail);
-        }
-      }
-
-      if (isActive) {
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        setError(error.message);
+        setIsAdmin(false);
         setLoading(false);
+        return;
       }
-    };
 
-    if (!authLoading) {
-      loadRole();
+      // Check both role column and email for admin access
+      const isAdminByRole = (data?.role ?? "user") === "admin";
+      const isAdminByEmail = (data?.email === import.meta.env.VITE_ADMIN_EMAIL);
+      setIsAdmin(isAdminByRole || isAdminByEmail);
+
+    } catch (e) {
+      console.error('Unexpected error checking admin status:', e);
+      setError(e instanceof Error ? e.message : 'An unexpected error occurred');
+      setIsAdmin(false);
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    return () => {
-      isActive = false;
-    };
-  }, [user, authLoading]);
+  useEffect(() => {
+    checkAdminStatus();
+  }, [checkAdminStatus]);
 
-  return { isAdmin, loading };
-};
+  return { isAdmin, loading, error };
+}

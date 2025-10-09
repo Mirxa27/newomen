@@ -1,3 +1,5 @@
+import type { Json } from "../types";
+
 export type AIConfigurations = {
   Row: {
     id: string;
@@ -14,23 +16,18 @@ export type AIConfigurations = {
     top_p: number | null;
     frequency_penalty: number | null;
     presence_penalty: number | null;
-    stop_sequences: string[] | null;
-    custom_headers: import('../types').Json | null;
+    system_prompt: string | null;
+    is_default: boolean;
+    custom_headers: Json | null;
     cost_per_1k_prompt_tokens: number | null;
     cost_per_1k_completion_tokens: number | null;
-    max_requests_per_minute: number | null;
-    max_tokens_per_minute: number | null;
-    system_prompt: string | null;
-    user_prompt_template: string | null;
-    tags: string[] | null;
-    metadata: import('../types').Json | null;
-    is_active: boolean | null;
-    is_default: boolean | null;
-    created_at: string | null;
-    updated_at: string | null;
-    created_by: string | null;
-    last_tested_at: string | null;
+    created_at: string;
+    updated_at: string;
     test_status: string | null;
+    last_tested: string | null;
+    is_active: boolean | null;
+    user_prompt_template: string | null; // Added missing column
+    created_by: string | null; // Added missing column
   };
   Insert: {
     id?: string;
@@ -47,23 +44,18 @@ export type AIConfigurations = {
     top_p?: number | null;
     frequency_penalty?: number | null;
     presence_penalty?: number | null;
-    stop_sequences?: string[] | null;
-    custom_headers?: import('../types').Json | null;
+    system_prompt?: string | null;
+    is_default?: boolean;
+    custom_headers?: Json | null;
     cost_per_1k_prompt_tokens?: number | null;
     cost_per_1k_completion_tokens?: number | null;
-    max_requests_per_minute?: number | null;
-    max_tokens_per_minute?: number | null;
-    system_prompt?: string | null;
-    user_prompt_template?: string | null;
-    tags?: string[] | null;
-    metadata?: import('../types').Json | null;
-    is_active?: boolean | null;
-    is_default?: boolean | null;
-    created_at?: string | null;
-    updated_at?: string | null;
-    created_by?: string | null;
-    last_tested_at?: string | null;
+    created_at?: string;
+    updated_at?: string;
     test_status?: string | null;
+    last_tested?: string | null;
+    is_active?: boolean | null;
+    user_prompt_template?: string | null;
+    created_by?: string | null;
   };
   Update: {
     id?: string;
@@ -80,23 +72,18 @@ export type AIConfigurations = {
     top_p?: number | null;
     frequency_penalty?: number | null;
     presence_penalty?: number | null;
-    stop_sequences?: string[] | null;
-    custom_headers?: import('../types').Json | null;
+    system_prompt?: string | null;
+    is_default?: boolean;
+    custom_headers?: Json | null;
     cost_per_1k_prompt_tokens?: number | null;
     cost_per_1k_completion_tokens?: number | null;
-    max_requests_per_minute?: number | null;
-    max_tokens_per_minute?: number | null;
-    system_prompt?: string | null;
-    user_prompt_template?: string | null;
-    tags?: string[] | null;
-    metadata?: import('../types').Json | null;
-    is_active?: boolean | null;
-    is_default?: boolean | null;
-    created_at?: string | null;
-    updated_at?: string | null;
-    created_by?: string | null;
-    last_tested_at?: string | null;
+    created_at?: string;
+    updated_at?: string;
     test_status?: string | null;
+    last_tested?: string | null;
+    is_active?: boolean | null;
+    user_prompt_template?: string | null;
+    created_by?: string | null;
   };
   Relationships: [];
 };

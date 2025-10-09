@@ -1,326 +1,192 @@
-/**
- * NewMe Memory Service
- * Handles all database operations for NewMe's memory and conversation system
- */
-
 import { supabase } from '@/integrations/supabase/client';
-import type {
-  NewMeConversation,
-  NewMeMessage,
-  NewMeUserMemory,
-  NewMeEmotionalSnapshot,
-  NewMeAssessmentTracking,
-  NewMeUserContext,
-  CreateMemoryInput,
-  CreateConversationInput,
-  UpdateConversationInput,
-  CreateMessageInput,
-  CreateEmotionalSnapshotInput,
-  UpdateAssessmentTrackingInput,
-} from '@/types/newme-memory-types';
+import { logger } from '@/lib/logging';
+import { NewmeConversations } from '@/integrations/supabase/tables/newme_conversations';
+import { NewmeUserMemories } from '@/integrations/supabase/tables/newme_user_memories';
+import { NewmeAssessmentTracking } from '@/integrations/supabase/tables/newme_assessment_tracking';
+import { NewmeMessages } from '@/integrations/supabase/tables/newme_messages';
+import { Json } from '@/integrations/supabase/types';
+import { PostgrestError } from '@supabase/supabase-js'; // Import PostgrestError
+
+interface NewMeMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+interface NewMeConversation {
+  id: string;
+  user_id: string;
+  agent_id?: string;
+  title?: string;
+  messages: NewMeMessage[];
+  created_at: string;
+  updated_at: string;
+}
+
+interface UserMemory {
+  id: string;
+  user_id: string;
+  memory_value: string;
+  context?: string | null;
+  importance_score?: number | null;
+  last_referenced_at?: string | null;
+  reference_count: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface AssessmentTracking {
+  id: string;
+  user_id: string;
+  assessment_name: string;
+  suggested_in_conversation_id?: string | null;
+  suggested_at: string;
+  completion_status: 'suggested' | 'started' | 'completed' | 'dismissed';
+  follow_up_discussed: boolean;
+}
 
 export class NewMeMemoryService {
-  /**
-   * Get user context for personalizing conversations
-   */
-  async getUserContext(userId: string): Promise<NewMeUserContext | null> {
+  private static instance: NewMeMemoryService;
+
+  private constructor() {
+    // Private constructor to prevent direct instantiation
+  }
+
+  public static getInstance(): NewMeMemoryService {
+    if (!NewMeMemoryService.instance) {
+      NewMeMemoryService.instance = new NewMeMemoryService();
+    }
+    return NewMeMemoryService.instance;
+  }
+
+  async getUserContext(userId: string): Promise<Json | null> {
     try {
       const { data, error } = await supabase.rpc('get_newme_user_context', {
         p_user_id: userId,
       });
 
-      if (error) throw error;
-      return data as NewMeUserContext;
-    } catch (error) {
-      console.error('Error fetching user context:', error);
+      if (error) {
+        logger.error('Error fetching user context:', error as Record<string, unknown>);
+        return null;
+      }
+      return data;
+    } catch (e) {
+      logger.error('Exception fetching user context:', e);
       return null;
     }
   }
 
-  /**
-   * Create a new conversation session
-   */
-  async createConversation(input: CreateConversationInput): Promise<NewMeConversation | null> {
+  async updateConversation(conversationId: string, updates: Partial<NewmeConversations['Update']>): Promise<NewmeConversations['Row'] | null> {
     try {
       const { data, error } = await supabase
         .from('newme_conversations')
-        .insert(input as any)
+        .update(updates)
+        .eq('id', conversationId)
         .select()
-        .single();
-
-      if (error) throw error;
-      return data as unknown as NewMeConversation;
-    } catch (error) {
-      console.error('Error creating conversation:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Update an existing conversation
-   */
-  async updateConversation(
-    conversationId: string,
-    updates: UpdateConversationInput
-  ): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('newme_conversations')
-        .update(updates as any)
-        .eq('id', conversationId);
-
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Error updating conversation:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Get conversation history for a user
-   */
-  async getConversationHistory(
-    userId: string,
-    limit: number = 10
-  ): Promise<NewMeConversation[]> {
-    try {
-      const { data, error } = await supabase
-        .from('newme_conversations')
-        .select('*')
-        .eq('user_id', userId)
-        .order('started_at', { ascending: false })
-        .limit(limit);
-
-      if (error) throw error;
-      return data as unknown as NewMeConversation[];
-    } catch (error) {
-      console.error('Error fetching conversation history:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Get the most recent active conversation
-   */
-  async getActiveConversation(userId: string): Promise<NewMeConversation | null> {
-    try {
-      const { data, error } = await supabase
-        .from('newme_conversations')
-        .select('*')
-        .eq('user_id', userId)
-        .is('ended_at', null)
-        .order('started_at', { ascending: false })
-        .limit(1)
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') return null; // No rows found
-        throw error;
+        logger.error('Error updating conversation:', error as Record<string, unknown>);
+        return null;
       }
-      return data as unknown as NewMeConversation;
-    } catch (error) {
-      console.error('Error fetching active conversation:', error);
+      return data;
+    } catch (e) {
+      logger.error('Exception updating conversation:', e);
       return null;
     }
   }
 
-  /**
-   * Add a message to a conversation
-   */
-  async addMessage(input: CreateMessageInput): Promise<NewMeMessage | null> {
+  async logNewMessage(input: {
+    conversation_id: string;
+    sender: 'user' | 'assistant';
+    text_content: string;
+    emotion_data?: Json | null;
+  }): Promise<void> {
     try {
-      const { data, error } = await supabase
-        .from('newme_messages')
-        .insert(input as any)
-        .select()
-        .single();
-
-      if (error) throw error;
+      await supabase.from('newme_messages').insert({
+        conversation_id: input.conversation_id,
+        sender: input.sender,
+        text_content: input.text_content,
+        emotion_data: input.emotion_data || null,
+        ts: new Date().toISOString(), // Add timestamp as it's a non-nullable column
+      } as NewmeMessages['Insert']); // Cast to Insert type
 
       // Update message count in conversation
       await supabase.rpc('increment_message_count', { conv_id: input.conversation_id });
 
-      return data as unknown as NewMeMessage;
-    } catch (error) {
-      console.error('Error adding message:', error);
-      return null;
+    } catch (e) {
+      logger.error('Error logging new message:', e);
     }
   }
 
-  /**
-   * Get messages for a conversation
-   */
-  async getMessages(conversationId: string, limit?: number): Promise<NewMeMessage[]> {
+  async upsertUserMemory(input: {
+    user_id: string;
+    memory_value: string;
+    context?: string | null;
+    importance_score?: number | null;
+  }): Promise<UserMemory | null> {
     try {
-      let query = supabase
-        .from('newme_messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .order('timestamp', { ascending: true });
-
-      if (limit) {
-        query = query.limit(limit);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      return data as unknown as NewMeMessage[];
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Create or update a user memory
-   */
-  async saveMemory(input: CreateMemoryInput): Promise<NewMeUserMemory | null> {
-    try {
-      // Check if memory already exists
-      const { data: existing } = await supabase
+      const { data: existingMemory } = await supabase
         .from('newme_user_memories')
         .select('*')
         .eq('user_id', input.user_id)
-        .eq('memory_type', input.memory_type)
-        .eq('memory_key', input.memory_key)
-        .eq('is_active', true)
+        .eq('memory_value', input.memory_value)
         .single();
 
-      if (existing) {
-        // Update existing memory
+      if (existingMemory) {
         const { data, error } = await supabase
           .from('newme_user_memories')
           .update({
             memory_value: input.memory_value,
-            context: input.context,
-            importance_score: input.importance_score ?? existing.importance_score,
+            context: input.context ?? existingMemory.context,
+            importance_score: input.importance_score ?? existingMemory.importance_score,
             last_referenced_at: new Date().toISOString(),
-            reference_count: Number(existing.reference_count) + 1,
-          })
-          .eq('id', existing.id)
+            reference_count: Number(existingMemory.reference_count) + 1,
+          } as NewmeUserMemories['Update']) // Cast to Update type
+          .eq('id', existingMemory.id)
           .select()
           .single();
 
         if (error) throw error;
-        return data as unknown as NewMeUserMemory;
+        return data;
       } else {
-        // Create new memory
         const { data, error } = await supabase
           .from('newme_user_memories')
           .insert({
-            ...input,
-            importance_score: input.importance_score ?? 5,
-          } as any)
+            user_id: input.user_id,
+            memory_value: input.memory_value,
+            context: input.context || null,
+            importance_score: input.importance_score || null,
+            last_referenced_at: new Date().toISOString(),
+            reference_count: 1,
+            is_active: true,
+          } as NewmeUserMemories['Insert']) // Cast to Insert type
           .select()
           .single();
 
         if (error) throw error;
-        return data as unknown as NewMeUserMemory;
+        return data;
       }
-    } catch (error) {
-      console.error('Error saving memory:', error);
+    } catch (e) {
+      logger.error('Error upserting user memory:', e);
       return null;
     }
   }
 
-  /**
-   * Get all active memories for a user
-   */
-  async getUserMemories(userId: string, memoryType?: string): Promise<NewMeUserMemory[]> {
-    try {
-      let query = supabase
-        .from('newme_user_memories')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .order('importance_score', { ascending: false });
-
-      if (memoryType) {
-        query = query.eq('memory_type', memoryType);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      return data as unknown as NewMeUserMemory[];
-    } catch (error) {
-      console.error('Error fetching user memories:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Deactivate a memory (soft delete)
-   */
-  async deactivateMemory(memoryId: string): Promise<boolean> {
+  async deactivateUserMemory(memoryId: string): Promise<void> {
     try {
       const { error } = await supabase
         .from('newme_user_memories')
-        .update({ is_active: false })
+        .update({ is_active: false } as NewmeUserMemories['Update']) // Cast to Update type
         .eq('id', memoryId);
 
       if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Error deactivating memory:', error);
-      return false;
+    } catch (e) {
+      logger.error('Error deactivating user memory:', e);
     }
   }
 
-  /**
-   * Track emotional snapshot
-   */
-  async createEmotionalSnapshot(
-    input: CreateEmotionalSnapshotInput
-  ): Promise<NewMeEmotionalSnapshot | null> {
-    try {
-      const { data, error } = await supabase
-        .from('newme_emotional_snapshots')
-        .insert(input as any)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data as unknown as NewMeEmotionalSnapshot;
-    } catch (error) {
-      console.error('Error creating emotional snapshot:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Get emotional journey for a user
-   */
-  async getEmotionalJourney(
-    userId: string,
-    limit: number = 30
-  ): Promise<NewMeEmotionalSnapshot[]> {
-    try {
-      const { data, error } = await supabase
-        .from('newme_emotional_snapshots')
-        .select('*')
-        .eq('user_id', userId)
-        .order('snapshot_date', { ascending: false })
-        .limit(limit);
-
-      if (error) throw error;
-      return data as unknown as NewMeEmotionalSnapshot[];
-    } catch (error) {
-      console.error('Error fetching emotional journey:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Track assessment suggestion and completion
-   */
-  async trackAssessmentSuggestion(
-    userId: string,
-    assessmentName: string,
-    conversationId?: string
-  ): Promise<NewMeAssessmentTracking | null> {
+  async trackAssessmentSuggestion(userId: string, assessmentName: string, conversationId: string): Promise<AssessmentTracking | null> {
     try {
       const { data, error } = await supabase
         .from('newme_assessment_tracking')
@@ -331,107 +197,32 @@ export class NewMeMemoryService {
           suggested_at: new Date().toISOString(),
           completion_status: 'suggested',
           follow_up_discussed: false,
-        })
+        } as NewmeAssessmentTracking['Insert']) // Cast to Insert type
         .select()
         .single();
 
       if (error) throw error;
-      return data as unknown as NewMeAssessmentTracking;
-    } catch (error) {
-      console.error('Error tracking assessment suggestion:', error);
+      return data;
+    } catch (e) {
+      logger.error('Error tracking assessment suggestion:', e);
       return null;
     }
   }
 
-  /**
-   * Update assessment tracking status
-   */
-  async updateAssessmentTracking(
-    trackingId: string,
-    updates: UpdateAssessmentTrackingInput
-  ): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('newme_assessment_tracking')
-        .update(updates as any)
-        .eq('id', trackingId);
-
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Error updating assessment tracking:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Get assessment suggestions for a user
-   */
-  async getAssessmentTracking(userId: string): Promise<NewMeAssessmentTracking[]> {
+  async updateAssessmentTracking(trackingId: string, updates: Partial<NewmeAssessmentTracking['Update']>): Promise<AssessmentTracking | null> {
     try {
       const { data, error } = await supabase
         .from('newme_assessment_tracking')
-        .select('*')
-        .eq('user_id', userId)
-        .order('suggested_at', { ascending: false });
+        .update(updates)
+        .eq('id', trackingId)
+        .select()
+        .single();
 
       if (error) throw error;
-      return data as unknown as NewMeAssessmentTracking[];
-    } catch (error) {
-      console.error('Error fetching assessment tracking:', error);
-      return [];
+      return data;
+    } catch (e) {
+      logger.error('Error updating assessment tracking:', e);
+      return null;
     }
   }
-
-  /**
-   * Calculate days since last conversation
-   */
-  calculateDaysSinceLastConversation(lastConversationDate?: string): number {
-    if (!lastConversationDate) return 999;
-
-    const lastDate = new Date(lastConversationDate);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - lastDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  }
-
-  /**
-   * Extract key insights from conversation messages
-   */
-  extractKeyInsights(messages: NewMeMessage[]): string[] {
-    const insights: string[] = [];
-    const assistantMessages = messages.filter((m) => m.role === 'assistant');
-
-    const insightKeywords = [
-      'realize',
-      'discover',
-      'understand',
-      'insight',
-      'pattern',
-      'breakthrough',
-      'aha',
-      'makes sense',
-    ];
-
-    assistantMessages.forEach((msg) => {
-      const lowerContent = msg.content.toLowerCase();
-      if (insightKeywords.some((keyword) => lowerContent.includes(keyword))) {
-        const sentences = msg.content.split(/[.!?]+/);
-        sentences.forEach((sentence) => {
-          if (
-            sentence.length > 20 &&
-            sentence.length < 150 &&
-            insightKeywords.some((kw) => sentence.toLowerCase().includes(kw))
-          ) {
-            insights.push(sentence.trim());
-          }
-        });
-      }
-    });
-
-    return insights.slice(0, 5);
-  }
 }
-
-export const newMeMemoryService = new NewMeMemoryService();

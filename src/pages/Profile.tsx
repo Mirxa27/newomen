@@ -1,60 +1,56 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Upload, Trophy, Target, Edit, Settings } from "lucide-react";
-import AchievementBadge from "@/components/AchievementBadge";
-import GamificationDisplay from "@/components/GamificationDisplay";
-import ImageCrop from "@/components/ImageCrop";
-import { useUserProfile } from "@/hooks/useUserProfile";
+import { Loader2, Edit, Save, Camera, Award, Zap } from "lucide-react";
+import { toast } from "sonner";
+import { useUserProfile, UserProfile, UserAchievement } from "@/hooks/useUserProfile";
+import type { Database, TablesUpdate } from "@/integrations/supabase/types";
+
+type LevelThreshold = Database["public"]["Tables"]["level_thresholds"]['Row'];
 
 export default function Profile() {
-  const navigate = useNavigate();
   const {
-    loading,
     profile,
     achievements,
-    levelThresholds,
-    uploadingAvatar,
+    loading,
+    error,
     updateProfile,
+    uploadingAvatar,
     uploadAvatar,
+    getDisplayName,
   } = useUserProfile();
 
   const [editMode, setEditMode] = useState(false);
   const [nickname, setNickname] = useState("");
-  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+  const [levelThresholds, setLevelThresholds] = useState<LevelThreshold[]>([]);
+
+  const fetchLevelThresholds = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("level_thresholds")
+      .select("*")
+      .order("level", { ascending: true });
+    if (error) {
+      console.error("Error fetching level thresholds:", error);
+      toast.error("Failed to load level thresholds.");
+    } else {
+      setLevelThresholds(data || []);
+    }
+  }, []);
 
   useEffect(() => {
     if (profile) {
       setNickname(profile.nickname || "");
     }
-  }, [profile]);
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setImageToCrop(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-    event.target.value = "";
-  };
-
-  const handleCropComplete = async (croppedImage: Blob) => {
-    setImageToCrop(null);
-    await uploadAvatar(croppedImage);
-  };
+    void fetchLevelThresholds();
+  }, [profile, fetchLevelThresholds]);
 
   const handleSaveProfile = async () => {
-    if (profile?.nickname !== nickname) {
+    if (!profile) return;
+    if (profile.nickname !== nickname) {
       const success = await updateProfile({ nickname });
       if (success) {
         setEditMode(false);
@@ -64,19 +60,32 @@ export default function Profile() {
     }
   };
 
+  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) {
+      toast.error("You must select an image to upload.");
+      return;
+    }
+    const file = event.target.files[0];
+    await uploadAvatar(file);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+        <Loader2 className="w-8 h-8 animate-spin" />
       </div>
     );
   }
 
+  if (error) {
+    return <div className="text-destructive text-center mt-8">{error}</div>;
+  }
+
   if (!profile) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <p className="text-white mb-4">Could not load profile.</p>
-        <Button onClick={() => navigate("/dashboard")}>Go to Dashboard</Button>
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 text-center">
+        <h1 className="text-3xl font-bold mb-4">Profile Not Found</h1>
+        <p className="text-muted-foreground mb-6">Please ensure you are logged in.</p>
       </div>
     );
   }
@@ -92,190 +101,135 @@ export default function Profile() {
   const nextLevelThreshold = levelThresholds.find(
     (threshold) => threshold.level === currentLevel + 1
   );
-  const currentLevelThreshold = levelThresholds.find(
-    (threshold) => threshold.level === currentLevel
-  );
-
-  const crystalsNeededForNextLevel = nextLevelThreshold
-    ? nextLevelThreshold.crystals_required - currentCrystalBalance
-    : 0;
-
-  const crystalsEarnedInCurrentLevel = currentCrystalBalance - (currentLevelThreshold?.crystals_required || 0);
-  const crystalsRequiredForCurrentLevelUp = (nextLevelThreshold?.crystals_required || 0) - (currentLevelThreshold?.crystals_required || 0);
-
-  const levelProgressPercentage =
-    crystalsRequiredForCurrentLevelUp > 0
-      ? (crystalsEarnedInCurrentLevel / crystalsRequiredForCurrentLevelUp) * 100
-      : 0;
+  const progressToNextLevel = nextLevelThreshold
+    ? (currentCrystalBalance / nextLevelThreshold.crystals_required) * 100
+    : 100;
 
   return (
-    <>
-      <div className="min-h-screen p-6">
-        <div className="max-w-6xl mx-auto space-y-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
-            <h1 className="text-4xl font-bold gradient-text">Profile</h1>
-          </div>
+    <div className="min-h-screen p-6">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <h1 className="text-4xl font-bold gradient-text">Your Profile</h1>
+        <p className="text-muted-foreground">Manage your personal information and track your progress.</p>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            <Card className="md:col-span-1 glass-card">
-              <CardHeader className="text-center">
-                <div className="relative mx-auto mb-4">
-                  <Avatar className="w-32 h-32 border-4 border-primary">
-                    <AvatarImage src={avatarUrl || undefined} alt={nickname || "User"} />
-                    <AvatarFallback className="text-4xl">
-                      {(nickname || email || "U")[0].toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  {editMode && (
-                    <label className="absolute bottom-0 right-0 clay-button p-2 rounded-full cursor-pointer">
-                      <Upload className="w-4 h-4" />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                        disabled={uploadingAvatar}
-                        title="Upload new avatar"
-                      />
-                    </label>
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle>Personal Information</CardTitle>
+            <CardDescription>Update your public profile details.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-4">
+              <div className="relative">
+                <Avatar className="h-24 w-24">
+                  <AvatarImage src={avatarUrl || undefined} />
+                  <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-3xl">
+                    {getDisplayName()?.[0]?.toUpperCase() || <User className="h-12 w-12" />}
+                  </AvatarFallback>
+                </Avatar>
+                <Label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-primary text-primary-foreground p-2 rounded-full cursor-pointer hover:bg-primary/80 transition-colors">
+                  {uploadingAvatar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                  <Input id="avatar-upload" type="file" accept="image/*" onChange={handleAvatarChange} className="sr-only" disabled={uploadingAvatar} />
+                </Label>
+              </div>
+              <div className="flex-1 space-y-2">
+                <div className="grid gap-1">
+                  <Label htmlFor="nickname">Nickname</Label>
+                  {editMode ? (
+                    <Input
+                      id="nickname"
+                      value={nickname}
+                      onChange={(e) => setNickname(e.target.value)}
+                      className="glass"
+                    />
+                  ) : (
+                    <p className="text-lg font-semibold">{getDisplayName()}</p>
                   )}
                 </div>
-                
-                {editMode ? (
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Nickname</Label>
-                      <Input
-                        value={nickname}
-                        onChange={(e) => setNickname(e.target.value)}
-                        className="text-center glass"
-                        placeholder="Enter nickname"
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={handleSaveProfile} className="flex-1 clay-button">Save</Button>
-                      <Button variant="outline" onClick={() => setEditMode(false)} className="flex-1 glass">Cancel</Button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <CardTitle className="text-2xl">{nickname || "Set your nickname"}</CardTitle>
-                    <CardDescription>{email}</CardDescription>
-                    <Button onClick={() => setEditMode(true)} variant="outline" className="mt-4 glass">
-                      <Edit className="w-4 h-4 mr-2" />
-                      Edit Profile
-                    </Button>
-                  </>
-                )}
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="glass p-4 rounded-lg space-y-2">
-                  <div className="flex justify-between">
-                    <span>Subscription:</span>
-                    <Badge className="capitalize" variant={profile.subscription_tier === 'growth' || profile.subscription_tier === 'transformation' ? 'default' : 'secondary'}>{profile.subscription_tier || "discovery"}</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Minutes Remaining:</span>
-                    <span className="font-semibold">{profile.remaining_minutes || 0} min</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Daily Streak:</span>
-                    <span className="font-semibold">{dailyStreak} days 🔥</span>
-                  </div>
+                <div className="grid gap-1">
+                  <Label htmlFor="email">Email</Label>
+                  <p className="text-lg font-semibold">{email}</p>
                 </div>
-                <Button onClick={() => navigate("/account-settings")} variant="outline" className="w-full glass">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Advanced Account Settings
-                </Button>
-              </CardContent>
-            </Card>
-
-            <div className="md:col-span-2">
-              <Tabs defaultValue="achievements">
-                <TabsList className="grid grid-cols-2 w-full glass">
-                  <TabsTrigger value="achievements">Achievements</TabsTrigger>
-                  <TabsTrigger value="progress">Progress</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="achievements" className="space-y-4 mt-4">
-                  <Card className="glass-card">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Trophy className="w-5 h-5 text-primary" />
-                        Your Achievements
-                      </CardTitle>
-                      <CardDescription>
-                        {achievements.length} achievement{achievements.length !== 1 ? 's' : ''} unlocked
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {achievements.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground">
-                          <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                          <p>No achievements yet. Keep exploring to earn your first!</p>
-                        </div>
-                      ) : (
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {achievements.map((achievement) => (
-                            achievement.achievements && (
-                              <AchievementBadge
-                                key={achievement.id}
-                                title={achievement.achievements.title}
-                                description={achievement.achievements.description}
-                                badgeUrl={achievement.achievements.badge_url || "/badges/default.svg"}
-                                earnedAt={achievement.earned_at}
-                              />
-                            )
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="progress" className="space-y-4 mt-4">
-                  <Card className="glass-card">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Target className="w-5 h-5 text-primary" />
-                        Growth Journey
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <GamificationDisplay
-                        crystalBalance={currentCrystalBalance}
-                        currentLevel={currentLevel}
-                        dailyStreak={dailyStreak}
-                        crystalsToNextLevel={crystalsNeededForNextLevel}
-                        levelProgressPercentage={levelProgressPercentage}
-                      />
-
-                      <div className="glass p-6 rounded-lg space-y-4">
-                        <h3 className="font-semibold text-lg">Life Balance Areas</h3>
-                        <div className="text-center py-8 text-muted-foreground">
-                          <p>Your personalized life balance report will be available here after you complete more assessments.</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
+              </div>
             </div>
-          </div>
-        </div>
+            <div className="flex justify-end">
+              {editMode ? (
+                <Button onClick={handleSaveProfile} disabled={loading || uploadingAvatar} className="clay-button">
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Profile
+                </Button>
+              ) : (
+                <Button onClick={() => setEditMode(true)} variant="outline">
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Profile
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle>Subscription & Usage</CardTitle>
+            <CardDescription>Your current plan and remaining minutes.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span>Subscription:</span>
+              <Badge className="capitalize" variant={profile.subscription_tier === 'growth' || profile.subscription_tier === 'transformation' ? 'default' : 'secondary'}>{profile.subscription_tier || "discovery"}</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Minutes Remaining:</span>
+              <span className="font-semibold">{profile.remaining_minutes || 0} min</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle>Gamification Progress</CardTitle>
+            <CardDescription>Your current level, crystals, and achievements.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex flex-col items-center">
+                <Zap className="h-8 w-8 text-yellow-500 mb-2" />
+                <span className="text-lg font-semibold">{currentCrystalBalance} Crystals</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <Award className="h-8 w-8 text-purple-500 mb-2" />
+                <span className="text-lg font-semibold">Level {currentLevel}</span>
+                <Progress value={progressToNextLevel} className="h-2 w-full mt-2" />
+                {nextLevelThreshold && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {nextLevelThreshold.crystals_required - currentCrystalBalance} crystals to next level
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-col items-center">
+                <Heart className="h-8 w-8 text-red-500 mb-2" />
+                <span className="text-lg font-semibold">{dailyStreak} Day Streak</span>
+              </div>
+            </div>
+
+            <h3 className="font-semibold text-lg mt-6 mb-3">Achievements</h3>
+            {achievements.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {achievements.map((achievement) => (
+                  <Card key={achievement.id} className="glass-card p-4 flex items-center space-x-3">
+                    <img src={achievement.achievements.badge_url || "/badges/default.svg"} alt={achievement.achievements.title} className="h-12 w-12" />
+                    <div>
+                      <h4 className="font-medium">{achievement.achievements.title}</h4>
+                      <p className="text-sm text-muted-foreground">{achievement.achievements.description}</p>
+                      <p className="text-xs text-muted-foreground">Earned: {new Date(achievement.earned_at).toLocaleDateString()}</p>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">No achievements unlocked yet. Keep going!</p>
+            )}
+          </CardContent>
+        </Card>
       </div>
-      {imageToCrop && (
-        <ImageCrop
-          image={imageToCrop}
-          open={!!imageToCrop}
-          onOpenChange={(isOpen) => !isOpen && setImageToCrop(null)}
-          onCropComplete={handleCropComplete}
-        />
-      )}
-    </>
+    </div>
   );
 }

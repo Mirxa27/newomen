@@ -1,8 +1,8 @@
-import { useChat } from '@/hooks/useChat';
-import { ChatOnboarding } from '@/components/chat/ChatOnboarding';
-import { ChatInterface } from '@/components/chat/ChatInterface';
+import { ChatInterface } from "@/components/chat/ChatInterface";
+import { ChatOnboarding } from "@/components/chat/ChatOnboarding";
+import { useChat } from "@/hooks/useChat";
 
-const ChatPage = () => {
+export default function Chat() {
   const chat = useChat();
 
   if (!chat.isConnected && !chat.isConnecting) {
@@ -11,5 +11,3 @@ const ChatPage = () => {
 
   return <ChatInterface {...chat} />;
 };
-
-export default ChatPage;

@@ -1,20 +1,57 @@
-import { supabase } from "@/integrations/supabase/client";
-import type { AIConfiguration } from './aiTypes';
-import { NEWME_SYSTEM_PROMPT } from "@/config/newme-system-prompt";
+import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logging';
+import { AIConfigurations } from '@/integrations/supabase/tables/ai_configurations';
+import { Json } from '@/integrations/supabase/types';
+import { PostgrestError } from '@supabase/supabase-js'; // Import PostgrestError
 
-class ConfigService {
+export interface AIConfiguration {
+  id: string;
+  name: string;
+  description?: string | null;
+  provider: 'openai' | 'anthropic' | 'google' | 'azure' | 'custom' | 'elevenlabs' | 'cartesia' | 'deepgram' | 'hume' | 'zai';
+  provider_name?: string | null;
+  model: string;
+  apiKey: string | null;
+  api_base_url?: string | null;
+  api_version?: string | null;
+  temperature: number | null;
+  maxTokens?: number | null;
+  topP?: number | null;
+  frequencyPenalty?: number | null;
+  presencePenalty?: number | null;
+  systemPrompt?: string | null;
+  isDefault: boolean;
+  custom_headers?: Json | null;
+  cost_per_1k_input_tokens?: number | null;
+  cost_per_1k_output_tokens?: number | null;
+  user_prompt_template?: string | null;
+  created_by?: string | null;
+  test_status?: string | null;
+  last_tested?: string | null;
+  is_active?: boolean | null;
+}
+
+export class AIConfigService {
+  private static instance: AIConfigService;
   private configurations: Map<string, AIConfiguration> = new Map();
+  private defaultConfiguration: AIConfiguration | null = null;
 
-  constructor() {
-    this.loadConfigurations();
+  private constructor() {
+    void this.loadConfigurations();
   }
 
-  async loadConfigurations() {
+  public static getInstance(): AIConfigService {
+    if (!AIConfigService.instance) {
+      AIConfigService.instance = new AIConfigService();
+    }
+    return AIConfigService.instance;
+  }
+
+  private async loadConfigurations(): Promise<void> {
     try {
       const { data, error } = await supabase
         .from('ai_configurations')
-        .select('*')
-        .eq('is_active', true);
+        .select('*');
 
       if (error) throw error;
 
@@ -24,21 +61,27 @@ class ConfigService {
           id: config.id,
           name: config.name,
           provider: config.provider as AIConfiguration['provider'],
-          provider_name: config.provider_name || undefined,
+          provider_name: config.provider_name,
           model: config.model_name,
-          apiKey: config.api_key_encrypted || '',
-          api_base_url: config.api_base_url || undefined,
-          api_version: config.api_version || undefined,
-          temperature: Number(config.temperature),
+          apiKey: config.api_key_encrypted,
+          api_base_url: config.api_base_url,
+          api_version: config.api_version,
+          temperature: config.temperature,
           maxTokens: config.max_tokens,
-          topP: config.top_p ? Number(config.top_p) : undefined,
-          frequencyPenalty: config.frequency_penalty ? Number(config.frequency_penalty) : undefined,
-          presencePenalty: config.presence_penalty ? Number(config.presence_penalty) : undefined,
-          systemPrompt: config.system_prompt || undefined,
-          isDefault: config.is_default || false,
-          custom_headers: (config.custom_headers as Record<string, string>) || undefined,
-          cost_per_1k_input_tokens: config.cost_per_1k_prompt_tokens ? Number(config.cost_per_1k_prompt_tokens) : undefined,
-          cost_per_1k_output_tokens: config.cost_per_1k_completion_tokens ? Number(config.cost_per_1k_completion_tokens) : undefined,
+          topP: config.top_p,
+          frequencyPenalty: config.frequency_penalty,
+          presencePenalty: config.presence_penalty,
+          systemPrompt: config.system_prompt,
+          isDefault: config.is_default,
+          custom_headers: config.custom_headers,
+          cost_per_1k_input_tokens: config.cost_per_1k_prompt_tokens,
+          cost_per_1k_output_tokens: config.cost_per_1k_completion_tokens,
+          user_prompt_template: config.user_prompt_template,
+          created_by: config.created_by,
+          test_status: config.test_status,
+          last_tested: config.last_tested,
+          is_active: config.is_active,
+          description: config.description,
         });
       });
 
@@ -46,74 +89,72 @@ class ConfigService {
       if (newMeConfig) {
         const baseConfig = this.configurations.get(newMeConfig.id);
         if (baseConfig) {
-          this.configurations.set('newme-voice-agent', { ...baseConfig, systemPrompt: NEWME_SYSTEM_PROMPT });
+          this.defaultConfiguration = { ...baseConfig, systemPrompt: newMeConfig.system_prompt || baseConfig.systemPrompt };
         }
       }
-    } catch (dbError) {
-      console.warn('Could not load AI configurations from database:', dbError);
+
+      logger.info('AI configurations loaded successfully.');
+    } catch (e) {
+      logger.error('Failed to load AI configurations:', e as Record<string, unknown>);
     }
   }
 
-  async getConfigurationForService(serviceType: string, serviceId?: string): Promise<AIConfiguration | null> {
+  public getConfiguration(id: string): AIConfiguration | undefined {
+    return this.configurations.get(id);
+  }
+
+  public getDefaultConfiguration(): AIConfiguration | null {
+    return this.defaultConfiguration;
+  }
+
+  public async getAIConfigForService(serviceType: string, serviceId?: string | null): Promise<AIConfiguration | null> {
     try {
       const { data, error } = await supabase.rpc('get_ai_config_for_service', {
         p_service_type: serviceType,
-        p_service_id: serviceId || null
+        p_service_id: serviceId,
       });
 
       if (error) {
-        console.warn(`Error getting config for ${serviceType}:`, error);
-        return this.getDefaultConfiguration();
+        logger.error(`Error fetching AI config for service ${serviceType}:`, error as Record<string, unknown>);
+        return null;
       }
 
       const configData = Array.isArray(data) ? data[0] : data;
       if (!configData) return this.getDefaultConfiguration();
 
-      const config: AIConfiguration = {
-        id: configData.config_id,
-        name: configData.config_name,
-        provider: configData.provider,
+      return {
+        id: configData.id,
+        name: configData.name,
+        description: configData.description,
+        provider: configData.provider as AIConfiguration['provider'],
+        provider_name: configData.provider_name,
         model: configData.model_name,
-        apiKey: '',
-        temperature: Number(configData.temperature),
+        apiKey: configData.api_key_encrypted,
+        api_base_url: configData.api_base_url,
+        api_version: configData.api_version,
+        temperature: configData.temperature,
         maxTokens: configData.max_tokens,
-        topP: configData.top_p ? Number(configData.top_p) : undefined,
-        frequencyPenalty: configData.frequency_penalty ? Number(configData.frequency_penalty) : undefined,
-        presencePenalty: configData.presence_penalty ? Number(configData.presence_penalty) : undefined,
-        systemPrompt: configData.system_prompt || undefined,
-        isDefault: configData.is_default || false,
-        provider_name: configData.provider_name || undefined,
-        api_base_url: configData.api_base_url || undefined,
-        api_version: configData.api_version || undefined,
-        custom_headers: (configData.custom_headers as Record<string, string>) || undefined,
-        cost_per_1k_input_tokens: configData.cost_per_1k_input_tokens ? Number(configData.cost_per_1k_input_tokens) : undefined,
-        cost_per_1k_output_tokens: configData.cost_per_1k_output_tokens ? Number(configData.cost_per_1k_output_tokens) : undefined
+        topP: configData.top_p,
+        frequencyPenalty: configData.frequency_penalty,
+        presencePenalty: configData.presence_penalty,
+        systemPrompt: configData.system_prompt,
+        isDefault: configData.is_default,
+        custom_headers: configData.custom_headers,
+        cost_per_1k_input_tokens: configData.cost_per_1k_prompt_tokens,
+        cost_per_1k_output_tokens: configData.cost_per_1k_completion_tokens,
+        user_prompt_template: configData.user_prompt_template,
+        created_by: configData.created_by,
+        test_status: configData.test_status,
+        last_tested: configData.last_tested,
+        is_active: configData.is_active,
       };
-
-      const storedConfig = Array.from(this.configurations.values()).find(c => c.id === config.id);
-      if (storedConfig) config.apiKey = storedConfig.apiKey;
-
-      return config;
-    } catch (error) {
-      console.error(`Error in getConfigurationForService(${serviceType}):`, error);
-      return this.getDefaultConfiguration();
+    } catch (e) {
+      logger.error(`Exception fetching AI config for service ${serviceType}:`, e);
+      return null;
     }
   }
 
-  getDefaultConfiguration(): AIConfiguration | null {
-    for (const config of this.configurations.values()) {
-      if (config.id === 'newme' || config.isDefault) return config;
-    }
-    return Array.from(this.configurations.values())[0] || null;
-  }
-
-  getConfigurations(): AIConfiguration[] {
-    return Array.from(this.configurations.values());
-  }
-
-  getConfiguration(id: string): AIConfiguration | null {
-    return this.configurations.get(id) || null;
+  public async refreshConfigurations(): Promise<void> {
+    await this.loadConfigurations();
   }
 }
-
-export const configService = new ConfigService();

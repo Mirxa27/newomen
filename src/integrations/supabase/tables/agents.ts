@@ -9,8 +9,9 @@ export type Agents = {
     voice_id: string | null;
     vad_config: Json | null;
     tool_policy: Json | null;
-    status: string | null;
-    created_at: string | null;
+    status: "active" | "inactive"; // Explicitly define enum values
+    created_at: string;
+    updated_at: string;
   };
   Insert: {
     id?: string;
@@ -20,8 +21,9 @@ export type Agents = {
     voice_id?: string | null;
     vad_config?: Json | null;
     tool_policy?: Json | null;
-    status?: string | null;
-    created_at?: string | null;
+    status?: "active" | "inactive";
+    created_at?: string;
+    updated_at?: string;
   };
   Update: {
     id?: string;
@@ -31,8 +33,9 @@ export type Agents = {
     voice_id?: string | null;
     vad_config?: Json | null;
     tool_policy?: Json | null;
-    status?: string | null;
-    created_at?: string | null;
+    status?: "active" | "inactive";
+    created_at?: string;
+    updated_at?: string;
   };
   Relationships: [];
 };

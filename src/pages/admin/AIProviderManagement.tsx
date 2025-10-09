@@ -1,51 +1,91 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import ResponsiveTable from "@/components/ui/ResponsiveTable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
+import { Label } from "@/components/ui/label";
+import { Loader2, Edit, Trash2, Plus, RefreshCw } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Plus, Edit, Trash2, KeyRound, Server, Cpu, CaseSensitive } from "lucide-react";
+import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
+import { Providers } from "@/integrations/supabase/tables/providers";
+import { Models } from "@/integrations/supabase/tables/models";
+import { Voices } from "@/integrations/supabase/tables/voices";
 
-type Provider = Database["public"]["Tables"]["providers"]["Row"];
-type Model = Database["public"]["Tables"]["models"]["Row"];
-type Voice = Database["public"]["Tables"]["voices"]["Row"];
+type Provider = Providers;
+type Model = Models;
+type Voice = Voices;
 
-type FormState<T> = Partial<T> & { type: "provider" | "model" | "voice" };
+interface ProviderFormState {
+  id?: string;
+  name: string;
+  type: string;
+  apiKey: string;
+}
+
+interface ModelFormState {
+  id?: string;
+  provider_id: string;
+  model_id: string;
+  display_name: string;
+  modality: string;
+  context_limit: number;
+  latency_hint_ms: number;
+  is_realtime: boolean;
+  enabled: boolean;
+}
+
+interface VoiceFormState {
+  id?: string;
+  provider_id: string;
+  voice_id: string;
+  name: string;
+  locale: string;
+  gender: string;
+  latency_hint_ms: number;
+  enabled: boolean;
+}
 
 export default function AIProviderManagement() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [models, setModels] = useState<Model[]>([]);
   const [voices, setVoices] = useState<Voice[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string; type: "provider" | "model" | "voice" } | null>(null);
-  const [formState, setFormState] = useState<FormState<Provider | Model | Voice> | null>(null);
-  const [apiKey, setApiKey] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [providerForm, setProviderForm] = useState<ProviderFormState>({ name: "", type: "llm", apiKey: "" });
+  const [modelForm, setModelForm] = useState<ModelFormState>({
+    provider_id: "", model_id: "", display_name: "", modality: "text", context_limit: 4096, latency_hint_ms: 500, is_realtime: false, enabled: true
+  });
+  const [voiceForm, setVoiceForm] = useState<VoiceFormState>({
+    provider_id: "", voice_id: "", name: "", locale: "en-US", gender: "female", latency_hint_ms: 200, enabled: true
+  });
+
+  const [dialogState, setDialogState] = useState<{ open: boolean; type: 'provider' | 'model' | 'voice'; id: string | null }>({ open: false, type: 'provider', id: null });
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [providersRes, modelsRes, voicesRes] = await Promise.all([
-        supabase.from("providers").select("*").order("name"),
-        supabase.from("models").select("*, providers(name)").order("display_name"),
-        supabase.from("voices").select("*, providers(name)").order("name"),
+      const [
+        { data: providersData, error: providersError },
+        { data: modelsData, error: modelsError },
+        { data: voicesData, error: voicesError },
+      ] = await Promise.all([
+        supabase.from("providers").select("*").order("created_at", { ascending: false }),
+        supabase.from("models").select("*").order("created_at", { ascending: false }),
+        supabase.from("voices").select("*").order("created_at", { ascending: false }),
       ]);
 
-      if (providersRes.error) throw providersRes.error;
-      if (modelsRes.error) throw modelsRes.error;
-      if (voicesRes.error) throw voicesRes.error;
+      if (providersError) throw providersError;
+      if (modelsError) throw modelsError;
+      if (voicesError) throw voicesError;
 
-      setProviders(providersRes.data || []);
-      setModels(modelsRes.data as Model[] || []);
-      setVoices(voicesRes.data as Voice[] || []);
+      setProviders(providersData || []);
+      setModels(modelsData || []);
+      setVoices(voicesData || []);
     } catch (error) {
       console.error("Error loading data:", error);
       toast.error("Failed to load AI provider data.");
@@ -58,393 +98,439 @@ export default function AIProviderManagement() {
     void loadData();
   }, [loadData]);
 
-  const openNewDialog = (type: "provider" | "model" | "voice") => {
-    setApiKey("");
-    if (type === "provider") {
-      setFormState({ type: "provider", name: "" });
-    } else if (type === "model") {
-      setFormState({ type: "model", model_id: "", display_name: "", provider_id: "" });
-    } else {
-      setFormState({ type: "voice", name: "", voice_id: "", provider_id: "", gender: "female", enabled: true });
-    }
-    setDialogOpen(true);
-  };
-
-  const openEditDialog = (item: Provider | Model | Voice, type: "provider" | "model" | "voice") => {
-    setApiKey("");
-    setFormState({ ...item, type });
-    setDialogOpen(true);
-  };
-
-  const handleSave = async () => {
-    if (!formState) return;
-    setSaving(true);
-
+  const handleProviderSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
     try {
-      const { type, ...payload } = formState;
+      const providerPayload: Providers['Insert'] = {
+        id: providerForm.id,
+        name: providerForm.name,
+        type: providerForm.type,
+      };
 
-      if (type === "provider") {
-        const providerPayload = payload as Partial<Provider>;
-        if (!providerPayload.name) throw new Error("Provider name is required.");
+      const { data: insertedProvider, error } = await supabase
+        .from("providers")
+        .upsert(providerPayload, { onConflict: "id" })
+        .select()
+        .single();
 
-        const { data: insertedProvider, error } = await supabase
-          .from("providers")
-          .upsert({ id: providerPayload.id, name: providerPayload.name, type: providerPayload.type || 'llm' })
-          .select()
-          .single();
+      if (error) throw error;
 
-        if (error) throw error;
-
-        if (apiKey && insertedProvider) {
-          const { error: keyError } = await supabase.rpc("store_provider_api_key", {
-            p_provider_id: insertedProvider.id,
-            p_api_key: apiKey,
-          });
-          if (keyError) throw new Error(`Failed to save API key: ${keyError.message}`);
-        }
-      } else if (type === "model") {
-        const modelPayload = payload as Partial<Model>;
-        if (!modelPayload.model_id || !modelPayload.provider_id || !modelPayload.display_name) throw new Error("Model ID, Display Name, and Provider are required.");
-        const { error } = await supabase.from("models").upsert(modelPayload as Model);
-        if (error) throw error;
-      } else if (type === "voice") {
-        const voicePayload = payload as Partial<Voice>;
-        if (!voicePayload.name || !voicePayload.voice_id || !voicePayload.provider_id) throw new Error("Voice name, ID, and provider are required.");
-        const { error } = await supabase.from("voices").upsert(voicePayload as Voice);
-        if (error) throw error;
+      if (providerForm.apiKey && insertedProvider) {
+        const { error: keyError } = await supabase.rpc("store_provider_api_key", {
+          p_provider_id: insertedProvider.id,
+          p_api_key: providerForm.apiKey,
+        });
+        if (keyError) throw keyError;
       }
 
-      toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} saved successfully!`);
-      setDialogOpen(false);
-      void loadData();
+      toast.success("AI Provider saved!");
+      setProviderForm({ name: "", type: "llm", apiKey: "" });
+      await loadData();
     } catch (error) {
-      console.error("Error saving:", error);
-      const message = error instanceof Error ? error.message : "An unknown error occurred.";
-      toast.error(`Save failed: ${message}`);
+      console.error("Error saving provider:", error);
+      toast.error("Failed to save AI provider.");
     } finally {
-      setSaving(false);
+      setIsSubmitting(false);
     }
   };
 
-  const confirmDelete = (item: { id: string; name: string }, type: "provider" | "model" | "voice") => {
-    setItemToDelete({ ...item, type });
-    setDeleteDialogOpen(true);
+  const handleModelSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const modelPayload: Models['Insert'] = {
+        id: modelForm.id,
+        provider_id: modelForm.provider_id,
+        model_id: modelForm.model_id,
+        display_name: modelForm.display_name,
+        modality: modelForm.modality,
+        context_limit: modelForm.context_limit,
+        latency_hint_ms: modelForm.latency_hint_ms,
+        is_realtime: modelForm.is_realtime,
+        enabled: modelForm.enabled,
+      };
+      if (!modelPayload.model_id || !modelPayload.provider_id || !modelPayload.display_name) throw new Error("Model ID, Display Name, and Provider are required.");
+      const { error } = await supabase.from("models").upsert(modelPayload);
+      if (error) throw error;
+      toast.success("AI Model saved!");
+      setModelForm({
+        provider_id: "", model_id: "", display_name: "", modality: "text", context_limit: 4096, latency_hint_ms: 500, is_realtime: false, enabled: true
+      });
+      await loadData();
+    } catch (error) {
+      console.error("Error saving model:", error);
+      toast.error("Failed to save AI model.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleVoiceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const voicePayload: Voices['Insert'] = {
+        id: voiceForm.id,
+        provider_id: voiceForm.provider_id,
+        voice_id: voiceForm.voice_id,
+        name: voiceForm.name,
+        locale: voiceForm.locale,
+        gender: voiceForm.gender,
+        latency_hint_ms: voiceForm.latency_hint_ms,
+        enabled: voiceForm.enabled,
+      };
+      if (!voicePayload.name || !voicePayload.voice_id || !voicePayload.provider_id) throw new Error("Voice name, ID, and provider are required.");
+      const { error } = await supabase.from("voices").upsert(voicePayload);
+      if (error) throw error;
+      toast.success("AI Voice saved!");
+      setVoiceForm({
+        provider_id: "", voice_id: "", name: "", locale: "en-US", gender: "female", latency_hint_ms: 200, enabled: true
+      });
+      await loadData();
+    } catch (error) {
+      console.error("Error saving voice:", error);
+      toast.error("Failed to save AI voice.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDelete = async () => {
-    if (!itemToDelete) return;
-    const { id, name, type } = itemToDelete;
-
+    if (!dialogState.id) return;
     try {
       let error;
-      if (type === "provider") {
-        ({ error } = await supabase.from("providers").delete().eq("id", id));
-      } else if (type === "model") {
-        ({ error } = await supabase.from("models").delete().eq("id", id));
-      } else {
-        ({ error } = await supabase.from("voices").delete().eq("id", id));
+      if (dialogState.type === 'provider') {
+        ({ error } = await supabase.from("providers").delete().eq("id", dialogState.id));
+      } else if (dialogState.type === 'model') {
+        ({ error } = await supabase.from("models").delete().eq("id", dialogState.id));
+      } else if (dialogState.type === 'voice') {
+        ({ error } = await supabase.from("voices").delete().eq("id", dialogState.id));
       }
       if (error) throw error;
-      toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} '${name}' deleted successfully!`);
-      void loadData();
+      toast.success(`${dialogState.type.charAt(0).toUpperCase() + dialogState.type.slice(1)} deleted!`);
+      await loadData();
     } catch (error) {
-      console.error(`Error deleting ${type}:`, error);
-      toast.error(`Failed to delete ${type}.`);
+      console.error(`Error deleting ${dialogState.type}:`, error);
+      toast.error(`Failed to delete ${dialogState.type}.`);
     } finally {
-      setDeleteDialogOpen(false);
-      setItemToDelete(null);
+      setDialogState({ open: false, type: 'provider', id: null });
     }
   };
 
-  const renderDialogContent = () => {
-    if (!formState) return null;
-
-    switch (formState.type) {
-      case "provider": {
-        const providerState = formState as Partial<Provider>;
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="provider-name">Provider Name</Label>
-              <Input
-                id="provider-name"
-                value={providerState.name || ""}
-                onChange={(e) => setFormState({ ...formState, name: e.target.value })}
-                placeholder="e.g., OpenAI"
-              />
-            </div>
-            <div>
-              <Label htmlFor="api-key">API Key (Optional)</Label>
-              <Input
-                id="api-key"
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Leave blank to keep existing key"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Key is write-only and will be encrypted at rest.
-              </p>
-            </div>
-          </div>
-        );
-      }
-      case "model": {
-        const modelState = formState as Partial<Model>;
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="model-provider">Provider</Label>
-              <select
-                id="model-provider"
-                aria-label="Select model provider"
-                value={modelState.provider_id || ""}
-                onChange={(e) => setFormState({ ...formState, provider_id: e.target.value })}
-                className="w-full p-2 border rounded"
-              >
-                <option value="">Select a provider</option>
-                {providers.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label htmlFor="model-id">Model ID</Label>
-              <Input
-                id="model-id"
-                value={modelState.model_id || ""}
-                onChange={(e) => setFormState({ ...formState, model_id: e.target.value })}
-                placeholder="e.g., gpt-4o"
-              />
-            </div>
-            <div>
-              <Label htmlFor="display-name">Display Name</Label>
-              <Input
-                id="display-name"
-                value={modelState.display_name || ""}
-                onChange={(e) => setFormState({ ...formState, display_name: e.target.value })}
-                placeholder="e.g., GPT-4 Omni"
-              />
-            </div>
-          </div>
-        );
-      }
-      case "voice": {
-        const voiceState = formState as Partial<Voice>;
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="voice-provider">Provider</Label>
-              <select
-                id="voice-provider"
-                aria-label="Select voice provider"
-                value={voiceState.provider_id || ""}
-                onChange={(e) => setFormState({ ...formState, provider_id: e.target.value })}
-                className="w-full p-2 border rounded"
-              >
-                <option value="">Select a provider</option>
-                {providers.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label htmlFor="voice-name">Voice Name</Label>
-              <Input
-                id="voice-name"
-                value={voiceState.name || ""}
-                onChange={(e) => setFormState({ ...formState, name: e.target.value })}
-                placeholder="e.g., Nova"
-              />
-            </div>
-            <div>
-              <Label htmlFor="voice-id">Voice ID</Label>
-              <Input
-                id="voice-id"
-                value={voiceState.voice_id || ""}
-                onChange={(e) => setFormState({ ...formState, voice_id: e.target.value })}
-                placeholder="e.g., a_voice_id_from_provider"
-              />
-            </div>
-            <div>
-              <Label htmlFor="voice-gender">Gender</Label>
-              <select
-                id="voice-gender"
-                aria-label="Select voice gender"
-                value={voiceState.gender || "female"}
-                onChange={(e) => setFormState({ ...formState, gender: e.target.value })}
-                className="w-full p-2 border rounded"
-              >
-                <option value="female">Female</option>
-                <option value="male">Male</option>
-                <option value="neutral">Neutral</option>
-              </select>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="voice-enabled"
-                checked={voiceState.enabled}
-                onCheckedChange={(checked) => setFormState({ ...formState, enabled: checked })}
-              />
-              <Label htmlFor="voice-enabled">Enabled</Label>
-            </div>
-          </div>
-        );
-      }
-      default:
-        return null;
-    }
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold gradient-text">AI Provider Management</h1>
-      <p className="text-muted-foreground">
-        Manage AI providers, models, and voices available to the platform.
-      </p>
-
-      {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      ) : (
-        <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Providers */}
-          <Card className="glass-card lg:col-span-1">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Server className="w-5 h-5 text-primary" /> Providers</CardTitle>
-              <Button onClick={() => openNewDialog("provider")} size="sm" className="absolute top-4 right-4">
-                <Plus className="w-4 h-4 mr-2" /> Add
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {providers.map((p) => (
-                    <TableRow key={p.id}>
-                      <TableCell>{p.name}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(p, "provider")}><Edit className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => confirmDelete({ id: p.id, name: p.name || '' }, "provider")}><Trash2 className="w-4 h-4" /></Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          {/* Models */}
-          <Card className="glass-card lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Cpu className="w-5 h-5 text-primary" /> Models</CardTitle>
-              <Button onClick={() => openNewDialog("model")} size="sm" className="absolute top-4 right-4">
-                <Plus className="w-4 h-4 mr-2" /> Add
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Display Name</TableHead>
-                    <TableHead>Model ID</TableHead>
-                    <TableHead>Provider</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {models.map((m) => (
-                    <TableRow key={m.id}>
-                      <TableCell>{m.display_name}</TableCell>
-                      <TableCell className="font-mono text-xs">{m.model_id}</TableCell>
-                      <TableCell>{(m as any).providers?.name}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(m, "model")}><Edit className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => confirmDelete({ id: m.id, name: m.display_name || m.model_id || '' }, "model")}><Trash2 className="w-4 h-4" /></Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          {/* Voices */}
-          <Card className="glass-card lg:col-span-3">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><CaseSensitive className="w-5 h-5 text-primary" /> Voices</CardTitle>
-              <Button onClick={() => openNewDialog("voice")} size="sm" className="absolute top-4 right-4">
-                <Plus className="w-4 h-4 mr-2" /> Add
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Voice ID</TableHead>
-                    <TableHead>Provider</TableHead>
-                    <TableHead>Gender</TableHead>
-                    <TableHead>Enabled</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {voices.map((v) => (
-                    <TableRow key={v.id}>
-                      <TableCell>{v.name}</TableCell>
-                      <TableCell className="font-mono text-xs">{v.voice_id}</TableCell>
-                      <TableCell>{(v as any).providers?.name}</TableCell>
-                      <TableCell>{v.gender}</TableCell>
-                      <TableCell>{v.enabled ? "Yes" : "No"}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(v, "voice")}><Edit className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => confirmDelete({ id: v.id, name: v.name || '' }, "voice")}><Trash2 className="w-4 h-4" /></Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="glass-card">
-          <DialogHeader>
-            <DialogTitle>
-              {formState?.id ? "Edit" : "Create"} {formState?.type}
-            </DialogTitle>
-            <DialogDescription>
-              Fill in the details for the AI resource.
-            </DialogDescription>
-          </DialogHeader>
-          {renderDialogContent()}
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle>Manage AI Providers</CardTitle>
+          <CardDescription>Add, edit, and remove AI service providers.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleProviderSubmit} className="space-y-4">
+            <Input
+              placeholder="Provider Name (e.g., OpenAI, Anthropic)"
+              value={providerForm.name}
+              onChange={(e) => setProviderForm((prev) => ({ ...prev, name: e.target.value }))}
+              required
+              className="glass"
+            />
+            <Select
+              value={providerForm.type}
+              onValueChange={(value) => setProviderForm((prev) => ({ ...prev, type: value }))}
+            >
+              <SelectTrigger className="glass">
+                <SelectValue placeholder="Select Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="llm">LLM</SelectItem>
+                <SelectItem value="tts">TTS</SelectItem>
+                <SelectItem value="stt">STT</SelectItem>
+                <SelectItem value="embedding">Embedding</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              type="password"
+              placeholder="API Key (will be encrypted)"
+              value={providerForm.apiKey}
+              onChange={(e) => setProviderForm((prev) => ({ ...prev, apiKey: e.target.value }))}
+              className="glass"
+            />
+            <Button type="submit" disabled={isSubmitting} className="clay-button">
+              {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Save Provider
             </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Save
+          </form>
+          <ResponsiveTable className="mt-6">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {providers.map((provider) => (
+                  <TableRow key={provider.id}>
+                    <TableCell className="font-medium">{provider.name}</TableCell>
+                    <TableCell>{provider.type}</TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="sm" onClick={() => setDialogState({ open: true, type: 'provider', id: provider.id })}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {providers.length === 0 && <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">No providers found.</TableCell></TableRow>}
+              </TableBody>
+            </Table>
+          </ResponsiveTable>
+        </CardContent>
+      </Card>
+
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle>Manage AI Models</CardTitle>
+          <CardDescription>Configure models available from your providers.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleModelSubmit} className="space-y-4">
+            <Select
+              value={modelForm.provider_id}
+              onValueChange={(value) => setModelForm((prev) => ({ ...prev, provider_id: value }))}
+              required
+            >
+              <SelectTrigger className="glass">
+                <SelectValue placeholder="Select Provider" />
+              </SelectTrigger>
+              <SelectContent>
+                {providers.map((provider) => (
+                  <SelectItem key={provider.id} value={provider.id}>
+                    {provider.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              placeholder="Model ID (e.g., gpt-4o, claude-3-opus-20240229)"
+              value={modelForm.model_id}
+              onChange={(e) => setModelForm((prev) => ({ ...prev, model_id: e.target.value }))}
+              required
+              className="glass"
+            />
+            <Input
+              placeholder="Display Name"
+              value={modelForm.display_name}
+              onChange={(e) => setModelForm((prev) => ({ ...prev, display_name: e.target.value }))}
+              required
+              className="glass"
+            />
+            <Select
+              value={modelForm.modality}
+              onValueChange={(value) => setModelForm((prev) => ({ ...prev, modality: value }))}
+            >
+              <SelectTrigger className="glass">
+                <SelectValue placeholder="Select Modality" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="text">Text</SelectItem>
+                <SelectItem value="audio">Audio</SelectItem>
+                <SelectItem value="vision">Vision</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              type="number"
+              placeholder="Context Limit"
+              value={modelForm.context_limit}
+              onChange={(e) => setModelForm((prev) => ({ ...prev, context_limit: Number(e.target.value) }))}
+              className="glass"
+            />
+            <Input
+              type="number"
+              placeholder="Latency Hint (ms)"
+              value={modelForm.latency_hint_ms}
+              onChange={(e) => setModelForm((prev) => ({ ...prev, latency_hint_ms: Number(e.target.value) }))}
+              className="glass"
+            />
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="model-realtime"
+                checked={modelForm.is_realtime}
+                onCheckedChange={(checked) => setModelForm((prev) => ({ ...prev, is_realtime: checked }))}
+              />
+              <Label htmlFor="model-realtime">Realtime</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="model-enabled"
+                checked={modelForm.enabled}
+                onCheckedChange={(checked) => setModelForm((prev) => ({ ...prev, enabled: checked }))}
+              />
+              <Label htmlFor="model-enabled">Enabled</Label>
+            </div>
+            <Button type="submit" disabled={isSubmitting} className="clay-button">
+              {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Save Model
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </form>
+          <ResponsiveTable className="mt-6">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Display Name</TableHead>
+                  <TableHead>Model ID</TableHead>
+                  <TableHead>Provider</TableHead>
+                  <TableHead>Modality</TableHead>
+                  <TableHead>Enabled</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {models.map((model) => (
+                  <TableRow key={model.id}>
+                    <TableCell className="font-medium">{model.display_name}</TableCell>
+                    <TableCell>{model.model_id}</TableCell>
+                    <TableCell>{providers.find(p => p.id === model.provider_id)?.name || "N/A"}</TableCell>
+                    <TableCell>{model.modality}</TableCell>
+                    <TableCell>{model.enabled ? "Yes" : "No"}</TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="sm" onClick={() => setDialogState({ open: true, type: 'model', id: model.id })}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {models.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No models found.</TableCell></TableRow>}
+              </TableBody>
+            </Table>
+          </ResponsiveTable>
+        </CardContent>
+      </Card>
+
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle>Manage AI Voices</CardTitle>
+          <CardDescription>Configure voices available from your providers.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleVoiceSubmit} className="space-y-4">
+            <Select
+              value={voiceForm.provider_id}
+              onValueChange={(value) => setVoiceForm((prev) => ({ ...prev, provider_id: value }))}
+              required
+            >
+              <SelectTrigger className="glass">
+                <SelectValue placeholder="Select Provider" />
+              </SelectTrigger>
+              <SelectContent>
+                {providers.map((provider) => (
+                  <SelectItem key={provider.id} value={provider.id}>
+                    {provider.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              placeholder="Voice ID (e.g., 'alloy', 'echo')"
+              value={voiceForm.voice_id}
+              onChange={(e) => setVoiceForm((prev) => ({ ...prev, voice_id: e.target.value }))}
+              required
+              className="glass"
+            />
+            <Input
+              placeholder="Voice Name (e.g., 'Standard Female 1')"
+              value={voiceForm.name}
+              onChange={(e) => setVoiceForm((prev) => ({ ...prev, name: e.target.value }))}
+              required
+              className="glass"
+            />
+            <Input
+              placeholder="Locale (e.g., en-US)"
+              value={voiceForm.locale}
+              onChange={(e) => setVoiceForm((prev) => ({ ...prev, locale: e.target.value }))}
+              className="glass"
+            />
+            <Select
+              value={voiceForm.gender}
+              onValueChange={(value) => setVoiceForm((prev) => ({ ...prev, gender: value }))}
+            >
+              <SelectTrigger className="glass">
+                <SelectValue placeholder="Select Gender" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
+                <SelectItem value="neutral">Neutral</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              type="number"
+              placeholder="Latency Hint (ms)"
+              value={voiceForm.latency_hint_ms}
+              onChange={(e) => setVoiceForm((prev) => ({ ...prev, latency_hint_ms: Number(e.target.value) }))}
+              className="glass"
+            />
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="voice-enabled"
+                checked={voiceForm.enabled}
+                onCheckedChange={(checked) => setVoiceForm((prev) => ({ ...prev, enabled: checked }))}
+              />
+              <Label htmlFor="voice-enabled">Enabled</Label>
+            </div>
+            <Button type="submit" disabled={isSubmitting} className="clay-button">
+              {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Save Voice
+            </Button>
+          </form>
+          <ResponsiveTable className="mt-6">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Voice ID</TableHead>
+                  <TableHead>Provider</TableHead>
+                  <TableHead>Locale</TableHead>
+                  <TableHead>Enabled</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {voices.map((voice) => (
+                  <TableRow key={voice.id}>
+                    <TableCell className="font-medium">{voice.name}</TableCell>
+                    <TableCell>{voice.voice_id}</TableCell>
+                    <TableCell>{providers.find(p => p.id === voice.provider_id)?.name || "N/A"}</TableCell>
+                    <TableCell>{voice.locale}</TableCell>
+                    <TableCell>{voice.enabled ? "Yes" : "No"}</TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="sm" onClick={() => setDialogState({ open: true, type: 'voice', id: voice.id })}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {voices.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No voices found.</TableCell></TableRow>}
+              </TableBody>
+            </Table>
+          </ResponsiveTable>
+        </CardContent>
+      </Card>
 
       <ConfirmationDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        title={`Delete ${itemToDelete?.type}`}
-        description={`Are you sure you want to delete "${itemToDelete?.name}"? This action cannot be undone.`}
+        open={dialogState.open}
+        onOpenChange={(open) => setDialogState({ ...dialogState, open })}
         onConfirm={handleDelete}
+        title={`Delete ${dialogState.type.charAt(0).toUpperCase() + dialogState.type.slice(1)}?`}
+        description="This action cannot be undone."
       />
     </div>
   );

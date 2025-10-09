@@ -1,101 +1,119 @@
-import { useNavigate } from "react-router-dom";
+import React, { useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Bot } from "lucide-react";
-import { TranscriptPane } from "@/components/chat/TranscriptPane";
-import { SessionHUD } from "@/components/chat/SessionHUD";
-import { Composer } from "@/components/chat/Composer";
-import { Waveform } from "@/components/chat/Waveform";
-import type { Message } from "@/hooks/useChat";
+import { Input } from "@/components/ui/input";
+import { Loader2, Send, Mic, Volume2, VolumeX, StopCircle } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Message } from "@/hooks/useChat"; // Corrected import for Message type
 
 interface ChatInterfaceProps {
+  conversation: { id: string; title: string | null } | null;
+  messages: Message[];
+  input: string;
+  setInput: (input: string) => void;
+  sendMessage: () => Promise<void>;
+  loading: boolean;
+  error: string | null;
+  messagesEndRef: React.RefObject<HTMLDivElement>;
   isConnected: boolean;
   isSpeaking: boolean;
   isRecording: boolean;
   isSpeakerMuted: boolean;
-  messages: Message[];
-  partialTranscript: string;
-  duration: number;
-  audioLevel: number;
-  endConversation: () => void;
-  handleSendText: (text: string) => void;
-  toggleRecording: () => void;
   toggleSpeakerMute: () => void;
+  startRecording: () => void;
+  stopRecording: () => void;
+  audioLevel: number;
 }
 
-export const ChatInterface = ({
+export function ChatInterface({
+  conversation,
+  messages,
+  input,
+  setInput,
+  sendMessage,
+  loading,
+  error,
+  messagesEndRef,
   isConnected,
   isSpeaking,
   isRecording,
   isSpeakerMuted,
-  messages,
-  partialTranscript,
-  duration,
-  audioLevel,
-  endConversation,
-  handleSendText,
-  toggleRecording,
   toggleSpeakerMute,
-}: ChatInterfaceProps) => {
-  const navigate = useNavigate();
+  startRecording,
+  stopRecording,
+  audioLevel,
+}: ChatInterfaceProps) {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !loading) {
+      void sendMessage();
+    }
+  };
 
   return (
-    <div className="app-page-shell h-dvh flex flex-col">
-      {/* Header */}
-      <header className="flex-shrink-0 glass p-3 sm:p-4 border-b border-white/10 sticky top-0 z-10">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center clay">
-              <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-            </div>
-            <div>
-              <h2 className="text-base sm:text-lg font-semibold">NewMe Chat</h2>
-              <p className="text-xs text-muted-foreground hidden sm:block">AI Companion</p>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/dashboard')}
-            className="gap-2 hover:gap-3 transition-all"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline text-sm">Dashboard</span>
+    <div className="flex flex-col h-full max-h-screen bg-background">
+      <header className="flex items-center justify-between p-4 border-b bg-background/80 backdrop-blur-lg">
+        <h1 className="text-xl font-bold">{conversation?.title || "NewMe Chat"}</h1>
+        <div className="flex items-center space-x-2">
+          <Button variant="ghost" size="icon" onClick={toggleSpeakerMute}>
+            {isSpeakerMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
           </Button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0 max-w-7xl mx-auto w-full p-2 sm:p-4 gap-2 sm:gap-4">
-        {/* Chat Area */}
-        <main className="flex-1 flex flex-col min-h-0 gap-2 sm:gap-4">
-          <div className="flex-1 glass rounded-3xl border border-white/10 flex flex-col overflow-hidden">
-            <TranscriptPane messages={messages} partialTranscript={partialTranscript} />
-          </div>
-          <div className="flex-shrink-0">
-            <Waveform isActive={isConnected && isSpeaking} audioLevel={audioLevel} />
-          </div>
-          <div className="flex-shrink-0">
-            <Composer
-              onSendText={handleSendText}
-              onEndSession={endConversation}
-              isConnected={isConnected}
-              isRecording={isRecording}
-              onToggleRecording={toggleRecording}
-              isSpeakerMuted={isSpeakerMuted}
-              onToggleSpeakerMute={toggleSpeakerMute}
-            />
-          </div>
-        </main>
-
-        {/* Sidebar - Desktop */}
-        <aside className="hidden lg:block w-80 xl:w-96 flex-shrink-0">
-          <SessionHUD duration={duration} isConnected={isConnected} isSpeaking={isSpeaking} />
-        </aside>
-
-        {/* Bottom HUD - Mobile */}
-        <div className="lg:hidden flex-shrink-0">
-          <SessionHUD duration={duration} isConnected={isConnected} isSpeaking={isSpeaking} />
+      <ScrollArea className="flex-1 p-4">
+        <div className="space-y-4">
+          {messages.map((message, index) => (
+            <div
+              key={message.id || index}
+              className={`flex ${
+                message.sender === "user" ? "justify-end" : "justify-start"
+              }`}
+            >
+              <div
+                className={`max-w-[70%] p-3 rounded-lg ${
+                  message.sender === "user"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {message.content}
+              </div>
+            </div>
+          ))}
+          {loading && messages.length > 0 && (
+            <div className="flex justify-start">
+              <div className="max-w-[70%] p-3 rounded-lg bg-muted text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin" />
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
         </div>
+      </ScrollArea>
+
+      <div className="p-4 border-t bg-background/80 backdrop-blur-lg flex items-center space-x-2">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={isRecording ? stopRecording : startRecording}
+          disabled={loading || isSpeaking}
+          className={isRecording ? "text-red-500 animate-pulse" : ""}
+        >
+          {isRecording ? <StopCircle className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+        </Button>
+        <Input
+          placeholder="Type your message..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyPress={handleKeyPress}
+          disabled={loading || isRecording || !isConnected}
+          className="flex-1"
+        />
+        <Button onClick={sendMessage} disabled={loading || !input.trim() || !isConnected}>
+          {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+        </Button>
       </div>
+      {error && <p className="text-red-500 text-center text-sm mt-2">{error}</p>}
     </div>
   );
-};
+}

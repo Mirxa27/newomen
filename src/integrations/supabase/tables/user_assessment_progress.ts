@@ -1,18 +1,42 @@
 export type UserAssessmentProgress = {
   Row: {
     id: string;
-    user_id: string | null;
-    assessment_id: string | null;
+    user_id: string;
+    assessment_id: string;
     best_score: number | null;
     best_attempt_id: string | null;
-    total_attempts: number | null;
+    total_attempts: number;
     last_attempt_at: string | null;
-    is_completed: boolean | null;
+    is_completed: boolean;
     completion_date: string | null;
-    created_at: string | null;
-    updated_at: string | null;
+    created_at: string;
+    updated_at: string;
   };
-  Insert: { [key: string]: unknown };
-  Update: { [key: string]: unknown };
+  Insert: {
+    id?: string;
+    user_id: string;
+    assessment_id: string;
+    best_score?: number | null;
+    best_attempt_id?: string | null;
+    total_attempts?: number;
+    last_attempt_at?: string | null;
+    is_completed?: boolean;
+    completion_date?: string | null;
+    created_at?: string;
+    updated_at?: string;
+  };
+  Update: {
+    id?: string;
+    user_id?: string;
+    assessment_id?: string;
+    best_score?: number | null;
+    best_attempt_id?: string | null;
+    total_attempts?: number;
+    last_attempt_at?: string | null;
+    is_completed?: boolean;
+    completion_date?: string | null;
+    created_at?: string;
+    updated_at?: string;
+  };
   Relationships: [];
 };

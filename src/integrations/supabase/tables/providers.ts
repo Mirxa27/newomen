@@ -9,7 +9,7 @@ export type Providers = {
     region: string | null;
     status: string | null;
     last_synced_at: string | null;
-    created_at: string | null;
+    created_at: string;
     api_key_encrypted: string | null;
     openai_compatible: boolean | null;
     max_tokens: number | null;
@@ -20,6 +20,7 @@ export type Providers = {
     stop_sequences: string[] | null;
     system_instructions: string | null;
     behavior_config: Json | null;
+    updated_at: string;
   };
   Insert: {
     id?: string;
@@ -29,7 +30,7 @@ export type Providers = {
     region?: string | null;
     status?: string | null;
     last_synced_at?: string | null;
-    created_at?: string | null;
+    created_at?: string;
     api_key_encrypted?: string | null;
     openai_compatible?: boolean | null;
     max_tokens?: number | null;
@@ -40,6 +41,7 @@ export type Providers = {
     stop_sequences?: string[] | null;
     system_instructions?: string | null;
     behavior_config?: Json | null;
+    updated_at?: string;
   };
   Update: {
     id?: string;
@@ -49,7 +51,7 @@ export type Providers = {
     region?: string | null;
     status?: string | null;
     last_synced_at?: string | null;
-    created_at?: string | null;
+    created_at?: string;
     api_key_encrypted?: string | null;
     openai_compatible?: boolean | null;
     max_tokens?: number | null;
@@ -60,6 +62,7 @@ export type Providers = {
     stop_sequences?: string[] | null;
     system_instructions?: string | null;
     behavior_config?: Json | null;
+    updated_at?: string;
   };
   Relationships: [];
 };

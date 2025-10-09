@@ -10,13 +10,18 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, ArrowLeft, Send, Heart, Users, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { trackCouplesChallengeCompletion } from "@/lib/gamification-events";
-import type { Tables, Json } from "@/integrations/supabase/types";
+import type { Json, TablesUpdate, TablesInsert } from "@/integrations/supabase/types";
+import { CouplesChallenges } from "@/integrations/supabase/tables/couples_challenges";
+import { ChallengeTemplates } from "@/integrations/supabase/tables/challenge_templates";
+import { UserProfiles } from "@/integrations/supabase/tables/user_profiles"; // Import UserProfiles
 
-type ChallengeTemplate = Tables<'challenge_templates'> & {
-  questions: string[];
-};
+interface ChallengeTemplate extends ChallengeTemplates['Row'] {
+  questions: Json; // Assuming questions is JSON
+}
 
-type Challenge = Tables<'couples_challenges'>;
+interface Challenge extends CouplesChallenges['Row'] {
+  responses: Json;
+}
 
 export default function CouplesChallenge() {
   const { id } = useParams<{ id: string }>();
@@ -49,6 +54,10 @@ export default function CouplesChallenge() {
         .single();
 
       if (challengeError) throw challengeError;
+      if (!challengeData) {
+        setError("Challenge data not found.");
+        return;
+      }
 
       setChallenge(challengeData as unknown as Challenge);
       setTemplate(challengeData.challenge_templates as unknown as ChallengeTemplate);
@@ -66,8 +75,7 @@ export default function CouplesChallenge() {
   }, [loadChallenge]);
 
   const handleResponseChange = (questionIndex: string, value: string) => {
-    if (!challenge) return;
-    const isInitiator = userId === challenge.initiator_id;
+    const isInitiator = userId === challenge?.initiator_id;
     const responseKey = isInitiator ? "initiator_response" : "partner_response";
 
     setResponses(prev => ({
@@ -85,13 +93,13 @@ export default function CouplesChallenge() {
     try {
       const { error: updateError } = await supabase
         .from("couples_challenges")
-        .update({ responses: responses as Json })
+        .update({ responses: responses as Json } as TablesUpdate<'couples_challenges'>)
         .eq("id", challenge.id);
 
       if (updateError) throw updateError;
 
       // Check if both partners have responded to all questions
-      const allAnswered = template?.questions.every((_q, index) => {
+      const allAnswered = template?.questions && Array.isArray(template.questions) && template.questions.every((_q, index) => {
         const res = responses[String(index)] as Record<string, string> | undefined;
         return res?.initiator_response && res?.partner_response;
       });
@@ -99,16 +107,16 @@ export default function CouplesChallenge() {
       if (allAnswered && challenge.status !== 'completed') {
         const { error: completeError } = await supabase
           .from("couples_challenges")
-          .update({ status: 'completed', completed_at: new Date().toISOString() })
+          .update({ status: 'completed', completed_at: new Date().toISOString() } as TablesUpdate<'couples_challenges'>)
           .eq("id", challenge.id);
         if (completeError) throw completeError;
         
         // Track completion for gamification
         if (challenge.initiator_id) {
-          trackCouplesChallengeCompletion(challenge.initiator_id, challenge.id);
+          trackCouplesChallengeCompletion(challenge.initiator_id, challenge.id); // Removed extra argument
         }
         if (challenge.partner_id) {
-          trackCouplesChallengeCompletion(challenge.partner_id, challenge.id);
+          trackCouplesChallengeCompletion(challenge.partner_id, challenge.id); // Removed extra argument
         }
 
         toast({
@@ -163,7 +171,8 @@ export default function CouplesChallenge() {
   }
 
   const isInitiator = userId === challenge.initiator_id;
-  const progress = (Object.keys(responses).length / template.questions.length) * 100;
+  const questionsArray = Array.isArray(template.questions) ? template.questions : [];
+  const progress = (Object.keys(responses).length / questionsArray.length) * 100;
 
   if (challenge.status === 'completed') {
     return (
@@ -173,10 +182,10 @@ export default function CouplesChallenge() {
             <CardHeader className="text-center">
               <Heart className="w-12 h-12 mx-auto text-primary" />
               <CardTitle className="text-3xl mt-4">Challenge Complete!</CardTitle>
-              <CardDescription>{String(template.title)}</CardDescription>
+              <CardDescription>{template.title}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-8">
-              {template.questions.map((question, index) => {
+              {questionsArray.map((question: any, index) => {
                 const questionResponses = (responses[String(index)] as { initiator_response?: string; partner_response?: string }) || {};
                 const initiatorResponse = questionResponses.initiator_response;
                 const partnerResponse = questionResponses.partner_response;
@@ -184,7 +193,7 @@ export default function CouplesChallenge() {
                 return (
                   <div key={index}>
                     <h3 className="font-semibold text-lg mb-4">
-                      {index + 1}. {question}
+                      {index + 1}. {question.text || question}
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Card className="bg-muted/50">
@@ -230,8 +239,8 @@ export default function CouplesChallenge() {
           <CardHeader>
             <div className="flex justify-between items-start">
               <div>
-                <CardTitle className="text-3xl">{String(template.title)}</CardTitle>
-                <CardDescription>{String(template.description)}</CardDescription>
+                <CardTitle className="text-3xl">{template.title}</CardTitle>
+                <CardDescription>{template.description}</CardDescription>
               </div>
               <Badge variant="secondary" className="flex items-center gap-2">
                 <Users className="w-4 h-4" />
@@ -241,12 +250,12 @@ export default function CouplesChallenge() {
             <div className="pt-4">
               <Progress value={progress} className="h-2" />
               <p className="text-sm text-muted-foreground mt-2">
-                {Object.keys(responses).length} of {template.questions.length} questions answered.
+                {Object.keys(responses).length} of {questionsArray.length} questions answered.
               </p>
             </div>
           </CardHeader>
           <CardContent className="space-y-8">
-            {template.questions.map((question, index) => {
+            {questionsArray.map((question: any, index) => {
               const questionResponses = (responses[String(index)] as { initiator_response?: string; partner_response?: string }) || {};
               const initiatorResponse = questionResponses.initiator_response;
               const partnerResponse = questionResponses.partner_response;
@@ -256,7 +265,7 @@ export default function CouplesChallenge() {
               return (
                 <div key={index}>
                   <h3 className="font-semibold text-lg mb-2">
-                    {index + 1}. {question}
+                    {index + 1}. {question.text || question}
                   </h3>
                   <Textarea
                     value={myResponse || ""}
@@ -266,7 +275,7 @@ export default function CouplesChallenge() {
                   />
                   {!partnerHasResponded && (
                     <Alert variant="default" className="mt-2">
-                      <Lock className="h-4 h-4" />
+                      <Lock className="h-4 w-4" />
                       <AlertDescription>
                         Your partner hasn't answered this question yet. Your answers will be revealed to each other once you've both responded.
                       </AlertDescription>

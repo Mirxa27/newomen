@@ -7,7 +7,6 @@ export type ChallengeTemplates = {
     description: string | null;
     category: string;
     questions: Json;
-    is_active: boolean;
     created_by: string | null;
     created_at: string;
     updated_at: string;
@@ -16,9 +15,8 @@ export type ChallengeTemplates = {
     id?: string;
     title: string;
     description?: string | null;
-    category?: string;
+    category: string;
     questions: Json;
-    is_active?: boolean;
     created_by?: string | null;
     created_at?: string;
     updated_at?: string;
@@ -29,7 +27,6 @@ export type ChallengeTemplates = {
     description?: string | null;
     category?: string;
     questions?: Json;
-    is_active?: boolean;
     created_by?: string | null;
     created_at?: string;
     updated_at?: string;

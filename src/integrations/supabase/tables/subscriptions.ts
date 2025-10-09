@@ -1,50 +1,32 @@
 export type Subscriptions = {
   Row: {
     id: string;
-    user_id: string | null;
-    provider: string | null;
-    provider_id: string | null;
-    status: string | null;
-    renewal_date: string | null;
-    created_at: string | null;
-    tier: string;
-    minutes_included: number;
-    minutes_used: number | null;
-    price: number | null;
-    currency: string | null;
-    cancelled_at: string | null;
+    user_id: string;
+    plan_id: string | null;
+    status: "active" | "cancelled" | "past_due" | "trialing"; // Explicitly define enum values
+    start_date: string;
+    end_date: string | null;
+    created_at: string;
     updated_at: string;
   };
   Insert: {
     id?: string;
-    user_id?: string | null;
-    provider?: string | null;
-    provider_id?: string | null;
-    status?: string | null;
-    renewal_date?: string | null;
-    created_at?: string | null;
-    tier?: string;
-    minutes_included?: number;
-    minutes_used?: number | null;
-    price?: number | null;
-    currency?: string | null;
-    cancelled_at?: string | null;
+    user_id: string;
+    plan_id?: string | null;
+    status?: "active" | "cancelled" | "past_due" | "trialing";
+    start_date?: string;
+    end_date?: string | null;
+    created_at?: string;
     updated_at?: string;
   };
   Update: {
     id?: string;
-    user_id?: string | null;
-    provider?: string | null;
-    provider_id?: string | null;
-    status?: string | null;
-    renewal_date?: string | null;
-    created_at?: string | null;
-    tier?: string;
-    minutes_included?: number;
-    minutes_used?: number | null;
-    price?: number | null;
-    currency?: string | null;
-    cancelled_at?: string | null;
+    user_id?: string;
+    plan_id?: string | null;
+    status?: "active" | "cancelled" | "past_due" | "trialing";
+    start_date?: string;
+    end_date?: string | null;
+    created_at?: string;
     updated_at?: string;
   };
   Relationships: [];

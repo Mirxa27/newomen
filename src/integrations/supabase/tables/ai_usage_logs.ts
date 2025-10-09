@@ -12,7 +12,7 @@ export type AiUsageLogs = {
     processing_time_ms: number | null;
     success: boolean;
     error_message: string | null;
-    created_at: string | null;
+    created_at: string;
   };
   Insert: {
     id?: string;
@@ -25,9 +25,9 @@ export type AiUsageLogs = {
     tokens_used?: number | null;
     cost_usd?: number | null;
     processing_time_ms?: number | null;
-    success: boolean;
+    success?: boolean;
     error_message?: string | null;
-    created_at?: string | null;
+    created_at?: string;
   };
   Update: {
     id?: string;
@@ -42,7 +42,7 @@ export type AiUsageLogs = {
     processing_time_ms?: number | null;
     success?: boolean;
     error_message?: string | null;
-    created_at?: string | null;
+    created_at?: string;
   };
   Relationships: [];
 };

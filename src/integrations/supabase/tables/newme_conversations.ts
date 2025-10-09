@@ -1,53 +1,44 @@
-import type { Json } from "../types";
+import type { Json } from "../types"; // Ensure Json is imported
 
 export type NewmeConversations = {
   Row: {
     id: string;
     user_id: string;
-    started_at: string | null;
-    ended_at: string | null;
-    duration_seconds: number | null;
-    message_count: number | null;
-    topics_discussed: string[] | null;
-    emotional_tone: string | null;
-    suggested_assessments: string[] | null;
-    key_insights: string[] | null;
-    summary: string | null;
-    metadata: Json | null;
-    created_at: string | null;
-    updated_at: string | null;
+    agent_id: string | null;
+    title: string | null;
+    created_at: string;
+    updated_at: string;
+    last_message_at: string | null;
+    message_count: number;
+    emotional_tone: string | null; // Added missing column
+    topics_discussed: Json | null; // Added missing column
+    ended_at: string | null; // Added missing column
   };
   Insert: {
     id?: string;
     user_id: string;
-    started_at?: string | null;
-    ended_at?: string | null;
-    duration_seconds?: number | null;
-    message_count?: number | null;
-    topics_discussed?: string[] | null;
+    agent_id?: string | null;
+    title?: string | null;
+    created_at?: string;
+    updated_at?: string;
+    last_message_at?: string | null;
+    message_count?: number;
     emotional_tone?: string | null;
-    suggested_assessments?: string[] | null;
-    key_insights?: string[] | null;
-    summary?: string | null;
-    metadata?: Json | null;
-    created_at?: string | null;
-    updated_at?: string | null;
+    topics_discussed?: Json | null;
+    ended_at?: string | null;
   };
   Update: {
     id?: string;
     user_id?: string;
-    started_at?: string | null;
-    ended_at?: string | null;
-    duration_seconds?: number | null;
-    message_count?: number | null;
-    topics_discussed?: string[] | null;
+    agent_id?: string | null;
+    title?: string | null;
+    created_at?: string;
+    updated_at?: string;
+    last_message_at?: string | null;
+    message_count?: number;
     emotional_tone?: string | null;
-    suggested_assessments?: string[] | null;
-    key_insights?: string[] | null;
-    summary?: string | null;
-    metadata?: Json | null;
-    created_at?: string | null;
-    updated_at?: string | null;
+    topics_discussed?: Json | null;
+    ended_at?: string | null;
   };
   Relationships: [];
 };

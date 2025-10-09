@@ -1,427 +1,171 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, CreditCard, Shield, Bell, User, Trash2 } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
-import type { Tables } from "@/integrations/supabase/types";
+import { Loader2 } from "lucide-react";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { Subscriptions } from "@/integrations/supabase/tables/subscriptions";
+import { Badge } from "@/components/ui/badge"; // Import Badge component
 
 export default function AccountSettings() {
-  const navigate = useNavigate();
+  const { profile, loading: profileLoading, error: profileError, updateProfile } = useUserProfile();
+  const [email, setEmail] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [subscription, setSubscription] = useState<Subscriptions['Row'] | null>(null);
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<Tables<'user_profiles'> | null>(null);
-  const [subscription, setSubscription] = useState<Tables<'subscriptions'> | null>(null);
-  const [notifications, setNotifications] = useState({
-    email: true,
-    achievements: true,
-    weeklyReport: true,
-    marketingEmails: false
-  });
-  const [dialogState, setDialogState] = useState({
-    cancelSubscription: false,
-    deleteAccount: false,
-  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const loadData = async () => {
+  const fetchSubscription = useCallback(async () => {
+    if (!profile) return;
+    setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
-
-      const { data: profileData, error: profileError } = await supabase
-        .from("user_profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
-      
-      if (profileError) throw profileError;
-      setProfile(profileData);
-
-      const { data: subData, error: subError } = await supabase
+      const { data, error } = await supabase
         .from("subscriptions")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", profile.user_id)
+        .order("created_at", { ascending: false })
+        .limit(1)
         .single();
-      
-      if (subError && subError.code !== 'PGRST116') { // Ignore no rows found error
-        throw subError;
-      }
-      setSubscription(subData);
 
-    } catch (error) {
-      console.error("Error loading data:", error);
-      toast.error("Failed to load account data.");
+      if (error && error.code !== 'PGRST116') throw error; // PGRST116 means no rows found, which is fine
+      setSubscription(data);
+    } catch (e) {
+      console.error("Error fetching subscription:", e);
+      toast.error("Failed to load subscription details.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile]);
 
   useEffect(() => {
-    loadData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handlePasswordReset = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user?.email) return;
-      const { error } = await supabase.auth.resetPasswordForEmail(user.email);
-      if (error) throw error;
-      toast.success("Password reset email sent! Check your inbox.");
-    } catch (error) {
-      console.error("Error:", error);
-      toast.error("Failed to send password reset email");
+    if (profile) {
+      setEmail(profile.email);
+      setNickname(profile.nickname || "");
+      void fetchSubscription();
     }
+  }, [profile, fetchSubscription]);
+
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile) return;
+    setIsSubmitting(true);
+    await updateProfile({ nickname });
+    setIsSubmitting(false);
   };
 
-  const handleCancelSubscription = async () => {
+  const handleSubscriptionCancel = async () => {
+    if (!subscription) return;
+    setIsSubmitting(true);
     try {
-      if (!subscription?.id) return;
-      
-      // In a real app, this would call a backend function to cancel with the payment provider.
       const { error } = await supabase
         .from("subscriptions")
-        .update({ status: "cancelled" })
+        .update({ status: "cancelled" } as Partial<Subscriptions['Update']>)
         .eq("id", subscription.id);
 
       if (error) throw error;
-      toast.success("Your subscription has been cancelled.");
-      await loadData();
-    } catch (error) {
-      console.error("Error cancelling subscription:", error);
-      toast.error("Failed to cancel subscription. Please contact support.");
+      setSubscription(prev => prev ? { ...prev, status: "cancelled" } : null);
+      toast.success("Subscription cancelled successfully.");
+    } catch (e) {
+      console.error("Error cancelling subscription:", e);
+      toast.error("Failed to cancel subscription.");
     } finally {
-      setDialogState(prev => ({ ...prev, cancelSubscription: false }));
+      setIsSubmitting(false);
     }
   };
 
-  const handleDeleteAccount = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // This should call a Supabase Edge Function to perform a secure delete
-      const { error } = await supabase.functions.invoke('delete-user');
-
-      if (error) throw error;
-
-      toast.success("Your account is being deleted. You will be logged out.");
-      await supabase.auth.signOut();
-      navigate('/');
-    } catch (error) {
-      console.error("Error deleting account:", error);
-      toast.error("Failed to delete account. Please contact support.");
-    } finally {
-      setDialogState(prev => ({ ...prev, deleteAccount: false }));
-    }
-  };
-
-  const handleExportData = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase.functions.invoke('export-user-data');
-      if (error) throw error;
-
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `newomen-data-export-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast.success("Data exported successfully!");
-    } catch (error) {
-      console.error("Error exporting data:", error);
-      toast.error("Failed to export data");
-    }
-  };
-
-  const handleNotificationToggle = (key: string) => {
-    setNotifications(prev => ({ ...prev, [key]: !prev[key] }));
-    toast.success("Notification preferences updated");
-  };
-
-  if (loading) {
+  if (profileLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+        <Loader2 className="w-8 h-8 animate-spin" />
       </div>
     );
   }
 
+  if (profileError) {
+    return <div className="text-destructive text-center mt-8">{profileError}</div>;
+  }
+
   return (
-    <>
-      <div className="min-h-screen p-6">
-        <div className="max-w-4xl mx-auto space-y-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate("/profile")}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Profile
-            </Button>
-            <div>
-              <h1 className="text-4xl font-bold gradient-text">Account Settings</h1>
-              <p className="text-muted-foreground">Manage your account preferences and subscription</p>
-            </div>
-          </div>
+    <div className="min-h-screen p-6">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <h1 className="text-4xl font-bold gradient-text">Account Settings</h1>
+        <p className="text-muted-foreground">Manage your profile and subscription details.</p>
 
-          <Tabs defaultValue="account">
-            <TabsList className="grid grid-cols-4 w-full glass">
-              <TabsTrigger value="account">Account</TabsTrigger>
-              <TabsTrigger value="subscription">Subscription</TabsTrigger>
-              <TabsTrigger value="privacy">Privacy</TabsTrigger>
-              <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            </TabsList>
+        <Tabs defaultValue="profile">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="subscription">Subscription</TabsTrigger>
+          </TabsList>
 
-            <TabsContent value="account" className="space-y-4">
-              <Card className="glass-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="w-5 h-5" />
-                    Account Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label>Email Address</Label>
-                    <Input value={profile?.email || ""} disabled className="opacity-50" />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Your email is used for login and cannot be changed
+          <TabsContent value="profile">
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle>Public Profile</CardTitle>
+                <CardDescription>This information will be displayed publicly.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleProfileUpdate} className="space-y-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" type="email" value={email} disabled className="glass" />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="nickname">Nickname</Label>
+                    <Input
+                      id="nickname"
+                      value={nickname}
+                      onChange={(e) => setNickname(e.target.value)}
+                      className="glass"
+                    />
+                  </div>
+                  <Button type="submit" disabled={isSubmitting} className="clay-button">
+                    {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                    Save Changes
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="subscription">
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle>Subscription Details</CardTitle>
+                <CardDescription>Manage your current plan and billing.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {subscription ? (
+                  <>
+                    <p>
+                      Current Plan: <Badge variant="secondary">{subscription.plan_id || "Free"}</Badge>
                     </p>
-                  </div>
-                  <div>
-                    <Label>Account ID</Label>
-                    <Input value={profile?.user_id || ""} disabled className="opacity-50 font-mono text-sm" />
-                  </div>
-                  <div className="pt-4">
-                    <Button onClick={handlePasswordReset} variant="outline" className="glass">
-                      Send Password Reset Email
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="glass-card border-red-500/30">
-                <CardHeader>
-                  <CardTitle className="text-destructive flex items-center gap-2">
-                    <Trash2 className="w-5 h-5" />
-                    Danger Zone
-                  </CardTitle>
-                  <CardDescription>Irreversible account actions</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Alert variant="destructive">
-                    <AlertTitle>Delete Your Account</AlertTitle>
-                    <AlertDescription>
-                      <p className="mb-4">
-                        This will permanently delete your account and all associated data. This action cannot be undone.
-                      </p>
-                      <Button variant="destructive" onClick={() => setDialogState(prev => ({ ...prev, deleteAccount: true }))}>
-                        Delete Account
-                      </Button>
-                    </AlertDescription>
-                  </Alert>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="subscription" className="space-y-4">
-              <Card className="glass-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="w-5 h-5" />
-                    Subscription Management
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between p-4 glass rounded-lg">
-                    <div>
-                      <h3 className="font-semibold capitalize">
-                        {profile?.subscription_tier || "Discovery"} Plan
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {profile?.remaining_minutes || 0} minutes remaining
-                      </p>
-                    </div>
-                    <Badge className="capitalize" variant={subscription?.status === 'active' ? 'default' : 'secondary'}>
-                      {subscription?.status || "Free"}
-                    </Badge>
-                  </div>
-
-                  {subscription?.status === "active" ? (
-                    <div className="space-y-4">
-                      <div className="glass p-4 rounded-lg">
-                        <p className="text-sm text-muted-foreground">Next renewal date:</p>
-                        <p className="font-semibold">
-                          {subscription?.renewal_date
-                            ? new Date(subscription.renewal_date).toLocaleDateString()
-                            : "N/A"}
-                        </p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        className="glass"
-                        onClick={() => setDialogState(prev => ({ ...prev, cancelSubscription: true }))}
-                      >
+                    <p>Status: <Badge variant={subscription.status === "active" ? "default" : "destructive"}>{subscription.status}</Badge></p>
+                    <p>Starts: {new Date(subscription.start_date).toLocaleDateString()}</p>
+                    {subscription.end_date && (
+                      <p>Ends: {new Date(subscription.end_date).toLocaleDateString()}</p>
+                    )}
+                    {subscription.status === "active" && (
+                      <Button onClick={handleSubscriptionCancel} disabled={isSubmitting} variant="destructive" className="clay-button">
+                        {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                         Cancel Subscription
                       </Button>
-                      <p className="text-xs text-muted-foreground">
-                        To manage your subscription details, please visit the PayPal website.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <p className="text-muted-foreground">
-                        You are currently on the free Discovery plan. Upgrade to unlock more features.
-                      </p>
-                      <Button onClick={() => navigate('/pricing')} className="clay-button">
-                        View Pricing Plans
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="privacy" className="space-y-4">
-              <Card className="glass-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="w-5 h-5" />
-                    Privacy Settings
-                  </CardTitle>
-                  <CardDescription>Control your data and visibility</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Profile Visibility</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Allow others to find and connect with you
-                      </p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Show Activity Status</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Let connections see when you're active
-                      </p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Data Sharing for AI Improvement</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Help us improve NewMe with anonymized data
-                      </p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                  <div className="pt-4">
-                    <Button variant="outline" className="glass" onClick={handleExportData}>
-                      Download My Data
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="notifications" className="space-y-4">
-              <Card className="glass-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Bell className="w-5 h-5" />
-                    Notification Preferences
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Email Notifications</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Receive important updates via email
-                      </p>
-                    </div>
-                    <Switch
-                      checked={notifications.email}
-                      onCheckedChange={() => handleNotificationToggle("email")}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Achievement Alerts</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Get notified when you unlock achievements
-                      </p>
-                    </div>
-                    <Switch
-                      checked={notifications.achievements}
-                      onCheckedChange={() => handleNotificationToggle("achievements")}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Weekly Progress Report</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Receive weekly summary of your journey
-                      </p>
-                    </div>
-                    <Switch
-                      checked={notifications.weeklyReport}
-                      onCheckedChange={() => handleNotificationToggle("weeklyReport")}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Marketing Emails</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Receive news, tips, and special offers
-                      </p>
-                    </div>
-                    <Switch
-                      checked={notifications.marketingEmails}
-                      onCheckedChange={() => handleNotificationToggle("marketingEmails")}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+                    )}
+                  </>
+                ) : (
+                  <p>No active subscription found.</p>
+                )}
+                <Button onClick={() => toast.info("Billing portal integration coming soon!")} className="clay-button">
+                  Manage Billing
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
-
-      <ConfirmationDialog
-        open={dialogState.cancelSubscription}
-        onOpenChange={(open) => setDialogState(prev => ({ ...prev, cancelSubscription: open }))}
-        onConfirm={handleCancelSubscription}
-        title="Cancel Subscription?"
-        description="Are you sure you want to cancel your subscription? This action cannot be undone."
-      />
-
-      <ConfirmationDialog
-        open={dialogState.deleteAccount}
-        onOpenChange={(open) => setDialogState(prev => ({ ...prev, deleteAccount: open }))}
-        onConfirm={handleDeleteAccount}
-        title="Delete Account?"
-        description="This will permanently delete your account and all associated data. This is irreversible."
-      />
-    </>
+    </div>
   );
 }
