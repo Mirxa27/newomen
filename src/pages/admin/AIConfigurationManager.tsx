@@ -39,6 +39,7 @@ interface AIConfigurationFormState {
   frequency_penalty?: number;
   presence_penalty?: number;
   system_prompt: string;
+  user_prompt_template: string;
   is_default: boolean;
   custom_headers: Json;
   cost_per_1k_prompt_tokens?: number;
@@ -69,6 +70,7 @@ export default function AIConfigurationManager() {
     frequency_penalty: undefined,
     presence_penalty: undefined,
     system_prompt: "",
+    user_prompt_template: "",
     is_default: false,
     custom_headers: {},
     cost_per_1k_prompt_tokens: undefined,
@@ -203,6 +205,7 @@ export default function AIConfigurationManager() {
       frequency_penalty: config.frequency_penalty || undefined,
       presence_penalty: config.presence_penalty || undefined,
       system_prompt: config.system_prompt || "",
+      user_prompt_template: config.user_prompt_template || "",
       is_default: config.is_default,
       custom_headers: config.custom_headers || {},
       cost_per_1k_prompt_tokens: config.cost_per_1k_prompt_tokens || undefined,
@@ -245,6 +248,7 @@ export default function AIConfigurationManager() {
       frequency_penalty: undefined,
       presence_penalty: undefined,
       system_prompt: "",
+      user_prompt_template: "",
       is_default: false,
       custom_headers: {},
       cost_per_1k_prompt_tokens: undefined,

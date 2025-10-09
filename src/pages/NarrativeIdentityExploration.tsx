@@ -40,22 +40,24 @@ export default function NarrativeIdentityExploration() {
 
       if (error && error.code !== 'PGRST116') throw error; // PGRST116 means no rows found, which is fine
 
-      setExistingData(data);
+      if (data) {
+        setExistingData(data);
 
-      if (data?.narrative_identity_data) {
-        let parsedData: { answers?: Record<number, string>; analysis?: NarrativeAnalysis | string; completed_at?: string } | null = null;
-        if (typeof data.narrative_identity_data === 'string') {
-          try {
-            parsedData = JSON.parse(data.narrative_identity_data as string);
-          } catch (e) {
-            console.error("Error parsing narrative_identity_data string:", e);
+        if (data.narrative_identity_data) {
+          let parsedData: { answers?: Record<number, string>; analysis?: NarrativeAnalysis | string; completed_at?: string } | null = null;
+          if (typeof data.narrative_identity_data === 'string') {
+            try {
+              parsedData = JSON.parse(data.narrative_identity_data as string);
+            } catch (e) {
+              console.error("Error parsing narrative_identity_data string:", e);
+            }
+          } else if (typeof data.narrative_identity_data === 'object' && data.narrative_identity_data !== null) {
+            parsedData = data.narrative_identity_data as { answers?: Record<number, string>; analysis?: NarrativeAnalysis | string; completed_at?: string };
           }
-        } else if (typeof data.narrative_identity_data === 'object' && data.narrative_identity_data !== null) {
-          parsedData = data.narrative_identity_data as { answers?: Record<number, string>; analysis?: NarrativeAnalysis | string; completed_at?: string };
-        }
 
-        if (parsedData?.analysis && typeof parsedData.analysis !== 'string') {
-          setAnalysis(parsedData.analysis);
+          if (parsedData?.analysis && typeof parsedData.analysis !== 'string') {
+            setAnalysis(parsedData.analysis);
+          }
         }
       }
     } catch (e) {
@@ -104,7 +106,7 @@ export default function NarrativeIdentityExploration() {
         throw new Error(aiResponse.error);
       }
 
-      const parsedAnalysis = aiResponse.json as NarrativeAnalysis;
+      const parsedAnalysis = aiResponse.json as unknown as NarrativeAnalysis;
       setAnalysis(parsedAnalysis);
       toast.success('Narrative analysis generated!');
 
@@ -118,12 +120,12 @@ export default function NarrativeIdentityExploration() {
       if (existingData) {
         await supabase
           .from('user_memory_profiles')
-          .update({ narrative_identity_data: narrativeDataToSave as Json } as TablesUpdate<'user_memory_profiles'>)
+          .update({ narrative_identity_data: narrativeDataToSave as unknown as Json } as TablesUpdate<'user_memory_profiles'>)
           .eq('id', existingData.id);
       } else {
         await supabase.from('user_memory_profiles').upsert({
           user_id: profile.user_id,
-          narrative_identity_data: narrativeDataToSave as Json,
+          narrative_identity_data: narrativeDataToSave as unknown as Json,
         } as TablesInsert<'user_memory_profiles'>);
       }
     } catch (e) {

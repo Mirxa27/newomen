@@ -111,7 +111,7 @@ export default function CouplesChallenge() {
       if (allAnswered && challenge.status !== 'completed') {
         const { error: completeError } = await supabase
           .from("couples_challenges")
-          .update({ status: 'completed', completed_at: new Date().toISOString() })
+          .update({ status: 'completed', updated_at: new Date().toISOString() })
           .eq("id", challenge.id);
         if (completeError) throw completeError;
         

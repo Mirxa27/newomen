@@ -80,15 +80,15 @@ export function useChat(initialConversationId?: string): ChatState {
         .from('newme_messages')
         .select('*')
         .eq('conversation_id', convId)
-        .order('ts', { ascending: true });
+        .order('timestamp', { ascending: true });
 
       if (msgsError) throw msgsError;
       const msgs = msgsData as Tables<'newme_messages'>[];
       setMessages(msgs.map(m => ({
         id: m.id,
-        content: m.text_content || '',
-        sender: m.sender,
-        timestamp: m.ts,
+        content: m.content || '',
+        sender: m.role as 'user' | 'assistant' | 'system',
+        timestamp: m.timestamp || new Date().toISOString(),
       })));
       setIsConnected(true);
     } catch (e) {
@@ -114,7 +114,7 @@ export function useChat(initialConversationId?: string): ChatState {
 
       const { data: newConv, error: newConvError } = await supabase
         .from('newme_conversations')
-        .insert({ user_id: user.id, title: 'New Conversation' })
+        .insert({ user_id: user.id, title: 'New Conversation' } as TablesInsert<'newme_conversations'>)
         .select()
         .single();
 
@@ -236,7 +236,7 @@ export function useChat(initialConversationId?: string): ChatState {
         text_content: assistantMessage.content,
       });
 
-      await memoryService.updateConversation(conversation.id, { last_message_at: new Date().toISOString() });
+      await memoryService.updateConversation(conversation.id, { updated_at: new Date().toISOString() });
 
     } catch (e) {
       logger.error('Error sending message:', e);

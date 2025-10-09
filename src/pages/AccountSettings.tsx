@@ -64,7 +64,7 @@ export default function AccountSettings() {
     try {
       const { error } = await supabase
         .from("subscriptions")
-        .update({ status: "cancelled" } as Partial<TablesUpdate<'subscriptions'>>)
+        .update({ status: "cancelled" } as TablesUpdate<'subscriptions'>)
         .eq("id", subscription.id);
 
       if (error) throw error;
@@ -142,12 +142,12 @@ export default function AccountSettings() {
                 {subscription ? (
                   <>
                     <p>
-                      Current Plan: <Badge variant="secondary">{subscription.plan_id || "Free"}</Badge>
+                      Current Plan: <Badge variant="secondary">{subscription.tier || "Free"}</Badge>
                     </p>
                     <p>Status: <Badge variant={subscription.status === "active" ? "default" : "destructive"}>{subscription.status}</Badge></p>
-                    <p>Starts: {new Date(subscription.start_date).toLocaleDateString()}</p>
-                    {subscription.end_date && (
-                      <p>Ends: {new Date(subscription.end_date).toLocaleDateString()}</p>
+                    <p>Renewal Date: {subscription.renewal_date ? new Date(subscription.renewal_date).toLocaleDateString() : 'N/A'}</p>
+                    {subscription.cancelled_at && (
+                      <p>Cancelled At: {new Date(subscription.cancelled_at).toLocaleDateString()}</p>
                     )}
                     {subscription.status === "active" && (
                       <Button onClick={handleSubscriptionCancel} disabled={isSubmitting} variant="destructive" className="clay-button">

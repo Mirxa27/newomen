@@ -99,11 +99,11 @@ export class NewMeMemoryService {
     try {
       await supabase.from('newme_messages').insert({
         conversation_id: input.conversation_id,
-        sender: input.sender,
-        text_content: input.text_content,
-        emotion_data: input.emotion_data || null,
-        ts: new Date().toISOString(),
-      });
+        role: input.sender,
+        content: input.text_content,
+        metadata: input.emotion_data || null,
+        timestamp: new Date().toISOString(),
+      } as TablesInsert<'newme_messages'>);
 
       await supabase.rpc('increment_message_count', { conv_id: input.conversation_id });
 
@@ -155,7 +155,7 @@ export class NewMeMemoryService {
             last_referenced_at: new Date().toISOString(),
             reference_count: 1,
             is_active: true,
-          })
+          } as TablesInsert<'newme_user_memories'>)
           .select()
           .single();
 
