@@ -108,30 +108,20 @@ export default function Header() {
   const displayName = getDisplayName();
 
   const renderLogo = (href: string) => (
-    <Link to={href} className="flex items-center space-x-3 mr-6">
-      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent">
-        <img 
-          src="/logo.svg" 
-          alt="NewMe Logo" 
-          className="w-6 h-6"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-            const nextEl = target.nextElementSibling;
-            if (nextEl) nextEl.classList.remove('hidden');
-          }}
+    <Link to={href} aria-label="Newomen" className="mr-6 group">
+      <div className="glass rounded-xl p-1 glow-primary transition-transform duration-200 group-hover:scale-105">
+        <img
+          src="/Newomen%20logo.svg"
+          alt="Newomen Logo"
+          className="h-8 w-auto select-none"
+          draggable={false}
         />
-        <Zap className="h-5 w-5 text-white hidden" />
-      </div>
-      <div className="flex flex-col">
-        <span className="font-bold text-lg">NewMe</span>
-        <span className="text-xs text-muted-foreground hidden sm:block">Personal Growth Journey</span>
       </div>
     </Link>
   );
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/70 backdrop-blur-md backdrop-saturate-150 supports-[backdrop-filter]:bg-background/50 shadow-sm">
       <div className="container flex h-16 items-center">
         {renderLogo(profile ? "/dashboard" : "/")}
 
@@ -141,7 +131,7 @@ export default function Header() {
             {profile ? (
               memberNavigationItems.map((section) => (
                 <NavigationMenuItem key={section.title}>
-                  <NavigationMenuTrigger className="font-medium">
+                  <NavigationMenuTrigger className="font-medium rounded-full px-3 py-2 hover:bg-accent/20">
                     {section.title}
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
@@ -153,7 +143,7 @@ export default function Header() {
                           <Link
                             key={item.name}
                             to={item.href}
-                            className={`group grid h-auto w-full items-center justify-start gap-1 rounded-md bg-background p-4 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 ${
+                            className={`group grid h-auto w-full items-center justify-start gap-1 rounded-xl glass p-4 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 ${
                               isActive ? 'bg-accent text-accent-foreground' : ''
                             }`}
                           >
@@ -200,11 +190,10 @@ export default function Header() {
             <SheetContent side="left" className="pr-0">
               <Link
                 to={profile ? "/dashboard" : "/"}
-                className="flex items-center space-x-2"
+                className="inline-flex items-center rounded-xl glass p-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                <Zap className="h-6 w-6 text-primary" />
-                <span className="font-bold">NewMe</span>
+                <img src="/Newomen%20logo.svg" alt="Newomen Logo" className="h-6 w-auto" />
               </Link>
               <div className="my-4 h-[calc(100vh-8rem)] pb-10 pl-6">
                 <div className="flex flex-col space-y-3">

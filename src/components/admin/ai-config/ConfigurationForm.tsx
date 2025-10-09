@@ -8,22 +8,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from "@/components/ui/switch";
 import type { Tables } from '@/integrations/supabase/types';
 
 type AIConfiguration = Tables<'ai_configurations'>;
+type Provider = Tables<'providers'>;
+type Model = Tables<'models'>;
 
 interface ConfigurationFormProps {
   formData: Partial<AIConfiguration>;
   onFieldChange: (field: keyof Partial<AIConfiguration>, value: string | number | boolean) => void;
   onSelectChange: (field: keyof Partial<AIConfiguration>, value: string) => void;
+  providers: Provider[];
+  models: Model[];
 }
 
-export const ConfigurationForm = ({ formData, onFieldChange, onSelectChange }: ConfigurationFormProps) => {
+export const ConfigurationForm = ({ formData, onFieldChange, onSelectChange, providers, models }: ConfigurationFormProps) => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value, type } = e.target;
     const finalValue = type === 'range' || type === 'number' ? parseFloat(value) : value;
     onFieldChange(id as keyof Partial<AIConfiguration>, finalValue);
   };
+
+  const handleSwitchChange = (id: keyof Partial<AIConfiguration>, checked: boolean) => {
+    onFieldChange(id, checked);
+  };
+
+  const filteredModels = models.filter(m => providers.find(p => p.name === formData.provider)?.id === m.provider_id);
 
   return (
     <div className="space-y-4">
@@ -45,18 +56,14 @@ export const ConfigurationForm = ({ formData, onFieldChange, onSelectChange }: C
             onValueChange={(value) => onSelectChange('provider', value)}
           >
             <SelectTrigger id="provider" className="glass">
-              <SelectValue />
+              <SelectValue placeholder="Select Provider" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="openai">OpenAI</SelectItem>
-              <SelectItem value="anthropic">Anthropic</SelectItem>
-              <SelectItem value="google">Google (Gemini)</SelectItem>
-              <SelectItem value="azure">Azure OpenAI</SelectItem>
-              <SelectItem value="elevenlabs">ElevenLabs</SelectItem>
-              <SelectItem value="cartesia">Cartesia</SelectItem>
-              <SelectItem value="deepgram">Deepgram</SelectItem>
-              <SelectItem value="hume">Hume AI</SelectItem>
-              <SelectItem value="zai">Z.ai</SelectItem>
+              {providers.map(provider => (
+                <SelectItem key={provider.id} value={provider.name}>
+                  {provider.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -65,13 +72,22 @@ export const ConfigurationForm = ({ formData, onFieldChange, onSelectChange }: C
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="model_name">Model Name</Label>
-          <Input
-            id="model_name"
+           <Select
             value={formData.model_name || ""}
-            onChange={handleInputChange}
-            placeholder="e.g., gpt-4, claude-3-sonnet-20240229"
-            className="glass"
-          />
+            onValueChange={(value) => onSelectChange('model_name', value)}
+            disabled={!formData.provider || filteredModels.length === 0}
+          >
+            <SelectTrigger id="model_name" className="glass">
+              <SelectValue placeholder="Select Model" />
+            </SelectTrigger>
+            <SelectContent>
+              {filteredModels.map(model => (
+                <SelectItem key={model.id} value={model.model_id}>
+                  {model.display_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-2">
           <Label htmlFor="api_base_url">API Base URL (Optional)</Label>
@@ -105,7 +121,7 @@ export const ConfigurationForm = ({ formData, onFieldChange, onSelectChange }: C
             id="max_tokens"
             type="range"
             min="100"
-            max="4000"
+            max="8192"
             step="100"
             value={String(formData.max_tokens)}
             onChange={handleInputChange}
@@ -120,10 +136,29 @@ export const ConfigurationForm = ({ formData, onFieldChange, onSelectChange }: C
           id="system_prompt"
           value={formData.system_prompt || ""}
           onChange={handleInputChange}
-          rows={3}
+          rows={5}
           className="glass"
           placeholder="Define the AI's role and behavior"
         />
+      </div>
+      
+      <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="is_active"
+            checked={formData.is_active || false}
+            onCheckedChange={(checked) => handleSwitchChange('is_active', checked)}
+          />
+          <Label htmlFor="is_active">Active</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="is_default"
+            checked={formData.is_default || false}
+            onCheckedChange={(checked) => handleSwitchChange('is_default', checked)}
+          />
+          <Label htmlFor="is_default">Default</Label>
+        </div>
       </div>
     </div>
   );
