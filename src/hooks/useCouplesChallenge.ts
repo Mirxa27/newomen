@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { type RealtimeChannel } from '@supabase/supabase-js';
-import { type Tables } from '@/integrations/supabase/types';
+import { type CouplesChallenges } from '@/integrations/supabase/tables/couples_challenges';
 import { useUserProfile } from './useUserProfile';
 import { toast } from 'sonner';
+import { safeUpdate, safeInsert } from '@/lib/supabase-utils';
 
-export type CouplesChallenge = Tables<'couples_challenges'>;
+export type CouplesChallenge = CouplesChallenges['Row'];
 export type ChallengeStatus = CouplesChallenge['status'];
 
 export interface RealtimePayload {
@@ -47,24 +48,30 @@ export function useCouplesChallenge(challengeId: string | null) {
           throw fetchError || new Error('Challenge not found.');
         }
 
+        const challengeData = data as CouplesChallenge;
+
         // Ensure the current user is part of the challenge
-        if (data.initiator_id !== profile.id && data.partner_id !== profile.id && data.partner_id !== null) {
+        if (challengeData.initiator_id !== profile.id && challengeData.partner_id !== profile.id && challengeData.partner_id !== null) {
           throw new Error("You are not authorized to view this challenge.");
         }
 
         // If the user is the second person to join, update the partner_id
-        if (data.initiator_id !== profile.id && data.partner_id === null) {
-          const { data: updatedChallenge, error: updateError } = await supabase
-            .from('couples_challenges')
-            .update({ partner_id: profile.id, status: 'active' })
-            .eq('id', challengeId)
-            .select()
-            .single();
+        if (challengeData.initiator_id !== profile.id && challengeData.partner_id === null) {
+          const updateData = {
+            partner_id: profile.id,
+            status: 'active'
+          };
+
+          const { data: updatedChallenge, error: updateError } = await safeUpdate<CouplesChallenge>(
+            'couples_challenges',
+            challengeId,
+            updateData
+          );
 
           if (updateError) throw updateError;
           setChallenge(updatedChallenge);
         } else {
-          setChallenge(data);
+          setChallenge(challengeData);
         }
 
       } catch (e) {
@@ -81,10 +88,10 @@ export function useCouplesChallenge(challengeId: string | null) {
 
     const newChannel = supabase.channel(`couples-challenge-${challengeId}`);
 
-    // Use the correct Supabase realtime syntax
+    // Use type assertion for the realtime channel - this is a known Supabase type issue
     newChannel.on(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      'postgres_changes' as any, // Temporary workaround for Supabase types
+      'postgres_changes' as any,
       {
         event: 'UPDATE',
         schema: 'public',
@@ -123,10 +130,15 @@ export function useCouplesChallenge(challengeId: string | null) {
       }
     };
 
-    const { error: updateError } = await supabase
-      .from('couples_challenges')
-      .update({ responses: newResponses })
-      .eq('id', challenge.id);
+    const updateData = {
+      responses: newResponses
+    };
+
+    const { data, error: updateError } = await safeUpdate<CouplesChallenge>(
+      'couples_challenges',
+      challenge.id,
+      updateData
+    );
 
     if (updateError) {
       toast.error('Failed to submit your response.');
@@ -154,15 +166,16 @@ export async function createNewChallenge(): Promise<CouplesChallenge | null> {
     };
 
     try {
-        const { data, error } = await supabase
-            .from('couples_challenges')
-            .insert({
-                initiator_id: user.id,
-                status: 'pending',
-                question_set: questionSet,
-            })
-            .select()
-            .single();
+        const insertData = {
+            initiator_id: user.id,
+            status: 'pending',
+            question_set: questionSet,
+        };
+
+        const { data, error } = await safeInsert<CouplesChallenge>(
+            'couples_challenges',
+            insertData
+        );
 
         if (error) throw error;
         toast.success("New challenge created! Share the link with your partner.");

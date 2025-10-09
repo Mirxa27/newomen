@@ -785,7 +785,8 @@ serve(async (req) => {
       );
     }
 
-    const subscriptionCheck = await checkSubscriptionAccess(supabase as any, body.userId);
+    // Allow mutation if we need to re-check after auto provisioning
+  let subscriptionCheck = await checkSubscriptionAccess(supabase, body.userId);
     logRequest('Subscription check result', {
       allowed: subscriptionCheck.allowed,
       reason: subscriptionCheck.reason,
@@ -795,6 +796,44 @@ serve(async (req) => {
       subscriptionTier: subscriptionCheck.subscription?.tier ?? subscriptionCheck.profile?.subscription_tier ?? null,
       hasProfile: !!subscriptionCheck.profile,
     });
+
+    // Auto-provision a dev profile if missing to unblock local testing
+    const isDevEnv = Deno.env.get('ENVIRONMENT') !== 'production';
+    const autoProvisionEnabled = Deno.env.get('DEV_AUTO_PROVISION') === 'true';
+    if (isDevEnv && autoProvisionEnabled && subscriptionCheck.reason === 'PROFILE_NOT_FOUND') {
+      try {
+        const autoRole = Deno.env.get('DEV_AUTO_PROFILE_ROLE') || 'admin';
+        const defaultMinutes = autoRole === 'admin' || autoRole === 'superadmin' ? 999999 : 60;
+        const defaultTier = autoRole === 'admin' || autoRole === 'superadmin' ? 'transformation' : 'discovery';
+        const email = `${body.userId}@dev.local`;
+
+        const { error: insertError } = await supabase
+          .from('user_profiles')
+          .insert({
+            id: crypto.randomUUID(),
+            user_id: body.userId,
+            email,
+            nickname: 'Dev User',
+            role: autoRole,
+            subscription_tier: defaultTier,
+            remaining_minutes: defaultMinutes,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
+          .maybeSingle();
+
+        if (insertError) {
+          logError('Auto-provision failed', insertError);
+        } else {
+          logRequest('Auto-provisioned dev profile', { userId: body.userId, role: autoRole, tier: defaultTier });
+          // Re-run subscription access now that profile exists
+          subscriptionCheck = await checkSubscriptionAccess(supabase, body.userId);
+        }
+      } catch (provisionErr) {
+        logError('Exception during auto-provision attempt', provisionErr);
+      }
+    }
 
     // Dev-only admin fallback: allow token generation for admin users even without profile/subscription
     if (!subscriptionCheck.allowed) {
@@ -820,7 +859,7 @@ serve(async (req) => {
                 ? 'User profile not found'
                 : 'An active subscription or minutes are required to start a new session.',
             code: subscriptionCheck.reason ?? 'SUBSCRIPTION_REQUIRED',
-            hint: isDev ? 'For dev testing: ensure user has admin role or valid subscription' : undefined
+            hint: isDev ? 'For dev testing: set DEV_AUTO_PROVISION=true to auto-create a profile' : undefined
           }),
           {
             status,
@@ -834,7 +873,7 @@ serve(async (req) => {
     let userSubscription = null;
     if (body.userId) {
       try {
-        userSubscription = await validateUserSubscription(supabase as any, body.userId);
+  userSubscription = await validateUserSubscription(supabase, body.userId);
         if (!userSubscription.isValid) {
           logError('Subscription validation failed', {
             userId: body.userId,
@@ -934,7 +973,7 @@ serve(async (req) => {
     });
 
     // Create OpenAI session with retry logic
-    const sessionRequest: any = {
+    const sessionRequest: SessionRequest = {
       model: selectedModel,
       voice: selectedVoice,
       modalities: selectedModalities,
@@ -1015,7 +1054,7 @@ serve(async (req) => {
 
     // Track usage for billing purposes (async, don't wait)
     if (body.userId && data.id) {
-      trackSessionUsage(supabase as any, body.userId, data.id).catch((error) => {
+  trackSessionUsage(supabase, body.userId, data.id).catch((error) => {
         logError('Failed to track session usage', error);
       });
     }

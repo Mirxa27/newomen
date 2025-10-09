@@ -10,7 +10,23 @@ export type Prompts = {
     status: string | null;
     created_at: string | null;
   };
-  Insert: { [key: string]: unknown };
-  Update: { [key: string]: unknown };
+  Insert: {
+    id?: string;
+    hosted_prompt_id?: string | null;
+    version?: number | null;
+    name: string;
+    content: Json;
+    status?: string | null;
+    created_at?: string | null;
+  };
+  Update: {
+    id?: string;
+    hosted_prompt_id?: string | null;
+    version?: number | null;
+    name?: string;
+    content?: Json;
+    status?: string | null;
+    created_at?: string | null;
+  };
   Relationships: [];
 };
