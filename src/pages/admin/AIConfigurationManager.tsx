@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Loader2, Edit, Trash2, Plus, TestTube } from "lucide-react";
+import { Loader2, Edit, Trash2, TestTube } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
@@ -16,38 +16,58 @@ import { AIConfigurations } from "@/integrations/supabase/tables/ai_configuratio
 import { Providers } from "@/integrations/supabase/tables/providers";
 import { Models } from "@/integrations/supabase/tables/models";
 import { Json, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
-import { AIConfiguration } from "@/services/ai/configService"; // Import AIConfiguration interface
 import { Badge } from "@/components/ui/badge";
 
+// Define types based on Supabase table schemas
 type AIConfig = AIConfigurations['Row'];
 type Provider = Providers['Row'];
 type Model = Models['Row'];
 
+// Define a more specific type for the form state
 interface AIConfigurationFormState {
   id?: string;
   name: string;
-  description: string;
-  provider: string;
-  provider_name: string;
-  model_name: string;
-  api_base_url: string;
-  api_key_encrypted: string;
-  api_version: string;
+  description: string | null;
+  provider_id: string | null;
+  model_id: string | null;
+  api_base_url: string | null;
+  api_key_encrypted: string; // Keep this as string for input handling
+  api_version: string | null;
   temperature: number;
   max_tokens: number;
-  top_p?: number;
-  frequency_penalty?: number;
-  presence_penalty?: number;
+  top_p: number | null;
+  frequency_penalty: number | null;
+  presence_penalty: number | null;
   system_prompt: string;
-  user_prompt_template: string;
+  user_prompt_template: string | null;
   is_default: boolean;
   custom_headers: Json;
-  cost_per_1k_prompt_tokens?: number;
-  cost_per_1k_completion_tokens?: number;
-  test_status: string;
-  last_tested: string;
+  cost_per_1k_prompt_tokens: number | null;
+  cost_per_1k_completion_tokens: number | null;
   is_active: boolean;
 }
+
+const initialFormData: AIConfigurationFormState = {
+  name: "",
+  description: null,
+  provider_id: null,
+  model_id: null,
+  api_base_url: null,
+  api_key_encrypted: "",
+  api_version: null,
+  temperature: 0.7,
+  max_tokens: 1024,
+  top_p: null,
+  frequency_penalty: null,
+  presence_penalty: null,
+  system_prompt: "",
+  user_prompt_template: null,
+  is_default: false,
+  custom_headers: {},
+  cost_per_1k_prompt_tokens: null,
+  cost_per_1k_completion_tokens: null,
+  is_active: true,
+};
 
 export default function AIConfigurationManager() {
   const [configurations, setConfigurations] = useState<AIConfig[]>([]);
@@ -55,59 +75,30 @@ export default function AIConfigurationManager() {
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState<AIConfigurationFormState>({
-    name: "",
-    description: "",
-    provider: "",
-    provider_name: "",
-    model_name: "",
-    api_base_url: "",
-    api_key_encrypted: "",
-    api_version: "",
-    temperature: 0.7,
-    max_tokens: 1024,
-    top_p: undefined,
-    frequency_penalty: undefined,
-    presence_penalty: undefined,
-    system_prompt: "",
-    user_prompt_template: "",
-    is_default: false,
-    custom_headers: {},
-    cost_per_1k_prompt_tokens: undefined,
-    cost_per_1k_completion_tokens: undefined,
-    test_status: "",
-    last_tested: "",
-    is_active: true,
-  });
+  const [formData, setFormData] = useState<AIConfigurationFormState>(initialFormData);
   const [editingConfig, setEditingConfig] = useState<AIConfig | null>(null);
   const [dialogState, setDialogState] = useState<{ open: boolean; configId: string | null }>({ open: false, configId: null });
-  const [testResults, setTestResults] = useState<{ testing: boolean; configId: string | null; success: boolean | null; message: string | null }>({
+  const [testResults, setTestResults] = useState<{ testing: boolean; configId: string | null }>({
     testing: false,
     configId: null,
-    success: null,
-    message: null,
   });
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [
-        { data: configsData, error: configsError },
-        { data: providersData, error: providersError },
-        { data: modelsData, error: modelsError },
-      ] = await Promise.all([
-        supabase.from("ai_configurations").select("*").order("created_at", { ascending: false }),
-        supabase.from("providers").select("*").order("created_at", { ascending: false }),
-        supabase.from("models").select("*").order("created_at", { ascending: false }),
+      const [configsRes, providersRes, modelsRes] = await Promise.all([
+        supabase.from("ai_configurations").select("*, provider:providers(name), model:models(display_name)").order("created_at", { ascending: false }),
+        supabase.from("providers").select("*").order("name"),
+        supabase.from("models").select("*").order("display_name"),
       ]);
 
-      if (configsError) throw configsError;
-      if (providersError) throw providersError;
-      if (modelsError) throw modelsError;
+      if (configsRes.error) throw configsRes.error;
+      if (providersRes.error) throw providersRes.error;
+      if (modelsRes.error) throw modelsRes.error;
 
-      setConfigurations(configsData || []);
-      setProviders(providersData || []);
-      setModels(modelsData || []);
+      setConfigurations(configsRes.data as any[] || []);
+      setProviders(providersRes.data || []);
+      setModels(modelsRes.data || []);
     } catch (error) {
       console.error("Error loading data:", error);
       toast.error("Failed to load AI configurations.");
@@ -121,48 +112,58 @@ export default function AIConfigurationManager() {
   }, [loadData]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { id, value, type, checked } = e.target as HTMLInputElement;
+    const { id, value, type } = e.target;
+    const isNumberInput = type === 'range' || type === 'number';
     setFormData((prev) => ({
       ...prev,
-      [id]: type === "checkbox" ? checked : value,
+      [id]: isNumberInput ? parseFloat(value) : value,
     }));
   };
 
-  const handleSelectChange = (id: string, value: string | boolean | number) => {
-    setFormData((prev) => ({
-      ...prev,
-      [id]: value,
-    }));
+  const handleSwitchChange = (id: keyof AIConfigurationFormState, checked: boolean) => {
+    setFormData((prev) => ({ ...prev, [id]: checked }));
+  };
+  
+  const handleSelectChange = (id: keyof AIConfigurationFormState, value: string) => {
+    setFormData((prev) => {
+      const newState = { ...prev, [id]: value };
+      // Reset model if provider changes
+      if (id === 'provider_id') {
+        newState.model_id = null;
+      }
+      return newState;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.provider_id || !formData.model_id) {
+        toast.error("Please select a provider and a model.");
+        return;
+    }
     setIsSubmitting(true);
-    try {
-      const payload = {
-        name: formData.name,
-        description: formData.description,
-        provider: formData.provider,
-        provider_name: formData.provider_name,
-        model_name: formData.model_name,
-        api_base_url: formData.api_base_url,
-        api_key_encrypted: formData.api_key_encrypted,
-        api_version: formData.api_version,
-        temperature: formData.temperature,
-        max_tokens: formData.max_tokens,
-        top_p: formData.top_p,
-        frequency_penalty: formData.frequency_penalty,
-        presence_penalty: formData.presence_penalty,
-        system_prompt: formData.system_prompt,
-        is_default: formData.is_default,
-        custom_headers: formData.custom_headers,
-        cost_per_1k_prompt_tokens: formData.cost_per_1k_prompt_tokens,
-        cost_per_1k_completion_tokens: formData.cost_per_1k_completion_tokens,
-        test_status: formData.test_status,
-        last_tested: formData.last_tested,
-        is_active: formData.is_active,
-      } as any;
 
+    const selectedProvider = providers.find(p => p.id === formData.provider_id);
+    const selectedModel = models.find(m => m.id === formData.model_id);
+
+    const payload: TablesInsert<'ai_configurations'> | TablesUpdate<'ai_configurations'> = {
+        ...formData,
+        provider_name: selectedProvider?.name || null,
+        model_name: selectedModel?.model_id || null,
+        // Ensure numeric fields are numbers
+        temperature: Number(formData.temperature),
+        max_tokens: Number(formData.max_tokens),
+        top_p: formData.top_p ? Number(formData.top_p) : null,
+        frequency_penalty: formData.frequency_penalty ? Number(formData.frequency_penalty) : null,
+        presence_penalty: formData.presence_penalty ? Number(formData.presence_penalty) : null,
+    };
+    
+    // Do not update the key if the input is empty during an edit
+    if (editingConfig && !formData.api_key_encrypted) {
+        delete (payload as any).api_key_encrypted;
+    }
+
+    try {
       if (editingConfig) {
         const { error } = await supabase
           .from('ai_configurations')
@@ -173,7 +174,7 @@ export default function AIConfigurationManager() {
       } else {
         const { error } = await supabase
           .from('ai_configurations')
-          .insert(payload);
+          .insert(payload as TablesInsert<'ai_configurations'>);
         if (error) throw error;
         toast.success("AI Configuration created successfully!");
       }
@@ -192,27 +193,24 @@ export default function AIConfigurationManager() {
     setFormData({
       id: config.id,
       name: config.name,
-      description: config.description || "",
-      provider: config.provider,
-      provider_name: config.provider_name || "",
-      model_name: config.model_name,
-      api_base_url: config.api_base_url || "",
-      api_key_encrypted: config.api_key_encrypted || "",
-      api_version: config.api_version || "",
-      temperature: config.temperature || 0.7,
-      max_tokens: config.max_tokens || 1024,
-      top_p: config.top_p || undefined,
-      frequency_penalty: config.frequency_penalty || undefined,
-      presence_penalty: config.presence_penalty || undefined,
-      system_prompt: config.system_prompt || "",
-      user_prompt_template: config.user_prompt_template || "",
+      description: config.description,
+      provider_id: config.provider_id,
+      model_id: config.model_id,
+      api_base_url: config.api_base_url,
+      api_key_encrypted: "", // Do not expose existing key
+      api_version: config.api_version,
+      temperature: config.temperature ?? 0.7,
+      max_tokens: config.max_tokens ?? 1024,
+      top_p: config.top_p,
+      frequency_penalty: config.frequency_penalty,
+      presence_penalty: config.presence_penalty,
+      system_prompt: config.system_prompt,
+      user_prompt_template: config.user_prompt_template,
       is_default: config.is_default,
-      custom_headers: config.custom_headers || {},
-      cost_per_1k_prompt_tokens: config.cost_per_1k_prompt_tokens || undefined,
-      cost_per_1k_completion_tokens: config.cost_per_1k_completion_tokens || undefined,
-      test_status: config.test_status || "",
-      last_tested: config.last_tested || "",
-      is_active: config.is_active || false,
+      custom_headers: config.custom_headers ?? {},
+      cost_per_1k_prompt_tokens: config.cost_per_1k_prompt_tokens,
+      cost_per_1k_completion_tokens: config.cost_per_1k_completion_tokens,
+      is_active: config.is_active,
     });
   };
 
@@ -233,91 +231,61 @@ export default function AIConfigurationManager() {
 
   const resetForm = () => {
     setEditingConfig(null);
-    setFormData({
-      name: "",
-      description: "",
-      provider: "",
-      provider_name: "",
-      model_name: "",
-      api_base_url: "",
-      api_key_encrypted: "",
-      api_version: "",
-      temperature: 0.7,
-      max_tokens: 1024,
-      top_p: undefined,
-      frequency_penalty: undefined,
-      presence_penalty: undefined,
-      system_prompt: "",
-      user_prompt_template: "",
-      is_default: false,
-      custom_headers: {},
-      cost_per_1k_prompt_tokens: undefined,
-      cost_per_1k_completion_tokens: undefined,
-      test_status: "",
-      last_tested: "",
-      is_active: true,
-    });
+    setFormData(initialFormData);
   };
 
   const testConfiguration = async (config: AIConfig) => {
-    setTestResults({ testing: true, configId: config.id, success: null, message: null });
-    toast.info(`Testing configuration ${config.name}...`);
+    setTestResults({ testing: true, configId: config.id });
+    toast.info(`Testing configuration: ${config.name}...`);
+    let testStatus: 'success' | 'failed' = 'failed';
     try {
-      // Simulate API call to test the configuration
-      const testPrompt = "Hello! Please respond with a brief introduction of yourself.";
-      const response = await fetch('/api/test-ai-config', { // This would be an actual API endpoint
+      // This API endpoint would use the config ID to securely fetch the configuration
+      // on the server-side and run the test.
+      const response = await fetch('/api/test-ai-config', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          provider: config.provider,
-          model: config.model_name,
-          prompt: testPrompt,
-          temperature: config.temperature,
-          max_tokens: 100
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ configId: config.id }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Test failed');
+        throw new Error(errorData.message || 'Test failed with status: ' + response.status);
       }
 
       const result = await response.json();
-      setTestResults({ testing: false, configId: config.id, success: true, message: result.response });
-      toast.success("Configuration test successful!");
-
-      // Update Supabase with test status
-      const { error } = await supabase
-        .from('ai_configurations')
-        .update({ test_status: 'success', last_tested: new Date().toISOString() } as TablesUpdate<'ai_configurations'>)
-        .eq('id', config.id);
-      if (error) throw error;
-      await loadData();
+      toast.success(`Test successful for ${config.name}!`);
+      console.log("Test Response:", result.response);
+      testStatus = 'success';
 
     } catch (e) {
-      console.error("Error testing configuration:", e);
-      setTestResults({ testing: false, configId: config.id, success: false, message: e instanceof Error ? e.message : 'Unknown error' });
-      toast.error(e instanceof Error ? e.message : 'Configuration test failed.');
-
-      // Update Supabase with test status
+      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred during testing.';
+      console.error("Error testing configuration:", errorMessage);
+      toast.error(`Test failed for ${config.name}: ${errorMessage}`);
+      testStatus = 'failed';
+    } finally {
+      setTestResults({ testing: false, configId: null });
+      // Update Supabase with the latest test status
       const { error } = await supabase
         .from('ai_configurations')
-        .update({ test_status: 'failed', last_tested: new Date().toISOString() } as TablesUpdate<'ai_configurations'>)
+        .update({ test_status: testStatus, last_tested: new Date().toISOString() })
         .eq('id', config.id);
-      if (error) throw error;
-      await loadData();
+      if (error) {
+        toast.error("Failed to update test status.");
+      } else {
+        await loadData(); // Refresh data to show new status
+      }
     }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+        <Loader2 className="animate-spin h-12 w-12 text-primary" />
       </div>
     );
   }
+
+  const filteredModels = formData.provider_id ? models.filter(m => m.provider_id === formData.provider_id) : [];
 
   return (
     <div className="space-y-6">
@@ -327,145 +295,58 @@ export default function AIConfigurationManager() {
           <CardDescription>Define parameters for AI model interactions.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              id="name"
-              placeholder="Configuration Name"
-              value={formData.name}
-              onChange={handleInputChange}
-              required
-              className="glass"
-            />
-            <Textarea
-              id="description"
-              placeholder="Description"
-              value={formData.description}
-              onChange={handleInputChange}
-              className="glass"
-              rows={3}
-            />
-            <Select
-              value={formData.provider}
-              onValueChange={(value) => handleSelectChange('provider', value)}
-              required
-            >
-              <SelectTrigger className="glass">
-                <SelectValue placeholder="Select Provider" />
-              </SelectTrigger>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input id="name" placeholder="Configuration Name" value={formData.name} onChange={handleInputChange} required className="glass md:col-span-2" />
+            <Textarea id="description" placeholder="Description" value={formData.description || ""} onChange={handleInputChange} className="glass md:col-span-2" rows={2} />
+            
+            <Select value={formData.provider_id || ""} onValueChange={(value) => handleSelectChange('provider_id', value)} required>
+              <SelectTrigger className="glass"><SelectValue placeholder="Select Provider" /></SelectTrigger>
               <SelectContent>
-                {providers.map((provider) => (
-                  <SelectItem key={provider.id} value={provider.name}>
-                    {provider.name}
-                  </SelectItem>
-                ))}
+                {providers.map((p) => (<SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>))}
               </SelectContent>
             </Select>
-            <Select
-              value={formData.model_name}
-              onValueChange={(value) => handleSelectChange('model_name', value)}
-              required
-            >
-              <SelectTrigger className="glass">
-                <SelectValue placeholder="Select Model" />
-              </SelectTrigger>
+
+            <Select value={formData.model_id || ""} onValueChange={(value) => handleSelectChange('model_id', value)} required disabled={!formData.provider_id}>
+              <SelectTrigger className="glass"><SelectValue placeholder="Select Model" /></SelectTrigger>
               <SelectContent>
-                {models.filter(m => providers.find(p => p.name === formData.provider)?.id === m.provider_id).map((model) => (
-                  <SelectItem key={model.id} value={model.model_id}>
-                    {model.display_name}
-                  </SelectItem>
-                ))}
+                {filteredModels.map((m) => (<SelectItem key={m.id} value={m.id}>{m.display_name}</SelectItem>))}
               </SelectContent>
             </Select>
-            <Input
-              id="api_base_url"
-              placeholder="API Base URL (optional)"
-              value={formData.api_base_url}
-              onChange={handleInputChange}
-              className="glass"
-            />
-            <Input
-              id="api_key_encrypted"
-              type="password"
-              placeholder="API Key (optional, will be encrypted)"
-              value={formData.api_key_encrypted}
-              onChange={handleInputChange}
-              className="glass"
-            />
-            <Input
-              id="api_version"
-              placeholder="API Version (optional)"
-              value={formData.api_version}
-              onChange={handleInputChange}
-              className="glass"
-            />
-            <div className="space-y-2">
+
+            <Input id="api_base_url" placeholder="API Base URL (optional)" value={formData.api_base_url || ""} onChange={handleInputChange} className="glass" />
+            <Input id="api_version" placeholder="API Version (optional)" value={formData.api_version || ""} onChange={handleInputChange} className="glass" />
+            <Input id="api_key_encrypted" type="password" placeholder={editingConfig ? "Enter new API Key to update" : "API Key (will be encrypted)"} value={formData.api_key_encrypted} onChange={handleInputChange} className="glass md:col-span-2" />
+
+            <div className="space-y-2 md:col-span-2">
               <Label htmlFor="temperature">Temperature: {formData.temperature}</Label>
-              <Input
-                id="temperature"
-                type="range"
-                min="0"
-                max="2"
-                step="0.1"
-                value={String(formData.temperature)}
-                onChange={handleInputChange}
-                className="glass"
-              />
+              <Input id="temperature" type="range" min="0" max="2" step="0.1" value={formData.temperature} onChange={handleInputChange} />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <Label htmlFor="max_tokens">Max Tokens: {formData.max_tokens}</Label>
-              <Input
-                id="max_tokens"
-                type="range"
-                min="100"
-                max="4096"
-                step="100"
-                value={String(formData.max_tokens)}
-                onChange={handleInputChange}
-                className="glass"
-              />
+              <Input id="max_tokens" type="range" min="100" max="8192" step="100" value={formData.max_tokens} onChange={handleInputChange} />
             </div>
-            <Textarea
-              id="system_prompt"
-              placeholder="System Prompt"
-              value={formData.system_prompt}
-              onChange={handleInputChange}
-              required
-              className="glass"
-              rows={5}
-            />
-            <Textarea
-              id="user_prompt_template"
-              placeholder="User Prompt Template (optional)"
-              value={formData.user_prompt_template || ""}
-              onChange={handleInputChange}
-              className="glass"
-              rows={3}
-            />
+
+            <Textarea id="system_prompt" placeholder="System Prompt" value={formData.system_prompt} onChange={handleInputChange} required className="glass md:col-span-2" rows={4} />
+            <Textarea id="user_prompt_template" placeholder="User Prompt Template (optional)" value={formData.user_prompt_template || ""} onChange={handleInputChange} className="glass md:col-span-2" rows={3} />
+
             <div className="flex items-center space-x-2">
-              <Switch
-                id="is_default"
-                checked={formData.is_default}
-                onCheckedChange={(checked) => handleSelectChange("is_default", checked)}
-              />
-              <Label htmlFor="is_default">Is Default</Label>
+              <Switch id="is_default" checked={formData.is_default} onCheckedChange={(checked) => handleSwitchChange("is_default", checked)} />
+              <Label htmlFor="is_default">Default Configuration</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <Switch
-                id="is_active"
-                checked={formData.is_active}
-                onCheckedChange={(checked) => handleSelectChange("is_active", checked)}
-              />
-              <Label htmlFor="is_active">Is Active</Label>
+              <Switch id="is_active" checked={formData.is_active} onCheckedChange={(checked) => handleSwitchChange("is_active", checked)} />
+              <Label htmlFor="is_active">Active</Label>
             </div>
-            <Button type="submit" disabled={isSubmitting} className="clay-button">
-              {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              {editingConfig ? "Update Configuration" : "Create Configuration"}
-            </Button>
-            {editingConfig && (
-              <Button variant="outline" onClick={resetForm} className="ml-2">
-                Cancel Edit
-              </Button>
-            )}
+
+            <div className="md:col-span-2 flex gap-2">
+                <Button type="submit" disabled={isSubmitting} className="clay-button">
+                  {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {editingConfig ? "Update Configuration" : "Create Configuration"}
+                </Button>
+                {editingConfig && (
+                  <Button variant="outline" type="button" onClick={resetForm}>Cancel Edit</Button>
+                )}
+            </div>
           </form>
         </CardContent>
       </Card>
@@ -473,7 +354,7 @@ export default function AIConfigurationManager() {
       <Card className="glass-card">
         <CardHeader>
           <CardTitle>Existing AI Configurations</CardTitle>
-          <CardDescription>Manage your deployed AI configurations.</CardDescription>
+          <CardDescription>Manage and test your deployed AI configurations.</CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveTable>
@@ -483,67 +364,41 @@ export default function AIConfigurationManager() {
                   <TableHead>Name</TableHead>
                   <TableHead>Provider</TableHead>
                   <TableHead>Model</TableHead>
-                  <TableHead>Temp</TableHead>
-                  <TableHead>Max Tokens</TableHead>
-                  <TableHead>Default</TableHead>
-                  <TableHead>Active</TableHead>
-                  <TableHead>Test Status</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Test</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {configurations.map((config) => (
+                {configurations.length > 0 ? configurations.map((config) => (
                   <TableRow key={config.id}>
-                    <TableCell className="font-medium">
-                      <div>
-                        <div className="font-semibold">{config.name}</div>
-                        {config.description && (
-                          <div className="text-sm text-muted-foreground">{config.description}</div>
-                        )}
-                      </div>
+                    <TableCell className="font-medium">{config.name}</TableCell>
+                    <TableCell><Badge variant="outline">{config.provider?.name || 'N/A'}</Badge></TableCell>
+                    <TableCell>{config.model?.display_name || 'N/A'}</TableCell>
+                    <TableCell>
+                        <div className="flex flex-col">
+                            {config.is_active ? <Badge className="bg-green-500 w-fit">Active</Badge> : <Badge variant="destructive" className="w-fit">Inactive</Badge>}
+                            {config.is_default && <Badge variant="secondary" className="mt-1 w-fit">Default</Badge>}
+                        </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="capitalize">
-                        {config.provider}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{config.model_name}</TableCell>
-                    <TableCell>{config.temperature}</TableCell>
-                    <TableCell>{config.max_tokens}</TableCell>
-                    <TableCell>{config.is_default ? "Yes" : "No"}</TableCell>
-                    <TableCell>{config.is_active ? "Yes" : "No"}</TableCell>
-                    <TableCell>
-                      <Badge variant={config.test_status === 'success' ? 'default' : 'destructive'}>
+                      <Badge variant={config.test_status === 'success' ? 'default' : config.test_status === 'failed' ? 'destructive' : 'secondary'}>
                         {config.test_status || 'Untested'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(config)}>
-                          <Edit className="w-4 h-4" />
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => testConfiguration(config)} disabled={testResults.testing && testResults.configId === config.id}>
+                          {testResults.testing && testResults.configId === config.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <TestTube className="w-4 h-4" />}
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => testConfiguration(config)}
-                          disabled={testResults?.testing && testResults?.configId === config.id}
-                          className="glass"
-                        >
-                          {testResults?.testing && testResults?.configId === config.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <TestTube className="w-4 h-4" />
-                          )}
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => { setDialogState({ open: true, configId: config.id }); }}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(config)}><Edit className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDialogState({ open: true, configId: config.id })}><Trash2 className="w-4 h-4 text-red-500" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
-                {configurations.length === 0 && (
+                )) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center text-muted-foreground">
-                      No AI configurations found.
-                    </TableCell>
+                    <TableCell colSpan={6} className="text-center h-24">No AI configurations found.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -555,8 +410,8 @@ export default function AIConfigurationManager() {
         open={dialogState.open}
         onOpenChange={(open) => setDialogState({ ...dialogState, open })}
         onConfirm={handleDelete}
-        title="Delete AI Configuration?"
-        description="This action cannot be undone. The configuration will be permanently removed."
+        title="Are you sure you want to delete this configuration?"
+        description="This action cannot be undone. The configuration will be permanently removed from the system."
       />
     </div>
   );
