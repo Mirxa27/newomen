@@ -1,108 +1,119 @@
-import { supabase } from '@/integrations/supabase/client';
-import { logger } from '@/lib/logging';
-import { Tables } from '@/integrations/supabase/types';
+import { supabase } from "@/integrations/supabase/client";
+import type { AIConfiguration } from './aiTypes';
+import { NEWME_SYSTEM_PROMPT } from "@/config/newme-system-prompt";
 
-export interface AIConfiguration {
-  id: string;
-  name: string;
-  provider: 'openai' | 'anthropic' | 'google' | 'custom';
-  provider_name: string;
-  model: string;
-  apiKey: string | null;
-  api_base_url: string | null;
-  api_version: string | null;
-  temperature: number | null;
-  maxTokens: number | null;
-  topP: number | null;
-  frequencyPenalty: number | null;
-  presencePenalty: number | null;
-  systemPrompt: string | null;
-  isDefault: boolean | null;
-  custom_headers: Record<string, string> | null;
-  cost_per_1k_input_tokens: number | null;
-  cost_per_1k_output_tokens: number | null;
-  user_prompt_template: string | null;
-  created_by: string | null;
-  test_status: string | null;
-  last_tested: string | null;
-  is_active: boolean;
-  description: string | null;
-}
-
-export class AIConfigService {
-  private static instance: AIConfigService;
+class ConfigService {
   private configurations: Map<string, AIConfiguration> = new Map();
 
-  private constructor() {
-    void this.loadConfigurations();
+  constructor() {
+    this.loadConfigurations();
   }
 
-  public static getInstance(): AIConfigService {
-    if (!AIConfigService.instance) {
-      AIConfigService.instance = new AIConfigService();
-    }
-    return AIConfigService.instance;
-  }
-
-  private async loadConfigurations(): Promise<void> {
+  async loadConfigurations() {
     try {
-      const { data, error } = await supabase.from('ai_configurations').select('*');
+      const { data, error } = await supabase
+        .from('ai_configurations')
+        .select('*')
+        .eq('is_active', true);
+
       if (error) throw error;
 
       this.configurations.clear();
-      (data as Tables<'ai_configurations'>[]).forEach(config => {
+      data?.forEach(config => {
         this.configurations.set(config.id, {
           id: config.id,
           name: config.name,
           provider: config.provider as AIConfiguration['provider'],
-          provider_name: config.provider_name,
+          provider_name: config.provider_name || undefined,
           model: config.model_name,
-          apiKey: config.api_key_encrypted,
-          api_base_url: config.api_base_url,
-          api_version: config.api_version,
-          temperature: config.temperature,
+          apiKey: config.api_key_encrypted || '',
+          api_base_url: config.api_base_url || undefined,
+          api_version: config.api_version || undefined,
+          temperature: Number(config.temperature),
           maxTokens: config.max_tokens,
-          topP: config.top_p,
-          frequencyPenalty: config.frequency_penalty,
-          presencePenalty: config.presence_penalty,
-          systemPrompt: config.system_prompt,
-          isDefault: config.is_default,
-          custom_headers: config.custom_headers as Record<string, string> | null,
-          cost_per_1k_input_tokens: config.cost_per_1k_prompt_tokens,
-          cost_per_1k_output_tokens: config.cost_per_1k_completion_tokens,
-          user_prompt_template: config.user_prompt_template,
-          created_by: config.created_by,
-          test_status: config.test_status,
-          last_tested: config.last_tested,
-          is_active: config.is_active,
-          description: config.description,
+          topP: config.top_p ? Number(config.top_p) : undefined,
+          frequencyPenalty: config.frequency_penalty ? Number(config.frequency_penalty) : undefined,
+          presencePenalty: config.presence_penalty ? Number(config.presence_penalty) : undefined,
+          systemPrompt: config.system_prompt || undefined,
+          isDefault: config.is_default || false,
+          custom_headers: (config.custom_headers as Record<string, string>) || undefined,
+          cost_per_1k_input_tokens: config.cost_per_1k_prompt_tokens ? Number(config.cost_per_1k_prompt_tokens) : undefined,
+          cost_per_1k_output_tokens: config.cost_per_1k_completion_tokens ? Number(config.cost_per_1k_completion_tokens) : undefined,
         });
       });
-      logger.info('AI configurations loaded successfully.');
-    } catch (e) {
-      logger.error('Failed to load AI configurations:', e);
+
+      const newMeConfig = data?.find(c => c.name === 'NewMe Voice Agent');
+      if (newMeConfig) {
+        const baseConfig = this.configurations.get(newMeConfig.id);
+        if (baseConfig) {
+          this.configurations.set('newme-voice-agent', { ...baseConfig, systemPrompt: NEWME_SYSTEM_PROMPT });
+        }
+      }
+    } catch (dbError) {
+      console.warn('Could not load AI configurations from database:', dbError);
     }
   }
 
-  public getConfiguration(id: string): AIConfiguration | undefined {
-    return this.configurations.get(id);
-  }
-
-  public async getAIConfigForService(serviceType: string, serviceId?: string): Promise<AIConfiguration | null> {
+  async getConfigurationForService(serviceType: string, serviceId?: string): Promise<AIConfiguration | null> {
     try {
       const { data, error } = await supabase.rpc('get_ai_config_for_service', {
-        service_type_param: serviceType,
-        service_id_param: serviceId,
+        p_service_type: serviceType,
+        p_service_id: serviceId || null
       });
 
       if (error) {
-        logger.error(`Error fetching AI config for ${serviceType}:`, error);
-        return null;
+        console.warn(`Error getting config for ${serviceType}:`, error);
+        return this.getDefaultConfiguration();
       }
-      return data as AIConfiguration | null;
-    } catch (e) {
-      logger.error(`Exception fetching AI config for ${serviceType}:`, e);
-      return null;
+
+      const configData = Array.isArray(data) ? data[0] : data;
+      if (!configData) return this.getDefaultConfiguration();
+
+      const config: AIConfiguration = {
+        id: configData.config_id,
+        name: configData.config_name,
+        provider: configData.provider,
+        model: configData.model_name,
+        apiKey: '',
+        temperature: Number(configData.temperature),
+        maxTokens: configData.max_tokens,
+        topP: configData.top_p ? Number(configData.top_p) : undefined,
+        frequencyPenalty: configData.frequency_penalty ? Number(configData.frequency_penalty) : undefined,
+        presencePenalty: configData.presence_penalty ? Number(configData.presence_penalty) : undefined,
+        systemPrompt: configData.system_prompt || undefined,
+        isDefault: configData.is_default || false,
+        provider_name: configData.provider_name || undefined,
+        api_base_url: configData.api_base_url || undefined,
+        api_version: configData.api_version || undefined,
+        custom_headers: (configData.custom_headers as Record<string, string>) || undefined,
+        cost_per_1k_input_tokens: configData.cost_per_1k_input_tokens ? Number(configData.cost_per_1k_input_tokens) : undefined,
+        cost_per_1k_output_tokens: configData.cost_per_1k_output_tokens ? Number(configData.cost_per_1k_output_tokens) : undefined
+      };
+
+      const storedConfig = Array.from(this.configurations.values()).find(c => c.id === config.id);
+      if (storedConfig) config.apiKey = storedConfig.apiKey;
+
+      return config;
+    } catch (error) {
+      console.error(`Error in getConfigurationForService(${serviceType}):`, error);
+      return this.getDefaultConfiguration();
     }
   }
+
+  getDefaultConfiguration(): AIConfiguration | null {
+    for (const config of this.configurations.values()) {
+      if (config.id === 'newme' || config.isDefault) return config;
+    }
+    return Array.from(this.configurations.values())[0] || null;
+  }
+
+  getConfigurations(): AIConfiguration[] {
+    return Array.from(this.configurations.values());
+  }
+
+  getConfiguration(id: string): AIConfiguration | null {
+    return this.configurations.get(id) || null;
+  }
 }
+
+export const configService = new ConfigService();

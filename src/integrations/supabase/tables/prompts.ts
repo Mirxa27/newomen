@@ -7,9 +7,8 @@ export type Prompts = {
     version: number | null;
     name: string;
     content: Json;
-    status: "draft" | "published" | "archived"; // Explicitly define enum values
-    created_at: string;
-        updated_at: string;
+    status: string | null;
+    created_at: string | null;
   };
   Insert: {
     id?: string;
@@ -17,9 +16,8 @@ export type Prompts = {
     version?: number | null;
     name: string;
     content: Json;
-    status?: "draft" | "published" | "archived";
-    created_at?: string;
-    updated_at?: string;
+    status?: string | null;
+    created_at?: string | null;
   };
   Update: {
     id?: string;
@@ -27,9 +25,8 @@ export type Prompts = {
     version?: number | null;
     name?: string;
     content?: Json;
-    status?: "draft" | "published" | "archived";
-    created_at?: string;
-    updated_at?: string;
+    status?: string | null;
+    created_at?: string | null;
   };
   Relationships: [];
 };

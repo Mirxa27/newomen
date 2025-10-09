@@ -8,8 +8,7 @@ export type Voices = {
     gender: string | null;
     latency_hint_ms: number | null;
     enabled: boolean | null;
-    created_at: string;
-    updated_at: string;
+    created_at: string | null;
   };
   Insert: {
     id?: string;
@@ -20,8 +19,7 @@ export type Voices = {
     gender?: string | null;
     latency_hint_ms?: number | null;
     enabled?: boolean | null;
-    created_at?: string;
-    updated_at?: string;
+    created_at?: string | null;
   };
   Update: {
     id?: string;
@@ -32,8 +30,7 @@ export type Voices = {
     gender?: string | null;
     latency_hint_ms?: number | null;
     enabled?: boolean | null;
-    created_at?: string;
-    updated_at?: string;
+    created_at?: string | null;
   };
   Relationships: [];
 };

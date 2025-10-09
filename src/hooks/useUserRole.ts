@@ -1,45 +1,39 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useUserProfile } from './useUserProfile';
-
-type UserRole = 'guest' | 'member' | 'admin' | 'superadmin' | 'premium';
+import { UserRole, UserPermissions, RolePermissions } from '@/lib/types/roles';
 
 export function useUserRole() {
-  const { profile, loading: profileLoading } = useUserProfile();
-  const [role, setRole] = useState<UserRole>('guest');
+  const [role, setRole] = useState<UserRole>();
+  const [permissions, setPermissions] = useState<UserPermissions>();
   const [loading, setLoading] = useState(true);
 
-  const determineRole = useCallback(() => {
-    setLoading(true);
-    if (profileLoading) {
-      return;
-    }
-
-    if (!profile) {
-      setRole('guest');
-      setLoading(false);
-      return;
-    }
-
-    // Simple role mapping for now
-    switch (profile.role) {
-      case 'admin':
-      case 'superadmin':
-        setRole('admin');
-        break;
-      case 'premium':
-        setRole('premium');
-        break;
-      default:
-        setRole('member');
-        break;
-    }
-    setLoading(false);
-  }, [profile, profileLoading]);
-
   useEffect(() => {
-    determineRole();
-  }, [determineRole]);
+    async function fetchUserRole() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setLoading(false);
+          return;
+        }
 
-  return { role, loading };
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        const userRole = (profile?.role as UserRole) || 'MODERATOR';
+        setRole(userRole);
+        setPermissions(RolePermissions[userRole]);
+      } catch (error) {
+        console.error('Error fetching user role:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchUserRole();
+  }, []);
+
+  return { role, permissions, loading };
 }

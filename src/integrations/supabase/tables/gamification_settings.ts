@@ -5,17 +5,17 @@ export type GamificationSettings = {
     crystal_reward_session: number;
     crystal_reward_assessment: number;
     crystal_reward_challenge: number;
-    created_at: string;
-    updated_at: string;
+    created_at: string | null;
+    updated_at: string | null;
   };
   Insert: {
     id?: string;
-    name: string;
+    name?: string;
     crystal_reward_session?: number;
     crystal_reward_assessment?: number;
     crystal_reward_challenge?: number;
-    created_at?: string;
-    updated_at?: string;
+    created_at?: string | null;
+    updated_at?: string | null;
   };
   Update: {
     id?: string;
@@ -23,8 +23,8 @@ export type GamificationSettings = {
     crystal_reward_session?: number;
     crystal_reward_assessment?: number;
     crystal_reward_challenge?: number;
-    created_at?: string;
-    updated_at?: string;
+    created_at?: string | null;
+    updated_at?: string | null;
   };
   Relationships: [];
 };

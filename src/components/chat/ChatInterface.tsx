@@ -1,77 +1,101 @@
-import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Send, Mic, Square, Loader2 } from "lucide-react";
-import { UIMessage as Message } from "@/hooks/useChat"; // Corrected import for Message type
+import { ArrowLeft, Bot } from "lucide-react";
+import { TranscriptPane } from "@/components/chat/TranscriptPane";
+import { SessionHUD } from "@/components/chat/SessionHUD";
+import { Composer } from "@/components/chat/Composer";
+import { Waveform } from "@/components/chat/Waveform";
+import type { Message } from "@/hooks/useChat";
 
 interface ChatInterfaceProps {
+  isConnected: boolean;
+  isSpeaking: boolean;
+  isRecording: boolean;
+  isSpeakerMuted: boolean;
   messages: Message[];
-  onSendMessage: (message: string) => void;
-  isSending: boolean;
+  partialTranscript: string;
+  duration: number;
+  audioLevel: number;
+  endConversation: () => void;
+  handleSendText: (text: string) => void;
+  toggleRecording: () => void;
+  toggleSpeakerMute: () => void;
 }
 
-export default function ChatInterface({ messages, onSendMessage, isSending }: ChatInterfaceProps) {
-  const [input, setInput] = useState("");
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
-    }
-  }, [messages]);
-
-  const handleSend = () => {
-    if (input.trim()) {
-      onSendMessage(input.trim());
-      setInput("");
-    }
-  };
+export const ChatInterface = ({
+  isConnected,
+  isSpeaking,
+  isRecording,
+  isSpeakerMuted,
+  messages,
+  partialTranscript,
+  duration,
+  audioLevel,
+  endConversation,
+  handleSendText,
+  toggleRecording,
+  toggleSpeakerMute,
+}: ChatInterfaceProps) => {
+  const navigate = useNavigate();
 
   return (
-    <div className="flex flex-col h-full">
-      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef as any}>
-        <div className="space-y-4">
-          {messages.map((msg) => (
-            <div key={msg.id} className={`flex items-end gap-2 ${msg.sender === 'user' ? 'justify-end' : ''}`}>
-              {msg.sender !== 'user' && (
-                <Avatar>
-                  <AvatarImage src="/ai-avatar.png" />
-                  <AvatarFallback>AI</AvatarFallback>
-                </Avatar>
-              )}
-              <div className={`rounded-lg p-3 max-w-xs lg:max-w-md ${msg.sender === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                <p>{msg.content}</p>
-                <p className="text-xs text-right opacity-70 mt-1">{new Date(msg.timestamp).toLocaleTimeString()}</p>
-              </div>
+    <div className="app-page-shell h-dvh flex flex-col">
+      {/* Header */}
+      <header className="flex-shrink-0 glass p-3 sm:p-4 border-b border-white/10 sticky top-0 z-10">
+        <div className="flex items-center justify-between max-w-7xl mx-auto">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center clay">
+              <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-          ))}
-          {isSending && (
-            <div className="flex items-center justify-start p-4">
-              <Loader2 className="h-6 w-6 animate-spin" />
-              <p className="ml-2">Thinking...</p>
+            <div>
+              <h2 className="text-base sm:text-lg font-semibold">NewMe Chat</h2>
+              <p className="text-xs text-muted-foreground hidden sm:block">AI Companion</p>
             </div>
-          )}
-        </div>
-      </ScrollArea>
-      <footer className="p-4 border-t">
-        <div className="flex items-center gap-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Type your message..."
-            disabled={isSending}
-          />
-          <Button onClick={handleSend} disabled={isSending}>
-            <Send className="w-4 h-4" />
-          </Button>
-          <Button variant="outline" disabled={isSending}>
-            <Mic className="w-4 h-4" />
+          </div>
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/dashboard')}
+            className="gap-2 hover:gap-3 transition-all"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden sm:inline text-sm">Dashboard</span>
           </Button>
         </div>
-      </footer>
+      </header>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0 max-w-7xl mx-auto w-full p-2 sm:p-4 gap-2 sm:gap-4">
+        {/* Chat Area */}
+        <main className="flex-1 flex flex-col min-h-0 gap-2 sm:gap-4">
+          <div className="flex-1 glass rounded-3xl border border-white/10 flex flex-col overflow-hidden">
+            <TranscriptPane messages={messages} partialTranscript={partialTranscript} />
+          </div>
+          <div className="flex-shrink-0">
+            <Waveform isActive={isConnected && isSpeaking} audioLevel={audioLevel} />
+          </div>
+          <div className="flex-shrink-0">
+            <Composer
+              onSendText={handleSendText}
+              onEndSession={endConversation}
+              isConnected={isConnected}
+              isRecording={isRecording}
+              onToggleRecording={toggleRecording}
+              isSpeakerMuted={isSpeakerMuted}
+              onToggleSpeakerMute={toggleSpeakerMute}
+            />
+          </div>
+        </main>
+
+        {/* Sidebar - Desktop */}
+        <aside className="hidden lg:block w-80 xl:w-96 flex-shrink-0">
+          <SessionHUD duration={duration} isConnected={isConnected} isSpeaking={isSpeaking} />
+        </aside>
+
+        {/* Bottom HUD - Mobile */}
+        <div className="lg:hidden flex-shrink-0">
+          <SessionHUD duration={duration} isConnected={isConnected} isSpeaking={isSpeaking} />
+        </div>
+      </div>
     </div>
   );
-}
+};

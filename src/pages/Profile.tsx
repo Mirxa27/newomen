@@ -1,28 +1,34 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Edit, Save } from "lucide-react";
-import { toast } from "sonner";
-import { useUserProfile, UserProfile, UserAchievement } from "@/hooks/useUserProfile";
-import type { TablesUpdate } from "@/integrations/supabase/types";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, Upload, Trophy, Target, Edit, Settings } from "lucide-react";
+import AchievementBadge from "@/components/AchievementBadge";
+import GamificationDisplay from "@/components/GamificationDisplay";
+import ImageCrop from "@/components/ImageCrop";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
-export default function ProfilePage() {
+export default function Profile() {
+  const navigate = useNavigate();
   const {
+    loading,
     profile,
     achievements,
-    loading,
-    updateProfile,
+    levelThresholds,
     uploadingAvatar,
+    updateProfile,
     uploadAvatar,
-    getDisplayName,
   } = useUserProfile();
 
   const [editMode, setEditMode] = useState(false);
   const [nickname, setNickname] = useState("");
+  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile) {
@@ -30,96 +36,246 @@ export default function ProfilePage() {
     }
   }, [profile]);
 
-  const handleSave = async () => {
-    const success = await updateProfile({ nickname });
-    if (success) {
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setImageToCrop(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+    event.target.value = "";
+  };
+
+  const handleCropComplete = async (croppedImage: Blob) => {
+    setImageToCrop(null);
+    await uploadAvatar(croppedImage);
+  };
+
+  const handleSaveProfile = async () => {
+    if (profile?.nickname !== nickname) {
+      const success = await updateProfile({ nickname });
+      if (success) {
+        setEditMode(false);
+      }
+    } else {
       setEditMode(false);
     }
   };
 
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      await uploadAvatar(e.target.files[0]);
-    }
-  };
-
   if (loading) {
-    return <div className="flex justify-center items-center h-screen"><Loader2 className="w-8 h-8 animate-spin" /></div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+      </div>
+    );
   }
 
   if (!profile) {
-    return <div>User not found.</div>;
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <p className="text-white mb-4">Could not load profile.</p>
+        <Button onClick={() => navigate("/dashboard")}>Go to Dashboard</Button>
+      </div>
+    );
   }
 
+  const {
+    crystal_balance: currentCrystalBalance = 0,
+    current_level: currentLevel = 1,
+    daily_streak: dailyStreak = 0,
+    avatar_url: avatarUrl,
+    email,
+  } = profile;
+
+  const nextLevelThreshold = levelThresholds.find(
+    (threshold) => threshold.level === currentLevel + 1
+  );
+  const currentLevelThreshold = levelThresholds.find(
+    (threshold) => threshold.level === currentLevel
+  );
+
+  const crystalsNeededForNextLevel = nextLevelThreshold
+    ? nextLevelThreshold.crystals_required - currentCrystalBalance
+    : 0;
+
+  const crystalsEarnedInCurrentLevel = currentCrystalBalance - (currentLevelThreshold?.crystals_required || 0);
+  const crystalsRequiredForCurrentLevelUp = (nextLevelThreshold?.crystals_required || 0) - (currentLevelThreshold?.crystals_required || 0);
+
+  const levelProgressPercentage =
+    crystalsRequiredForCurrentLevelUp > 0
+      ? (crystalsEarnedInCurrentLevel / crystalsRequiredForCurrentLevelUp) * 100
+      : 0;
+
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <Card>
-        <CardHeader>
+    <>
+      <div className="min-h-screen p-6">
+        <div className="max-w-6xl mx-auto space-y-6">
           <div className="flex items-center gap-4">
-            <div className="relative">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={profile.avatar_url || ""} alt={getDisplayName()} />
-                <AvatarFallback>{getDisplayName().charAt(0)}</AvatarFallback>
-              </Avatar>
-              <Input type="file" id="avatar-upload" className="hidden" onChange={handleAvatarChange} accept="image/*" />
-              <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-1 cursor-pointer">
-                {uploadingAvatar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit className="h-4 w-4" />}
-              </label>
-            </div>
-            <div>
-              {editMode ? (
-                <Input value={nickname} onChange={(e) => setNickname(e.target.value)} className="text-2xl font-bold" />
-              ) : (
-                <CardTitle className="text-3xl">{getDisplayName()}</CardTitle>
-              )}
-              <CardDescription>{profile.email}</CardDescription>
-            </div>
-            <div className="ml-auto">
-              {editMode ? (
-                <Button onClick={handleSave}><Save className="mr-2 h-4 w-4" /> Save</Button>
-              ) : (
-                <Button variant="outline" onClick={() => setEditMode(true)}><Edit className="mr-2 h-4 w-4" /> Edit</Button>
-              )}
-            </div>
+            <Button variant="ghost" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
+            <h1 className="text-4xl font-bold gradient-text">Profile</h1>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div>
-            <h3 className="font-semibold text-lg">Stats</h3>
-            <div className="grid grid-cols-3 gap-4 mt-2">
-              <StatCard title="Level" value={profile.current_level || 1} />
-              <StatCard title="Crystals" value={profile.crystal_balance || 0} />
-              <StatCard title="Minutes Left" value={profile.remaining_minutes || 0} />
-            </div>
-          </div>
-          <div>
-            <h3 className="font-semibold text-lg">Achievements</h3>
-            <div className="grid grid-cols-2 gap-4 mt-2">
-              {achievements.map(ach => (
-                <AchievementCard key={ach.id} achievement={ach} />
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
 
-function StatCard({ title, value }: { title: string, value: number | string }) {
-  return (
-    <div className="p-4 bg-muted rounded-lg text-center">
-      <p className="text-sm text-muted-foreground">{title}</p>
-      <p className="text-2xl font-bold">{value}</p>
-    </div>
-  );
-}
+          <div className="grid md:grid-cols-3 gap-6">
+            <Card className="md:col-span-1 glass-card">
+              <CardHeader className="text-center">
+                <div className="relative mx-auto mb-4">
+                  <Avatar className="w-32 h-32 border-4 border-primary">
+                    <AvatarImage src={avatarUrl || undefined} alt={nickname || "User"} />
+                    <AvatarFallback className="text-4xl">
+                      {(nickname || email || "U")[0].toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  {editMode && (
+                    <label className="absolute bottom-0 right-0 clay-button p-2 rounded-full cursor-pointer">
+                      <Upload className="w-4 h-4" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        disabled={uploadingAvatar}
+                        title="Upload new avatar"
+                      />
+                    </label>
+                  )}
+                </div>
+                
+                {editMode ? (
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Nickname</Label>
+                      <Input
+                        value={nickname}
+                        onChange={(e) => setNickname(e.target.value)}
+                        className="text-center glass"
+                        placeholder="Enter nickname"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={handleSaveProfile} className="flex-1 clay-button">Save</Button>
+                      <Button variant="outline" onClick={() => setEditMode(false)} className="flex-1 glass">Cancel</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <CardTitle className="text-2xl">{nickname || "Set your nickname"}</CardTitle>
+                    <CardDescription>{email}</CardDescription>
+                    <Button onClick={() => setEditMode(true)} variant="outline" className="mt-4 glass">
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit Profile
+                    </Button>
+                  </>
+                )}
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="glass p-4 rounded-lg space-y-2">
+                  <div className="flex justify-between">
+                    <span>Subscription:</span>
+                    <Badge className="capitalize" variant={profile.subscription_tier === 'growth' || profile.subscription_tier === 'transformation' ? 'default' : 'secondary'}>{profile.subscription_tier || "discovery"}</Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Minutes Remaining:</span>
+                    <span className="font-semibold">{profile.remaining_minutes || 0} min</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Daily Streak:</span>
+                    <span className="font-semibold">{dailyStreak} days 🔥</span>
+                  </div>
+                </div>
+                <Button onClick={() => navigate("/account-settings")} variant="outline" className="w-full glass">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Advanced Account Settings
+                </Button>
+              </CardContent>
+            </Card>
 
-function AchievementCard({ achievement }: { achievement: UserAchievement }) {
-  return (
-    <div className="p-4 border rounded-lg">
-      <p className="font-bold">{achievement.name}</p>
-      <p className="text-sm text-muted-foreground">{achievement.description}</p>
-    </div>
+            <div className="md:col-span-2">
+              <Tabs defaultValue="achievements">
+                <TabsList className="grid grid-cols-2 w-full glass">
+                  <TabsTrigger value="achievements">Achievements</TabsTrigger>
+                  <TabsTrigger value="progress">Progress</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="achievements" className="space-y-4 mt-4">
+                  <Card className="glass-card">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Trophy className="w-5 h-5 text-primary" />
+                        Your Achievements
+                      </CardTitle>
+                      <CardDescription>
+                        {achievements.length} achievement{achievements.length !== 1 ? 's' : ''} unlocked
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {achievements.length === 0 ? (
+                        <div className="text-center py-12 text-muted-foreground">
+                          <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                          <p>No achievements yet. Keep exploring to earn your first!</p>
+                        </div>
+                      ) : (
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {achievements.map((achievement) => (
+                            achievement.achievements && (
+                              <AchievementBadge
+                                key={achievement.id}
+                                title={achievement.achievements.title}
+                                description={achievement.achievements.description}
+                                badgeUrl={achievement.achievements.badge_url || "/badges/default.svg"}
+                                earnedAt={achievement.earned_at}
+                              />
+                            )
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="progress" className="space-y-4 mt-4">
+                  <Card className="glass-card">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Target className="w-5 h-5 text-primary" />
+                        Growth Journey
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <GamificationDisplay
+                        crystalBalance={currentCrystalBalance}
+                        currentLevel={currentLevel}
+                        dailyStreak={dailyStreak}
+                        crystalsToNextLevel={crystalsNeededForNextLevel}
+                        levelProgressPercentage={levelProgressPercentage}
+                      />
+
+                      <div className="glass p-6 rounded-lg space-y-4">
+                        <h3 className="font-semibold text-lg">Life Balance Areas</h3>
+                        <div className="text-center py-8 text-muted-foreground">
+                          <p>Your personalized life balance report will be available here after you complete more assessments.</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </div>
+        </div>
+      </div>
+      {imageToCrop && (
+        <ImageCrop
+          image={imageToCrop}
+          open={!!imageToCrop}
+          onOpenChange={(isOpen) => !isOpen && setImageToCrop(null)}
+          onCropComplete={handleCropComplete}
+        />
+      )}
+    </>
   );
 }

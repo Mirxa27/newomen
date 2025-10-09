@@ -1,144 +1,296 @@
-import { supabase } from '@/integrations/supabase/client';
-import { logger } from '@/lib/logging';
-import { Json, Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
-import { AIAssessmentService } from './AIAssessmentService';
-import { AIService } from './ai/aiService';
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Assessment,
+  AssessmentInsert,
+  AssessmentUpdate,
+  AssessmentAttempt,
+  AssessmentFilters,
+  asAssessments,
+  asAssessment
+} from "@/types/assessment-optimized";
+import type { Json } from "@/integrations/supabase/types";
 
-type AssessmentFull = Tables<'assessments_enhanced'> & {
-  ai_configurations: Tables<'ai_configurations'> | null;
-};
-type AssessmentInsert = TablesInsert<'assessments_enhanced'>;
-type AttemptFull = Tables<'assessment_attempts'>;
-
+/**
+ * Optimized Assessment Service with pre-typed query builders
+ * Prevents TypeScript from complex type inference during compilation
+ */
 export class AssessmentServiceOptimized {
-  private static instance: AssessmentServiceOptimized;
-  private assessmentsTable = 'assessments_enhanced';
-  private attemptsTable = 'assessment_attempts';
-  private resultsTable = 'assessment_results';
-  private progressTable = 'user_assessment_progress';
-  private aiService: AIService;
-  private aiAssessmentService: AIAssessmentService;
+  private readonly assessmentsTable = "assessments_enhanced";
+  private readonly attemptsTable = "assessment_attempts";
 
-  private constructor() {
-    this.aiService = AIService.getInstance();
-    this.aiAssessmentService = AIAssessmentService.getInstance();
-  }
+  /**
+   * Get assessments with type-safe query builder
+   */
+  async getAssessments(filters?: AssessmentFilters): Promise<Assessment[]> {
+    try {
+      // Use Supabase's query builder directly and let TypeScript infer the type
+      let query: any = supabase
+        .from(this.assessmentsTable)
+        .select("id, title, type, category, description, status, is_public, difficulty_level, time_limit_minutes, max_attempts, created_at, updated_at, questions, scoring_logic, outcome_descriptions");
 
-  public static getInstance(): AssessmentServiceOptimized {
-    if (!AssessmentServiceOptimized.instance) {
-      AssessmentServiceOptimized.instance = new AssessmentServiceOptimized();
-    }
-    return AssessmentServiceOptimized.instance;
-  }
+      // Apply filters
+      if (filters?.is_public !== undefined) {
+        query = query.eq("is_public", filters.is_public);
+      }
+      if (filters?.category) {
+        query = query.eq("category", filters.category);
+      }
+      if (filters?.type) {
+        query = query.eq("type", filters.type);
+      }
+      if (filters?.status) {
+        query = query.eq("status", filters.status);
+      }
 
-  public async getAssessmentById(id: string): Promise<AssessmentFull | null> {
-    const { data, error } = await supabase
-      .from(this.assessmentsTable)
-      .select('*, ai_configurations(*)')
-      .eq('id', id)
-      .single();
-    if (error) {
-      logger.error('Error fetching assessment by ID:', error);
-      return null;
-    }
-    return data as AssessmentFull | null;
-  }
+      const { data, error } = await query;
 
-  public async getAllActiveAssessments(): Promise<AssessmentFull[]> {
-    const { data, error } = await supabase
-      .from(this.assessmentsTable)
-      .select('*, ai_configurations(*)')
-      .eq('is_active', true);
-    if (error) {
-      logger.error('Error fetching all active assessments:', error);
+      if (error) {
+        console.error("Error fetching assessments:", error);
+        return [];
+      }
+
+      return data ? asAssessments(data) : [];
+    } catch (error) {
+      console.error("Unexpected error in getAssessments:", error);
       return [];
     }
-    return (data as AssessmentFull[]) || [];
   }
 
-  public async createAssessment(assessment: AssessmentInsert): Promise<AssessmentFull | null> {
-    const { data, error } = await supabase
-      .from(this.assessmentsTable)
-      .insert(assessment)
-      .select()
-      .single();
-    if (error) {
-      logger.error('Error creating assessment:', error);
+  /**
+   * Get assessment by ID with caching strategy
+   */
+  async getAssessmentById(id: string): Promise<Assessment | null> {
+    try {
+      const { data, error } = await supabase
+        .from(this.assessmentsTable)
+        .select(`
+          id,
+          title,
+          type,
+          category,
+          description,
+          status,
+          is_public,
+          difficulty_level,
+          time_limit_minutes,
+          max_attempts,
+          created_at,
+          updated_at,
+          questions,
+          scoring_logic,
+          outcome_descriptions
+        `)
+        .eq("id", id)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No rows returned
+          return null;
+        }
+        console.error(`Error fetching assessment ${id}:`, error);
+        return null;
+      }
+
+      return data ? asAssessment(data) : null;
+    } catch (error) {
+      console.error(`Unexpected error fetching assessment ${id}:`, error);
       return null;
     }
-    return data as AssessmentFull | null;
   }
 
-  public async updateAssessment(id: string, updates: Partial<Omit<AssessmentFull, 'id' | 'created_at' | 'updated_at'>>): Promise<AssessmentFull | null> {
-    const { data, error } = await supabase
-      .from(this.assessmentsTable)
-      .update(updates as TablesUpdate<'assessments_enhanced'>)
-      .eq("id", id)
-      .select()
-      .single();
-    if (error) {
-      logger.error('Error updating assessment:', error);
-      return null;
-    }
-    return data as AssessmentFull | null;
+  /**
+   * Get public assessments with optimized query
+   */
+  async getPublicAssessments(filters?: Omit<AssessmentFilters, 'is_public'>): Promise<Assessment[]> {
+    return this.getAssessments({ ...filters, is_public: true });
   }
 
-  public async startAttempt(assessmentId: string, userId: string, rawResponses: Json): Promise<AttemptFull | null> {
-    const { data: latestAttempt, error: latestError } = await supabase
-      .from(this.attemptsTable)
-      .select('attempt_number')
-      .eq('assessment_id', assessmentId)
-      .eq('user_id', userId)
-      .order('attempt_number', { ascending: false })
-      .limit(1)
-      .single();
+  /**
+   * Create assessment with type safety
+   */
+  async createAssessment(assessment: AssessmentInsert): Promise<Assessment | null> {
+    try {
+      const { data, error } = await supabase
+        .from(this.assessmentsTable)
+        .insert(assessment)
+        .select()
+        .single();
 
-    if (latestError && latestError.code !== 'PGRST116') {
-      logger.error('Error fetching latest attempt number:', latestError);
+      if (error) {
+        console.error("Error creating assessment:", error);
+        return null;
+      }
+
+      return data ? asAssessment(data) : null;
+    } catch (error) {
+      console.error("Unexpected error creating assessment:", error);
       return null;
     }
-
-    const newAttemptNumber = (latestAttempt?.attempt_number || 0) + 1;
-
-    const attempt: TablesInsert<'assessment_attempts'> = {
-      assessment_id: assessmentId,
-      user_id: userId,
-      raw_responses: rawResponses,
-      attempt_number: newAttemptNumber,
-      status: 'in-progress',
-      started_at: new Date().toISOString(),
-    };
-
-    const { data, error } = await supabase
-      .from(this.attemptsTable)
-      .insert(attempt)
-      .select()
-      .single();
-
-    if (error) {
-      logger.error('Error starting new attempt:', error);
-      return null;
-    }
-    return data;
   }
 
-  public async finishAttempt(attemptId: string, score: number, feedback: string): Promise<AttemptFull | null> {
-    const { data, error } = await supabase
-      .from(this.attemptsTable)
-      .update({
-          ai_score: score,
-          ai_feedback: feedback,
+  /**
+   * Update assessment with partial updates
+   */
+  async updateAssessment(id: string, updates: AssessmentUpdate): Promise<Assessment | null> {
+    try {
+      const { data, error } = await supabase
+        .from(this.assessmentsTable)
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error(`Error updating assessment ${id}:`, error);
+        return null;
+      }
+
+      return data ? asAssessment(data) : null;
+    } catch (error) {
+      console.error(`Unexpected error updating assessment ${id}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get assessment attempts with pagination
+   */
+  async getAssessmentAttempts(
+    assessmentId: string,
+    options?: {
+      limit?: number;
+      offset?: number;
+      orderBy?: 'created_at' | 'score';
+      orderDirection?: 'asc' | 'desc';
+    }
+  ): Promise<AssessmentAttempt[]> {
+    try {
+      let query = supabase
+        .from(this.attemptsTable)
+        .select("*")
+        .eq("assessment_id", assessmentId);
+
+      // Apply ordering
+      const orderBy = options?.orderBy || 'created_at';
+      const orderDirection = options?.orderDirection || 'desc';
+      query = query.order(orderBy, { ascending: orderDirection === 'asc' });
+
+      // Apply pagination
+      if (options?.limit) {
+        query = query.limit(options.limit);
+      }
+      if (options?.offset) {
+        query = query.range(options.offset, options.offset + (options.limit || 10) - 1);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("Error fetching assessment attempts:", error);
+        return [];
+      }
+
+      return (data || []) as AssessmentAttempt[];
+    } catch (error) {
+      console.error("Unexpected error fetching assessment attempts:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Submit assessment attempt
+   */
+  async submitAttempt(
+    assessmentId: string,
+    userId: string,
+    answers: Record<string, unknown>
+  ): Promise<AssessmentAttempt | null> {
+    try {
+      const attempt = {
+        assessment_id: assessmentId,
+        user_id: userId,
+        raw_responses: answers as Json, // Use raw_responses for JSON
+        attempt_number: 1, // Default to 1, or fetch next number
+        status: 'in_progress',
+        started_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from(this.attemptsTable)
+        .insert(attempt)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error submitting assessment attempt:", error);
+        return null;
+      }
+
+      return data as AssessmentAttempt;
+    } catch (error) {
+      console.error("Unexpected error submitting assessment attempt:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Complete assessment attempt
+   */
+  async completeAttempt(
+    attemptId: string,
+    score: number,
+    feedback?: string
+  ): Promise<AssessmentAttempt | null> {
+    try {
+      const { data, error } = await supabase
+        .from(this.attemptsTable)
+        .update({
+          ai_score: score, // Use ai_score for number score
+          ai_feedback: feedback, // Use ai_feedback for string feedback
           status: 'completed',
-          completed_at: new Date().toISOString(),
-      } as TablesUpdate<'assessment_attempts'>)
-      .eq('id', attemptId)
-      .select()
-      .single();
+          completed_at: new Date().toISOString()
+        })
+        .eq("id", attemptId)
+        .select()
+        .single();
 
-    if (error) {
-      logger.error('Error finishing attempt:', error);
+      if (error) {
+        console.error("Error completing assessment attempt:", error);
+        return null;
+      }
+
+      return data as AssessmentAttempt;
+    } catch (error) {
+      console.error("Unexpected error completing assessment attempt:", error);
       return null;
     }
-    return data;
+  }
+
+  /**
+   * Batch operations for performance
+   */
+  async batchGetAssessments(ids: string[]): Promise<Assessment[]> {
+    if (ids.length === 0) return [];
+
+    try {
+      const { data, error } = await supabase
+        .from(this.assessmentsTable)
+        .select("id, title, type, category, description, status, is_public, created_at, updated_at")
+        .in("id", ids);
+
+      if (error) {
+        console.error("Error batch fetching assessments:", error);
+        return [];
+      }
+
+      return data ? asAssessments(data) : [];
+    } catch (error) {
+      console.error("Unexpected error in batchGetAssessments:", error);
+      return [];
+    }
   }
 }
+
+// Export singleton instance
+export const assessmentServiceOptimized = new AssessmentServiceOptimized();

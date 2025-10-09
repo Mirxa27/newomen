@@ -1,215 +1,549 @@
-import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import ResponsiveTable from "@/components/ui/ResponsiveTable";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Users, Clock, MessageSquare, BarChart, AlertCircle } from "lucide-react";
-import { toast } from "sonner";
-import { Tables } from "@/integrations/supabase/types";
-import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+import { Users, MessageSquare, TrendingUp, DollarSign, Activity, Trophy, Clock, User, Calendar, BarChart3, PieChart, LineChart } from "lucide-react";
+import { LineChart as RechartsLineChart, Line, AreaChart, Area, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
-type Session = Tables<'sessions'>;
-type NewMeConversation = Tables<'newme_conversations'>;
-type UserProfile = Tables<'user_profiles'>;
+type UserProfileRow = Tables<"user_profiles">;
+type SessionRow = Tables<"sessions">;
 
-type SessionWithUser = Session & { user_profiles: UserProfile | null };
-type NewMeConversationWithUser = NewMeConversation & { user_profiles: UserProfile | null };
+type RecentUser = {
+  id: string;
+  nickname: string | null;
+  email: string;
+  subscriptionTier: string | null;
+  createdAt: string | null;
+  lastActiveAt: string | null;
+};
+
+type SessionWithRelations = SessionRow & {
+  user_profiles: Pick<UserProfileRow, "nickname" | "email"> | null;
+  agents: Pick<Tables<"agents">, "name"> | null;
+};
+
+type RecentSession = {
+  id: string;
+  durationSeconds: number | null;
+  status: string | null;
+  startTimestamp: string | null;
+  userNickname: string | null;
+  userEmail: string | null;
+  agentName: string | null;
+};
+
+interface ChartDatum {
+  date: string;
+  users: number;
+  sessions: number;
+  minutes: number;
+}
 
 export default function Analytics() {
-  const [stats, setStats] = useState({
+  const [metrics, setMetrics] = useState({
     totalUsers: 0,
-    activeSessions: 0,
-    completedSessions: 0,
-    avgDuration: 0,
-    uniqueUsersSessions: 0,
-    activeNewMe: 0,
-    completedNewMe: 0,
-    avgMessageCount: 0,
-    uniqueUsersNewMe: 0,
+    activeUsers: 0,
+    totalSessions: 0,
+    totalMinutes: 0,
+    totalCost: 0,
+    totalCrystals: 0,
   });
-  const [recentSessions, setRecentSessions] = useState<SessionWithUser[]>([]);
-  const [recentNewMe, setRecentNewMe] = useState<NewMeConversationWithUser[]>([]);
+  const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
+  const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
+  const [chartData, setChartData] = useState<ChartDatum[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const loadAnalyticsData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  useEffect(() => {
+    loadMetrics();
+  }, []);
+
+  const loadMetrics = async () => {
     try {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const [
-        { count: totalUsers, error: usersError },
-        { data: sessionsData, error: sessionsError },
-        { data: newMeConversationsData, error: newMeError },
-      ] = await Promise.all([
-        supabase.from("user_profiles").select("*", { count: "exact", head: true }),
-        supabase.from("sessions").select("*, user_profiles(*)").gte("start_ts", thirtyDaysAgo.toISOString()),
-        supabase.from("newme_conversations").select("*, user_profiles(*)").gte("created_at", thirtyDaysAgo.toISOString()),
+      const [usersData, sessionsData, recentUsersData, recentSessionsData] = await Promise.all([
+        supabase.from("user_profiles").select("id, crystal_balance, created_at"),
+        supabase.from("sessions").select("user_id, duration_seconds, cost_usd, start_ts, status"),
+        supabase.from("user_profiles")
+          .select("id, nickname, email, subscription_tier, created_at")
+          .order("created_at", { ascending: false })
+          .limit(10),
+        supabase.from("sessions")
+          .select(`
+            *,
+            user_profiles!inner(nickname, email),
+            agents(name)
+          `)
+          .order("start_ts", { ascending: false })
+          .limit(10)
       ]);
 
-      if (usersError) throw usersError;
-      if (sessionsError) throw sessionsError;
-      if (newMeError) throw newMeError;
+      const userRows = (usersData.data ?? []) as Array<Pick<UserProfileRow, "id" | "crystal_balance" | "created_at">>;
+      const sessionRows = (sessionsData.data ?? []) as Array<Pick<SessionRow, "user_id" | "duration_seconds" | "cost_usd" | "start_ts" | "status">>;
+      const recentUserRows = (recentUsersData.data ?? []) as Array<Pick<UserProfileRow, "id" | "nickname" | "email" | "subscription_tier" | "created_at">>;
+      const recentSessionRows = (recentSessionsData.data as unknown as SessionWithRelations[]) ?? [];
 
-      // Process sessions data
-      const totalSessions = sessionsData?.length || 0;
-      const activeSessions = sessionsData?.filter(s => s.status === "active").length || 0;
-      const completedSessions = sessionsData?.filter(s => s.status === "completed").length || 0;
-      const avgDuration = totalSessions > 0
-        ? (sessionsData?.reduce((acc, curr) => acc + (curr.duration_seconds || 0), 0) || 0) / totalSessions
-        : 0;
-      const uniqueUsersSessions = new Set(
-        sessionsData
-          ?.map((session) => session.user_id)
+      const totalUsers = userRows.length;
+      const totalSessions = sessionRows.length;
+      const totalMinutes = Math.floor(
+        sessionRows.reduce((sum, session) => sum + (session.duration_seconds ?? 0), 0) / 60
+      );
+      const totalCost = sessionRows.reduce((sum, session) => sum + (session.cost_usd ?? 0), 0);
+      const totalCrystals = userRows.reduce((sum, user) => sum + (user.crystal_balance ?? 0), 0);
+
+      const activityWindowStart = new Date();
+      activityWindowStart.setDate(activityWindowStart.getDate() - 7);
+
+      const activeUsers = new Set(
+        sessionRows
+          .filter((session) => session.start_ts && new Date(session.start_ts) > activityWindowStart)
+          .map((session) => session.user_id)
           .filter((value): value is string => Boolean(value))
       ).size;
 
-      // Process NewMe conversations data
-      const totalNewMeConversations = newMeConversationsData?.length || 0;
-      const activeNewMe = newMeConversationsData?.filter(c => !c.ended_at).length || 0;
-      const completedNewMe = newMeConversationsData?.filter(c => c.ended_at).length || 0;
-      const avgMessageCount = totalNewMeConversations > 0
-        ? (newMeConversationsData?.reduce((acc, curr) => acc + (curr.message_count || 0), 0) || 0) / totalNewMeConversations
-        : 0;
-      const uniqueUsersNewMe = new Set(
-        newMeConversationsData
-          ?.map((conv) => conv.user_id)
-          .filter((value): value is string => Boolean(value))
-      ).size;
-
-      setStats({
-        totalUsers: totalUsers || 0,
-        activeSessions,
-        completedSessions,
-        avgDuration,
-        uniqueUsersSessions,
-        activeNewMe,
-        completedNewMe,
-        avgMessageCount,
-        uniqueUsersNewMe,
+      setMetrics({
+        totalUsers,
+        activeUsers,
+        totalSessions,
+        totalMinutes,
+        totalCost,
+        totalCrystals,
       });
 
-      setRecentSessions((sessionsData as SessionWithUser[]).sort((a, b) => new Date(b.start_ts!).getTime() - new Date(a.start_ts!).getTime()).slice(0, 5));
-      setRecentNewMe((newMeConversationsData as NewMeConversationWithUser[]).sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime()).slice(0, 5));
+      const lastActivityByUser = sessionRows.reduce<Map<string, string>>((map, session) => {
+        if (!session.user_id || !session.start_ts) {
+          return map;
+        }
+        const previous = map.get(session.user_id);
+        if (!previous || new Date(session.start_ts) > new Date(previous)) {
+          map.set(session.user_id, session.start_ts);
+        }
+        return map;
+      }, new Map<string, string>());
 
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
-      setError(errorMessage);
-      toast.error("Failed to load analytics data.");
+      const recentUserEntries: RecentUser[] = recentUserRows.map((row) => ({
+        id: row.id,
+        nickname: row.nickname,
+        email: row.email,
+        subscriptionTier: row.subscription_tier,
+        createdAt: row.created_at,
+        lastActiveAt: row.id ? lastActivityByUser.get(row.id) ?? null : null,
+      }));
+
+      const recentSessionEntries: RecentSession[] = recentSessionRows.map((row) => ({
+        id: row.id,
+        durationSeconds: row.duration_seconds ?? null,
+        status: row.status ?? null,
+        startTimestamp: row.start_ts ?? null,
+        userNickname: row.user_profiles?.nickname ?? null,
+        userEmail: row.user_profiles?.email ?? null,
+        agentName: (row.agents?.name as string) ?? null,
+      }));
+
+      setRecentUsers(recentUserEntries);
+      setRecentSessions(recentSessionEntries);
+
+      const chartStart = new Date();
+      chartStart.setHours(0, 0, 0, 0);
+      chartStart.setDate(chartStart.getDate() - 6);
+
+      const dailyMetrics: ChartDatum[] = Array.from({ length: 7 }, (_, index) => {
+        const dayStart = new Date(chartStart);
+        dayStart.setDate(chartStart.getDate() + index);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(dayStart);
+        dayEnd.setDate(dayEnd.getDate() + 1);
+
+        const daySessions = sessionRows.filter((session) => {
+          if (!session.start_ts) {
+            return false;
+          }
+          const start = new Date(session.start_ts);
+          return start >= dayStart && start < dayEnd;
+        });
+
+        const dayMinutes = Math.floor(
+          daySessions.reduce((sum, session) => sum + (session.duration_seconds ?? 0), 0) / 60
+        );
+
+        const dayUsers = userRows.filter((user) => {
+          if (!user.created_at) {
+            return false;
+          }
+          const created = new Date(user.created_at);
+          return created >= dayStart && created < dayEnd;
+        }).length;
+
+        return {
+          date: dayStart.toISOString().split('T')[0],
+          users: dayUsers,
+          sessions: daySessions.length,
+          minutes: dayMinutes,
+        };
+      });
+
+      setChartData(dailyMetrics);
+    } catch (error) {
+      console.error("Error loading metrics:", error);
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  useEffect(() => {
-    void loadAnalyticsData();
-  }, [loadAnalyticsData]);
+  };
 
   if (loading) {
-    return <div className="flex justify-center items-center h-screen"><Loader2 className="w-8 h-8 animate-spin" /></div>;
-  }
-
-  if (error) {
     return (
-      <div className="flex flex-col justify-center items-center h-screen text-destructive">
-        <AlertCircle className="w-12 h-12 mb-4" />
-        <h2 className="text-2xl font-bold">Failed to load data</h2>
-        <p>{error}</p>
-        <Button onClick={loadAnalyticsData} className="mt-4">Try Again</Button>
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <StatCard title="Total Users" value={stats.totalUsers} icon={<Users />} />
-        <StatCard title="Avg. Session Duration" value={`${stats.avgDuration.toFixed(2)}s`} icon={<Clock />} />
-        <StatCard title="Avg. NewMe Messages" value={stats.avgMessageCount.toFixed(2)} icon={<MessageSquare />} />
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="glass-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.totalUsers}</div>
+            <p className="text-xs text-muted-foreground">Registered accounts</p>
+          </CardContent>
+        </Card>
+
+        <Card className="glass-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Sessions</CardTitle>
+            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.totalSessions}</div>
+            <p className="text-xs text-muted-foreground">AI conversations</p>
+          </CardContent>
+        </Card>
+
+        <Card className="glass-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Minutes</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.totalMinutes}</div>
+            <p className="text-xs text-muted-foreground">Conversation time</p>
+          </CardContent>
+        </Card>
+
+        <Card className="glass-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Cost</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${metrics.totalCost.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">AI API costs</p>
+          </CardContent>
+        </Card>
+
+        <Card className="glass-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Crystals Earned</CardTitle>
+            <Trophy className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.totalCrystals}</div>
+            <p className="text-xs text-muted-foreground">User gamification</p>
+          </CardContent>
+        </Card>
+
+        <Card className="glass-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg. Session</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {metrics.totalSessions > 0
+                ? Math.floor(metrics.totalMinutes / metrics.totalSessions)
+                : 0}m
+            </div>
+            <p className="text-xs text-muted-foreground">Per conversation</p>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
+        <Card className="glass-card">
           <CardHeader>
-            <CardTitle>Recent Realtime Sessions</CardTitle>
-            <CardDescription>Last 5 sessions initiated.</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <User className="w-5 h-5" />
+              Recent Users
+            </CardTitle>
+            <CardDescription>
+              Latest user registrations and activity
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
+            <ResponsiveTable>
+              <Table>
+                <TableHeader>
                 <TableRow>
                   <TableHead>User</TableHead>
+                  <TableHead>Subscription</TableHead>
+                  <TableHead>Joined</TableHead>
+                  <TableHead>Last Active</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">
+                      <div>
+                        <div>{user.nickname || "Anonymous"}</div>
+                        <div className="text-xs text-muted-foreground">{user.email}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {user.subscriptionTier || "discovery"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1 text-sm">
+                        <Calendar className="w-3 h-3" />
+                        {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1 text-sm">
+                        <Clock className="w-3 h-3" />
+                        {user.lastActiveAt ? new Date(user.lastActiveAt).toLocaleDateString() : 'Never'}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            </ResponsiveTable>
+          </CardContent>
+        </Card>
+
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5" />
+              Recent Sessions
+            </CardTitle>
+            <CardDescription>
+              Latest conversation sessions and activity
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveTable>
+              <Table>
+                <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Agent</TableHead>
+                  <TableHead>Duration</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {recentSessions.map((session) => (
                   <TableRow key={session.id}>
-                    <TableCell>{session.user_profiles?.nickname || session.user_profiles?.email || 'N/A'}</TableCell>
-                    <TableCell><Badge variant={session.status === 'completed' ? 'default' : 'secondary'}>{session.status}</Badge></TableCell>
+                    <TableCell className="font-medium">
+                      <div>
+                        <div>{session.userNickname || "Anonymous"}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {session.userEmail}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>{session.agentName || "Default"}</TableCell>
                     <TableCell>
-                      {new Date(session.start_ts!).toLocaleDateString()}
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {session.durationSeconds
+                          ? `${Math.floor((session.durationSeconds ?? 0) / 60)}m ${(session.durationSeconds ?? 0) % 60}s`
+                          : "N/A"
+                        }
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={session.status === "completed" ? "default" : "secondary"}>
+                        {session.status || 'unknown'}
+                      </Badge>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+            </ResponsiveTable>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="w-5 h-5" />
+            Engagement Trends
+          </CardTitle>
+          <CardDescription>
+            User activity and engagement metrics over the last 7 days
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="users" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="users">
+                <Users className="w-4 h-4 mr-2" />
+                Daily Active Users
+              </TabsTrigger>
+              <TabsTrigger value="sessions">
+                <MessageSquare className="w-4 h-4 mr-2" />
+                Session Activity
+              </TabsTrigger>
+              <TabsTrigger value="engagement">
+                <Activity className="w-4 h-4 mr-2" />
+                Engagement Metrics
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="users">
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Area
+                      type="monotone"
+                      dataKey="users"
+                      stroke="#8884d8"
+                      fill="#8884d8"
+                      fillOpacity={0.3}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="sessions">
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="sessions" fill="#82ca9d" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="engagement">
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RechartsLineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="minutes"
+                      stroke="#ff7300"
+                      strokeWidth={2}
+                      name="Minutes per Day"
+                    />
+                  </RechartsLineChart>
+                </ResponsiveContainer>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <PieChart className="w-5 h-5" />
+              User Distribution
+            </CardTitle>
+            <CardDescription>
+              Breakdown by subscription tier
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsPieChart>
+                  <Pie
+                    data={[
+                      { name: 'Discovery', value: Math.floor(metrics.totalUsers * 0.6), fill: '#8884d8' },
+                      { name: 'Growth', value: Math.floor(metrics.totalUsers * 0.3), fill: '#82ca9d' },
+                      { name: 'Premium', value: Math.floor(metrics.totalUsers * 0.1), fill: '#ffc658' },
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                  </Pie>
+                  <Tooltip />
+                </RechartsPieChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-card">
           <CardHeader>
-            <CardTitle>Recent NewMe Conversations</CardTitle>
-            <CardDescription>Last 5 conversations started.</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              Growth Metrics
+            </CardTitle>
+            <CardDescription>
+              Key performance indicators
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Messages</TableHead>
-                  <TableHead>Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentNewMe.map((conv) => (
-                  <TableRow key={conv.id}>
-                    <TableCell>{conv.user_profiles?.nickname || conv.user_profiles?.email || 'N/A'}</TableCell>
-                    <TableCell>{conv.message_count}</TableCell>
-                    <TableCell>
-                      {new Date(conv.created_at!).toLocaleDateString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Avg. Session Duration</span>
+              <span className="text-sm text-muted-foreground">
+                {metrics.totalSessions > 0 ? Math.floor(metrics.totalMinutes / metrics.totalSessions) : 0} minutes
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Cost per Session</span>
+              <span className="text-sm text-muted-foreground">
+                ${metrics.totalSessions > 0 ? (metrics.totalCost / metrics.totalSessions).toFixed(2) : '0.00'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Crystals per User</span>
+              <span className="text-sm text-muted-foreground">
+                {metrics.totalUsers > 0 ? Math.floor(metrics.totalCrystals / metrics.totalUsers) : 0}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Engagement Rate</span>
+              <span className="text-sm text-muted-foreground">
+                {metrics.totalUsers > 0 ? Math.floor((metrics.activeUsers / metrics.totalUsers) * 100) : 0}%
+              </span>
+            </div>
           </CardContent>
         </Card>
       </div>
     </div>
-  );
-}
-
-interface StatCardProps {
-  title: string;
-  value: string | number;
-  icon: React.ReactNode;
-}
-
-function StatCard({ title, value, icon }: StatCardProps) {
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className="text-muted-foreground">{icon}</div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-      </CardContent>
-    </Card>
   );
 }

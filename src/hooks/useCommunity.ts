@@ -1,136 +1,119 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import type { Tables } from '@/integrations/supabase/types';
 import { useUserProfile } from './useUserProfile';
-import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
+import { toast } from 'sonner';
 
-type UserProfile = Tables<'user_profiles'>;
-export type CommunityConnection = Tables<'community_connections'> & {
-  requester: UserProfile;
-  receiver: UserProfile;
+type ConnectionStatus = 'pending' | 'accepted' | 'declined';
+type UserProfilePartial = Pick<Tables<'user_profiles'>, 'id' | 'nickname' | 'avatar_url'>;
+
+type CommunityConnection = Omit<Tables<'community_connections'>, 'requester_id' | 'receiver_id'> & {
+  requester: UserProfilePartial;
+  receiver: UserProfilePartial;
 };
-export type ConnectionStatus = Tables<'community_connections'>['status'];
 
 export function useCommunity() {
   const { profile } = useUserProfile();
   const [connections, setConnections] = useState<CommunityConnection[]>([]);
-  const [potentialFriends, setPotentialFriends] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
+  const [searchResults, setSearchResults] = useState<UserProfilePartial[]>([]);
   const [searching, setSearching] = useState(false);
 
-  const fetchCommunityData = useCallback(async () => {
+  const fetchConnections = useCallback(async () => {
     if (!profile) return;
     setLoading(true);
-    setError(null);
     try {
-      const { data: connectionsData, error: connectionsError } = await supabase
+      const { data, error } = await supabase
         .from('community_connections')
-        .select(`*, requester:requester_id(*), receiver:receiver_id(*)`)
-        .or(`requester_id.eq.${profile.user_id},receiver_id.eq.${profile.user_id}`);
+        .select(`
+          *,
+          requester:requester_id (id, nickname, avatar_url),
+          receiver:receiver_id (id, nickname, avatar_url)
+        `)
+        .or(`requester_id.eq.${profile.id},receiver_id.eq.${profile.id}`);
 
-      if (connectionsError) throw connectionsError;
-      const typedConnections = connectionsData as CommunityConnection[] || [];
-      setConnections(typedConnections);
-
-      const connectedUserIds = typedConnections.flatMap(c => [c.requester_id, c.receiver_id]);
-      const idsToExclude = [...new Set([profile.user_id, ...connectedUserIds])];
-
-      const { data: potentialFriendsData, error: friendsError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .not('user_id', 'in', `(${idsToExclude.join(',')})`);
-
-      if (friendsError) throw friendsError;
-      setPotentialFriends(potentialFriendsData || []);
-
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to load community data.';
-      setError(msg);
-      toast.error(msg);
+      if (error) throw error;
+      setConnections(data as unknown as CommunityConnection[]);
+    } catch (error) {
+      console.error('Error fetching connections:', error);
+      toast.error('Could not load community connections.');
     } finally {
       setLoading(false);
     }
   }, [profile]);
 
   useEffect(() => {
-    void fetchCommunityData();
-  }, [fetchCommunityData]);
-
-  const sendConnectionRequest = useCallback(async (receiverId: string) => {
-    if (!profile) return;
-    try {
-      const insertPayload: TablesInsert<'community_connections'> = {
-        requester_id: profile.user_id,
-        receiver_id: receiverId,
-        status: 'pending',
-      };
-      const { data, error: insertError } = await supabase
-        .from('community_connections')
-        .insert(insertPayload)
-        .select(`*, requester:requester_id(*), receiver:receiver_id(*)`)
-        .single();
-
-      if (insertError) throw insertError;
-      setConnections(prev => [...prev, data as CommunityConnection]);
-      setPotentialFriends(prev => prev.filter(p => p.user_id !== receiverId));
-      toast.success('Friend request sent!');
-    } catch (e) {
-      toast.error('Failed to send friend request.');
+    if (profile) {
+      void fetchConnections();
     }
-  }, [profile]);
+  }, [profile, fetchConnections]);
 
-  const updateConnectionStatus = useCallback(async (connectionId: string, status: ConnectionStatus) => {
-    try {
-      const updatePayload: TablesUpdate<'community_connections'> = { status };
-      const { data, error: updateError } = await supabase
-        .from('community_connections')
-        .update(updatePayload)
-        .eq('id', connectionId)
-        .select(`*, requester:requester_id(*), receiver:receiver_id(*)`)
-        .single();
-
-      if (updateError) throw updateError;
-      setConnections(prev => prev.map(c => c.id === connectionId ? data as CommunityConnection : c));
-      toast.success(`Request ${status}.`);
-    } catch (e) {
-      toast.error('Failed to update connection status.');
-    }
-  }, []);
-
-  const searchUsers = useCallback(async (searchTerm: string) => {
-    if (!searchTerm.trim()) {
+  const searchUsers = useCallback(async (query: string) => {
+    if (!profile || query.length < 3) {
       setSearchResults([]);
       return;
     }
     setSearching(true);
     try {
-      const { data, error: searchError } = await supabase
+      const { data, error } = await supabase
         .from('user_profiles')
-        .select('*')
-        .or(`email.ilike.%${searchTerm}%,nickname.ilike.%${searchTerm}%`)
-        .limit(10);
-      if (searchError) throw searchError;
+        .select('id, nickname, avatar_url')
+        .ilike('nickname', `%${query}%`)
+        .not('id', 'eq', profile.id);
+
+      if (error) throw error;
       setSearchResults(data || []);
-    } catch (e) {
-      toast.error('Failed to search for users.');
+    } catch (error) {
+      console.error('Error searching users:', error);
+      toast.error('User search failed.');
     } finally {
       setSearching(false);
     }
-  }, []);
+  }, [profile]);
+
+  const sendConnectionRequest = useCallback(async (receiverId: string) => {
+    if (!profile) return;
+    try {
+      const { error } = await supabase
+        .from('community_connections')
+        .insert({
+          requester_id: profile.id,
+          receiver_id: receiverId,
+          status: 'pending',
+        });
+      if (error) throw error;
+      toast.success('Connection request sent!');
+      void fetchConnections();
+    } catch (error) {
+      console.error('Error sending connection request:', error);
+      toast.error('Failed to send connection request.');
+    }
+  }, [profile, fetchConnections]);
+
+  const updateConnectionStatus = useCallback(async (connectionId: string, status: ConnectionStatus) => {
+    try {
+      const { error } = await supabase
+        .from('community_connections')
+        .update({ status })
+        .eq('id', connectionId);
+      
+      if (error) throw error;
+      toast.success(`Connection ${status}.`);
+      void fetchConnections();
+    } catch (error) {
+      console.error(`Error updating connection status to ${status}:`, error);
+      toast.error('Could not update connection.');
+    }
+  }, [fetchConnections]);
 
   return {
-    connections,
-    potentialFriends,
     loading,
-    error,
+    connections,
     searchResults,
     searching,
     searchUsers,
     sendConnectionRequest,
     updateConnectionStatus,
-    refetch: fetchCommunityData,
-    currentUserId: profile?.user_id,
+    currentUserId: profile?.id,
   };
 }

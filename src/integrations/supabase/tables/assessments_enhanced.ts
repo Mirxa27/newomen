@@ -1,5 +1,3 @@
-import type { Json } from "../types";
-
 export type AssessmentsEnhanced = {
   Row: {
     id: string;
@@ -7,15 +5,18 @@ export type AssessmentsEnhanced = {
     description: string | null;
     type: string;
     category: string;
-    difficulty_level: string;
+    difficulty_level: string | null;
     time_limit_minutes: number | null;
-    questions: Json;
-    passing_score: number | null;
+    max_attempts: number | null;
+    is_public: boolean | null;
+    is_active: boolean | null;
     ai_config_id: string | null;
-    is_public: boolean;
-    is_active: boolean;
-    created_at: string;
-    updated_at: string;
+    questions: import('../types').Json;
+    scoring_rubric: import('../types').Json | null;
+    passing_score: number | null;
+    created_by: string | null;
+    created_at: string | null;
+    updated_at: string | null;
   };
   Insert: {
     id?: string;
@@ -23,15 +24,18 @@ export type AssessmentsEnhanced = {
     description?: string | null;
     type: string;
     category: string;
-    difficulty_level: string;
+    difficulty_level?: string | null;
     time_limit_minutes?: number | null;
-    questions: Json;
-    passing_score?: number | null;
+    max_attempts?: number | null;
+    is_public?: boolean | null;
+    is_active?: boolean | null;
     ai_config_id?: string | null;
-    is_public?: boolean;
-    is_active?: boolean;
-    created_at?: string;
-    updated_at?: string;
+    questions: import('../types').Json;
+    scoring_rubric?: import('../types').Json | null;
+    passing_score?: number | null;
+    created_by?: string | null;
+    created_at?: string | null;
+    updated_at?: string | null;
   };
   Update: {
     id?: string;
@@ -39,15 +43,18 @@ export type AssessmentsEnhanced = {
     description?: string | null;
     type?: string;
     category?: string;
-    difficulty_level?: string;
+    difficulty_level?: string | null;
     time_limit_minutes?: number | null;
-    questions?: Json;
-    passing_score?: number | null;
+    max_attempts?: number | null;
+    is_public?: boolean | null;
+    is_active?: boolean | null;
     ai_config_id?: string | null;
-    is_public?: boolean;
-    is_active?: boolean;
-    created_at?: string;
-    updated_at?: string;
+    questions?: import('../types').Json;
+    scoring_rubric?: import('../types').Json | null;
+    passing_score?: number | null;
+    created_by?: string | null;
+    created_at?: string | null;
+    updated_at?: string | null;
   };
   Relationships: [];
 };

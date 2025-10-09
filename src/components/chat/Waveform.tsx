@@ -8,7 +8,7 @@ interface WaveformProps {
 
 const Waveform: React.FC<WaveformProps> = ({ isActive, audioLevel }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationFrameRef = useRef<number | undefined>();
+  const animationFrameRef = useRef<number>();
 
   useEffect(() => {
     const canvas = canvasRef.current;

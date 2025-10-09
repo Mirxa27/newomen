@@ -86,11 +86,7 @@ export type Database = {
       ai_assessment_configs: import('./tables/ai_assessment_configs').AiAssessmentConfigs;
       prompt_templates: import('./tables/prompt_templates').PromptTemplates;
       achievements: import('./tables/achievements').Achievements;
-      schema_migrations: {
-        Row: { version: string; dirty: boolean };
-        Insert: { version: string; dirty?: boolean };
-        Update: { version?: string; dirty?: boolean };
-      };
+      schema_migrations: { Row: any, Insert: any, Update: any };
     };
     Views: {
       [_ in never]: never
@@ -98,15 +94,15 @@ export type Database = {
     Functions: {
       get_newme_user_context: {
         Args: { p_user_id: string };
-        Returns: Json;
+        Returns: unknown;
       };
       increment_message_count: {
         Args: { conv_id: string };
         Returns: void;
       };
       get_ai_config_for_service: {
-        Args: { p_service_type: string; p_service_id?: string | null };
-        Returns: import('./tables/ai_configurations').AIConfigurations['Row'] | null;
+        Args: { p_service_type: string; p_service_id?: string };
+        Returns: unknown;
       };
       store_provider_api_key: {
         Args: { p_provider_id: string; p_api_key: string };

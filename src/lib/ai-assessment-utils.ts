@@ -1,284 +1,462 @@
-import { supabase } from '@/integrations/supabase/client';
-import { logger } from '@/lib/logging';
-import { Json, Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
-import { AIService } from '@/services/ai/aiService';
-import { PostgrestError } from '@supabase/supabase-js';
+import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
+import { aiService } from "@/services/ai/aiService";
+import type { AssessmentSubmission as AIServiceSubmission, AssessmentAnswers } from "@/types/ai-types";
 
-interface AIAnalysisResult {
-  overall_analysis: string;
-  strengths_identified: string[];
-  growth_areas: string[];
-  ai_score: number;
-  ai_feedback: string;
-  recommendations: string[];
+export interface AssessmentQuestion {
+  id: string;
+  question: string;
+  type: 'multiple_choice' | 'text' | 'rating' | 'boolean';
+  options?: string[];
+  required: boolean;
+  weight?: number;
 }
 
-const aiService = AIService.getInstance();
+export interface AssessmentSubmission {
+  assessment_id: string;
+  user_id: string;
+  responses: AssessmentAnswers;
+  time_spent_minutes: number;
+  attempt_id?: string;
+  attempt_number?: number;
+}
 
-export const checkAIRateLimit = async (userId: string, providerName: string): Promise<boolean> => {
+export interface AIAnalysisResult {
+  score: number;
+  feedback: string;
+  explanation: string;
+  insights: string[];
+  recommendations: string[];
+  strengths: string[];
+  areas_for_improvement: string[];
+}
+
+export interface Assessment {
+  id?: string;
+  title: string;
+  description?: string;
+  questions: AssessmentQuestion[];
+  scoring_rubric?: Record<string, unknown>;
+  time_limit_minutes?: number | null;
+  difficulty_level?: string | null;
+  max_attempts?: number | null;
+  ai_config_id?: string | null;
+  [key: string]: unknown;
+}
+
+export interface AssessmentResults {
+  id: string;
+  assessment_id: string;
+  user_id: string;
+  raw_responses: Record<string, unknown>;
+  ai_analysis?: AIAnalysisResult;
+  score?: number;
+  time_spent_minutes: number;
+  status: string;
+  completed_at?: string;
+  assessments_enhanced?: {
+    title: string;
+    description?: string;
+    type: string;
+  };
+  [key: string]: unknown;
+}
+
+/**
+ * Check if user has exceeded AI rate limits
+ */
+export async function checkAIRateLimit(userId: string, providerName: string): Promise<boolean> {
   try {
     const { data, error } = await supabase.rpc('check_ai_rate_limit', {
       p_user_id: userId,
       p_provider_name: providerName,
     });
+
     if (error) throw error;
     return data;
-  } catch (e) {
-    logger.error('Error checking AI rate limit:', e as Record<string, unknown>);
+  } catch (error) {
+    console.error("Error checking rate limit:", error);
     return false;
   }
-};
+}
 
-export const incrementAIRateLimit = async (userId: string, providerName: string): Promise<void> => {
+/**
+ * Increment AI rate limit counter
+ */
+export async function incrementAIRateLimit(userId: string, providerName: string): Promise<void> {
   try {
     const { error } = await supabase.rpc('increment_ai_rate_limit', {
       p_user_id: userId,
       p_provider_name: providerName,
     });
+
     if (error) throw error;
-  } catch (e) {
-    logger.error('Error incrementing AI rate limit:', e as Record<string, unknown>);
+  } catch (error) {
+    console.error("Error incrementing rate limit:", error);
   }
-};
+}
 
-export const getAssessmentAndConfig = async (assessmentId: string) => {
-  const { data: assessment, error } = await supabase
-    .from('assessments_enhanced')
-    .select('*, ai_configurations(*)')
-    .eq('id', assessmentId)
-    .single();
-
-  if (error) throw error;
-  return assessment as (Tables<'assessments_enhanced'> & { ai_configurations: Tables<'ai_configurations'> | null });
-};
-
-export const saveInitialAttempt = async (assessmentId: string, userId: string, attemptNumber: number, rawResponses: Json) => {
-  const { data, error } = await supabase
-    .from('assessment_attempts')
-    .insert({
-      assessment_id: assessmentId,
-      user_id: userId,
-      attempt_number: attemptNumber,
-      status: 'in-progress',
-      raw_responses: rawResponses,
-    } as TablesInsert<'assessment_attempts'>)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
-};
-
-export const updateAttemptWithAIResult = async (attemptId: string, analysisResult: AIAnalysisResult) => {
-  const { data, error } = await supabase
-    .from('assessment_attempts')
-    .update({
-      status: 'completed',
-      completed_at: new Date().toISOString(),
-      ai_analysis: analysisResult as unknown as Json,
-      ai_score: analysisResult.ai_score,
-      ai_feedback: analysisResult.ai_feedback,
-    } as TablesUpdate<'assessment_attempts'>)
-    .eq('id', attemptId)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
-};
-
-export const saveAssessmentResult = async (
-  assessment: Tables<'assessments_enhanced'>,
-  attempt: Tables<'assessment_attempts'>,
-  analysisResult: AIAnalysisResult
-) => {
-  const percentageScore = (analysisResult.ai_score / 100) * 100;
-  const isPassed = percentageScore >= (assessment.passing_score || 0);
-
-  const { data, error } = await supabase
-    .from('assessment_results')
-    .insert({
-      assessment_id: assessment.id,
-      user_id: attempt.user_id,
-      attempt_id: attempt.id,
-      answers: attempt.raw_responses,
-      raw_score: analysisResult.ai_score,
-      percentage_score: percentageScore,
-      is_passed: isPassed,
-      ai_feedback: analysisResult.ai_feedback,
-      ai_insights: analysisResult as unknown as Json,
-    } as TablesInsert<'assessment_results'>);
-
-  if (error) throw error;
-  return data;
-};
-
-export const logAIUsage = async (
-  userId: string,
+/**
+ * Process assessment submission with AI
+ */
+export async function processAssessmentWithAI(
   assessmentId: string,
-  attemptId: string,
-  config: Tables<'ai_configurations'>,
-  usage: { tokens_used: number; cost_usd: number; processing_time_ms: number; success: boolean; error_message?: string }
-) => {
-  const { error } = await supabase.from('ai_usage_logs').insert({
-    user_id: userId,
-    assessment_id: assessmentId,
-    attempt_id: attemptId,
-    ai_config_id: config.id,
-    provider_name: config.provider,
-    model_name: config.model_name,
-    ...usage,
-  } as TablesInsert<'ai_usage_logs'>);
-
-  if (error) {
-    logger.error('Error logging AI usage:', error as unknown as Record<string, unknown>);
-  }
-};
-
-export const updateAttemptError = async (attemptId: string, errorMessage: string) => {
-  const { error } = await supabase
-    .from('assessment_attempts')
-    .update({
-      status: 'error',
-      ai_feedback: errorMessage,
-    } as TablesUpdate<'assessment_attempts'>)
-    .eq('id', attemptId);
-
-  if (error) {
-    logger.error('Error updating attempt with error status:', error as unknown as Record<string, unknown>);
-  }
-};
-
-export const getLatestAttemptNumber = async (assessmentId: string, userId: string): Promise<number> => {
-  const { data, error } = await supabase
-    .from('assessment_attempts')
-    .select('attempt_number')
-    .eq('assessment_id', assessmentId)
-    .eq('user_id', userId)
-    .order('attempt_number', { ascending: false })
-    .limit(1)
-    .single();
-
-  if (error && error.code !== 'PGRST116') throw error;
-  return data?.attempt_number || 0;
-};
-
-export const createNewAttempt = async (assessmentId: string, userId: string, rawResponses: Json) => {
-  const latestAttemptNumber = await getLatestAttemptNumber(assessmentId, userId);
-  const newAttemptNumber = latestAttemptNumber + 1;
-
-  const { data, error } = await supabase
-    .from('assessment_attempts')
-    .insert({
-      assessment_id: assessmentId,
-      user_id: userId,
-      attempt_number: newAttemptNumber,
-      status: 'in-progress',
-      raw_responses: rawResponses,
-    } as TablesInsert<'assessment_attempts'>)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
-};
-
-export const finalizeAttempt = async (attemptId: string, updates: TablesUpdate<'assessment_attempts'>) => {
-  const { data, error } = await supabase
-    .from('assessment_attempts')
-    .update({
-      status: 'completed',
-      completed_at: new Date().toISOString(),
-      ...updates,
-    })
-    .eq('id', attemptId)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
-};
-
-export const updateUserAssessmentProgress = async (
-  userId: string,
-  assessmentId: string,
-  result: Tables<'assessment_results'>,
-  attempt: Tables<'assessment_attempts'>
-) => {
-  const { data: progress, error: progressError } = await supabase
-    .from('user_assessment_progress')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('assessment_id', assessmentId)
-    .single();
-
-  if (progressError && progressError.code !== 'PGRST116') throw progressError;
-
-  if (progress) {
-    const bestScore = Math.max(progress.best_score || 0, result.percentage_score || 0);
-    const isCompleted = progress.is_completed || result.is_passed;
-
-    const { error } = await supabase
-      .from('user_assessment_progress')
-      .update({
-        best_score: bestScore,
-        best_attempt_id: bestScore > (progress.best_score || 0) ? attempt.id : progress.best_attempt_id,
-        total_attempts: (progress.total_attempts || 0) + 1,
-        last_attempt_at: new Date().toISOString(),
-        is_completed: isCompleted,
-        completion_date: isCompleted && !progress.is_completed ? new Date().toISOString() : progress.completion_date,
-      } as TablesUpdate<'user_assessment_progress'>)
-      .eq('id', progress.id);
-    if (error) throw error;
-  } else {
-    const { error } = await supabase.from('user_assessment_progress').insert({
-      user_id: userId,
-      assessment_id: assessmentId,
-      best_score: result.percentage_score,
-      best_attempt_id: attempt.id,
-      total_attempts: 1,
-      last_attempt_at: new Date().toISOString(),
-      is_completed: result.is_passed,
-      completion_date: result.is_passed ? new Date().toISOString() : null,
-    } as TablesInsert<'user_assessment_progress'>);
-    if (error) throw error;
-  }
-};
-
-// Added missing exported function
-export const submitAssessmentResponses = async (
-  assessmentId: string,
-  userId: string,
-  answers: Record<string, string>
-): Promise<{ success: boolean; result?: Tables<'assessment_results'> | null; analysis?: AIAnalysisResult; error?: string }> => {
+  submission: AssessmentSubmission
+): Promise<AIAnalysisResult | null> {
   try {
-    const assessmentData = await getAssessmentAndConfig(assessmentId);
-    const attempt = await createNewAttempt(assessmentId, userId, answers as unknown as Json);
+    const runtimeConfig = await aiService.configService.getConfigurationForService(
+      "assessment_scoring",
+      assessmentId
+    );
 
-    if (!assessmentData.ai_configurations) {
-      throw new Error("Assessment is not linked to an AI configuration.");
+    if (!runtimeConfig) {
+      throw new Error("No active AI configuration available for this assessment");
     }
 
-    const aiResponse = await aiService.generateAssessmentAnalysis(assessmentData, { answers, userId }, assessmentData.ai_config_id!);
-    
-    if (aiResponse.error || !aiResponse.json) {
-      throw new Error(aiResponse.error || "AI analysis failed.");
+    const providerName = runtimeConfig.provider ?? "openai";
+    const withinRateLimit = await checkAIRateLimit(submission.user_id, providerName);
+    if (!withinRateLimit) {
+      throw new Error("Rate limit exceeded. Please try again later.");
     }
 
-    const analysisResult = aiResponse.json as unknown as AIAnalysisResult;
-    const finalAttempt = await updateAttemptWithAIResult(attempt.id, analysisResult);
-    const result = await saveAssessmentResult(assessmentData, finalAttempt, analysisResult);
-    await updateUserAssessmentProgress(userId, assessmentId, result!, finalAttempt);
-    await logAIUsage(userId, assessmentId, attempt.id, assessmentData.ai_configurations, {
-      tokens_used: aiResponse.tokensUsed || 0,
-      cost_usd: aiResponse.cost || 0,
-      processing_time_ms: aiResponse.processingTimeMs || 0,
+    const { data: assessmentRow, error: assessmentError } = await supabase
+      .from("assessments_enhanced")
+      .select("passing_score")
+      .eq("id", assessmentId)
+      .single();
+
+    if (assessmentError) throw assessmentError;
+
+    const aiSubmission: AIServiceSubmission = {
+      assessment_id: assessmentId,
+      user_id: submission.user_id,
+      answers: submission.responses,
+    };
+
+    const aiResponse = await aiService.generateAssessmentResult(aiSubmission, runtimeConfig.id);
+
+    if (!aiResponse.success || !aiResponse.content) {
+      throw new Error(aiResponse.error ?? "AI analysis did not return a response");
+    }
+
+    const analysisResult = parseAIResponse(aiResponse.content);
+
+    if (submission.attempt_id) {
+      await supabase
+        .from("assessment_attempts")
+        .update({
+          ai_analysis: analysisResult as unknown as Json,
+          ai_score: analysisResult.score,
+          ai_feedback: analysisResult.feedback,
+          is_ai_processed: true,
+          ai_processing_error: null,
+        })
+        .eq("id", submission.attempt_id);
+    }
+
+    const passingScore = assessmentRow?.passing_score ?? 70;
+
+    await supabase
+      .from("assessment_results")
+      .upsert(
+        {
+          assessment_id: assessmentId,
+          user_id: submission.user_id,
+          answers: submission.responses as unknown as Json,
+          raw_score: analysisResult.score,
+          percentage_score: analysisResult.score,
+          ai_feedback: analysisResult.feedback,
+          ai_insights: analysisResult.insights as unknown as Json,
+          ai_recommendations: analysisResult.recommendations.join("\n"),
+          strengths_identified: analysisResult.strengths as unknown as Json,
+          areas_for_improvement: analysisResult.areas_for_improvement as unknown as Json,
+          detailed_explanations: analysisResult.explanation
+            ? ({ explanation: analysisResult.explanation } as Json)
+            : null,
+          processing_time_ms: aiResponse.processing_time_ms,
+          ai_model_used: runtimeConfig.model,
+          attempt_number: submission.attempt_number ?? 1,
+          is_passed: analysisResult.score >= passingScore,
+        },
+        { onConflict: "assessment_id,user_id,attempt_number" }
+      );
+
+    if (submission.attempt_id) {
+      await updateUserProgress(submission.user_id, assessmentId, analysisResult.score, submission.attempt_id);
+    }
+
+    await logAIUsage({
+      user_id: submission.user_id,
+      assessment_id: assessmentId,
+      attempt_id: submission.attempt_id ?? null,
+      ai_config_id: runtimeConfig.id,
+      provider_name: runtimeConfig.provider,
+      model_name: runtimeConfig.model,
+      tokens_used: aiResponse.usage?.total_tokens ?? 0,
+      cost_usd: aiResponse.cost_usd ?? 0,
+      processing_time_ms: aiResponse.processing_time_ms,
       success: true,
     });
 
-    return { success: true, result, analysis: analysisResult };
-  } catch (e) {
-    logger.error("Error submitting assessment:", e);
-    return { success: false, error: e instanceof Error ? e.message : "An unknown error occurred." };
+    await incrementAIRateLimit(submission.user_id, providerName);
+
+    return analysisResult;
+  } catch (error) {
+    console.error("Error processing assessment with AI:", error);
+
+    await logAIUsage({
+      user_id: submission.user_id,
+      assessment_id: assessmentId,
+      attempt_id: submission.attempt_id ?? null,
+      ai_config_id: null,
+      provider_name: "openai",
+      model_name: "unknown",
+      tokens_used: 0,
+      cost_usd: 0,
+      processing_time_ms: 0,
+      success: false,
+      error_message: error instanceof Error ? error.message : "Unknown error"
+    });
+
+    return null;
   }
-};
+}
+
+/**
+ * Parse AI response into structured format
+ */
+function parseAIResponse(response: string): AIAnalysisResult {
+  try {
+    const parsed = JSON.parse(response);
+    const traits = parsed.traits || parsed.coreThemes || parsed.insights || [];
+    const strengths = parsed.strengths || parsed.strengthPatterns || [];
+    const improvements = parsed.areas_for_improvement || parsed.improvements || [];
+    const recommendations =
+      parsed.recommendations || parsed.recommended_practices || parsed.transformationOpportunities || [];
+
+    return {
+      score: parsed.score || 0,
+      feedback: parsed.feedback || "No feedback available",
+      explanation: parsed.explanation || "No explanation available",
+      insights: Array.isArray(traits) ? traits : [],
+      recommendations: Array.isArray(recommendations) ? recommendations : [],
+      strengths: Array.isArray(strengths) ? strengths : [],
+      areas_for_improvement: Array.isArray(improvements) ? improvements : []
+    };
+  } catch (error) {
+    console.error("Error parsing AI response:", error);
+    return {
+      score: 0,
+      feedback: "Error processing AI response",
+      explanation: "Unable to analyze your responses at this time",
+      insights: [],
+      recommendations: [],
+      strengths: [],
+      areas_for_improvement: []
+    };
+  }
+}
+
+/**
+ * Log AI usage for monitoring and billing
+ */
+async function logAIUsage(logData: {
+  user_id: string;
+  assessment_id: string;
+  attempt_id: string | null;
+  ai_config_id: string | null;
+  provider_name: string;
+  model_name: string;
+  tokens_used: number;
+  cost_usd: number;
+  processing_time_ms: number;
+  success: boolean;
+  error_message?: string;
+}): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from("ai_usage_logs")
+      .insert({
+        user_id: logData.user_id,
+        assessment_id: logData.assessment_id,
+        attempt_id: logData.attempt_id,
+        ai_config_id: logData.ai_config_id,
+        provider_name: logData.provider_name,
+        model_name: logData.model_name,
+        tokens_used: logData.tokens_used,
+        cost_usd: logData.cost_usd,
+        processing_time_ms: logData.processing_time_ms,
+        success: logData.success,
+        error_message: logData.error_message
+      });
+
+    if (error) throw error;
+  } catch (error) {
+    console.error("Error logging AI usage:", error);
+  }
+}
+
+/**
+ * Create assessment attempt
+ */
+export async function createAssessmentAttempt(
+  assessmentId: string,
+  userId: string
+): Promise<string | null> {
+  try {
+    // Get user's attempt number
+    const { data: existingAttempts, error: countError } = await supabase
+      .from("assessment_attempts")
+      .select("attempt_number")
+      .eq("assessment_id", assessmentId)
+      .eq("user_id", userId)
+      .order("attempt_number", { ascending: false })
+      .limit(1);
+
+    if (countError) throw countError;
+
+    const attemptNumber = (existingAttempts?.[0]?.attempt_number || 0) + 1;
+
+    // Create new attempt
+    const { data, error } = await supabase
+      .from("assessment_attempts")
+      .insert({
+        assessment_id: assessmentId,
+        user_id: userId,
+        attempt_number: attemptNumber,
+        status: 'in_progress',
+        raw_responses: {} as Json
+      })
+      .select("id")
+      .single();
+
+    if (error) throw error;
+    return data.id;
+  } catch (error) {
+    console.error("Error creating assessment attempt:", error);
+    return null;
+  }
+}
+
+/**
+ * Submit assessment responses
+ */
+export async function submitAssessmentResponses(
+  attemptId: string,
+  responses: Record<string, unknown>,
+  timeSpentMinutes: number
+): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("assessment_attempts")
+      .update({
+        raw_responses: responses as unknown as Json,
+        time_spent_minutes: timeSpentMinutes,
+        status: 'completed',
+        completed_at: new Date().toISOString()
+      })
+      .eq("id", attemptId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error("Error submitting assessment responses:", error);
+    return false;
+  }
+}
+
+/**
+ * Get assessment results
+ */
+export async function getAssessmentResults(attemptId: string): Promise<AssessmentResults | null> {
+  try {
+    const { data, error } = await supabase
+      .from("assessment_attempts")
+      .select(`
+        *,
+        assessments_enhanced (
+          title,
+          description,
+          type
+        )
+      `)
+      .eq("id", attemptId)
+      .single();
+
+    if (error) throw error;
+
+    // Convert the data to match AssessmentResults interface
+    if (data) {
+      return {
+        ...data,
+        raw_responses: (data.raw_responses as unknown) as Record<string, unknown>,
+        ai_analysis: (data.ai_analysis as unknown) as AIAnalysisResult | undefined
+      } as unknown as AssessmentResults;
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error fetching assessment results:", error);
+    return null;
+  }
+}
+
+/**
+ * Update user assessment progress
+ */
+export async function updateUserProgress(
+  userId: string,
+  assessmentId: string,
+  score: number,
+  attemptId: string
+): Promise<void> {
+  try {
+    // Get current progress
+    const { data: currentProgress, error: fetchError } = await supabase
+      .from("user_assessment_progress")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("assessment_id", assessmentId)
+      .single();
+
+    if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
+
+    const isNewRecord = !currentProgress;
+    const isNewBestScore = isNewRecord || score > Number(currentProgress?.best_score || 0);
+
+    if (isNewRecord) {
+      // Create new progress record
+      const { error: insertError } = await supabase
+        .from("user_assessment_progress")
+        .insert({
+          user_id: userId,
+          assessment_id: assessmentId,
+          best_score: score,
+          best_attempt_id: attemptId,
+          total_attempts: 1,
+          last_attempt_at: new Date().toISOString(),
+          is_completed: score >= 70, // Assuming 70% is passing
+          completion_date: score >= 70 ? new Date().toISOString() : null
+        });
+
+      if (insertError) throw insertError;
+    } else {
+      // Update existing progress
+      const { error: updateError } = await supabase
+        .from("user_assessment_progress")
+        .update({
+          best_score: isNewBestScore ? score : currentProgress.best_score,
+          best_attempt_id: isNewBestScore ? attemptId : currentProgress.best_attempt_id,
+          total_attempts: Number(currentProgress.total_attempts ?? 0) + 1,
+          last_attempt_at: new Date().toISOString(),
+          is_completed: score >= 70 || currentProgress.is_completed,
+          completion_date: score >= 70 && !currentProgress.is_completed ? new Date().toISOString() : currentProgress.completion_date
+        })
+        .eq("id", currentProgress.id);
+
+      if (updateError) throw updateError;
+    }
+  } catch (error) {
+    console.error("Error updating user progress:", error);
+  }
+}
