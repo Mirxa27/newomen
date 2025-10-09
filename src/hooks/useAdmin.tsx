@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfiles } from '@/integrations/supabase/tables/user_profiles';
 
-type UserRole = UserProfiles['Row']['role'];
+type UserProfile = UserProfiles['Row'];
 
 export function useAdmin() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -33,9 +33,10 @@ export function useAdmin() {
         return;
       }
 
+      const profileData = data as UserProfile;
       // Check both role column and email for admin access
-      const isAdminByRole = (data.role ?? "user") === "admin";
-      const isAdminByEmail = (data.email === import.meta.env.VITE_ADMIN_EMAIL);
+      const isAdminByRole = (profileData.role ?? "user") === "admin";
+      const isAdminByEmail = (profileData.email === import.meta.env.VITE_ADMIN_EMAIL);
       setIsAdmin(isAdminByRole || isAdminByEmail);
 
     } catch (e) {

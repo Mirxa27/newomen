@@ -1,122 +1,86 @@
 import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, Save } from "lucide-react";
-import { ConfigurationForm } from "./ConfigurationForm";
-import type { Tables } from '@/integrations/supabase/types';
+import { Loader2 } from "lucide-react";
+import ConfigurationForm from "./ConfigurationForm";
+import { Tables } from "@/integrations/supabase/types";
 
-// Define types from Supabase schema
-type AIConfiguration = Tables<'ai_configurations'>;
+type AIConfig = Tables<'ai_configurations'>;
 type Provider = Tables<'providers'>;
 type Model = Tables<'models'>;
 
-// Define the props for the dialog component
 interface ConfigurationFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (formData: Partial<AIConfiguration>) => void;
-  saving: boolean;
-  config: AIConfiguration | null; // The configuration being edited, or null for a new one
+  onSave: (config: Partial<AIConfig>) => Promise<void>;
+  isSaving: boolean;
+  config: AIConfig | null;
   providers: Provider[];
   models: Model[];
 }
 
-// Initialize the form state with nulls for relational IDs
-const INITIAL_FORM_STATE: Partial<AIConfiguration> = {
-  name: "",
-  description: null,
-  provider_id: null,
-  model_id: null,
-  api_base_url: null,
-  api_key_encrypted: "",
-  api_version: null,
-  temperature: 0.7,
-  max_tokens: 1024,
-  system_prompt: "",
-  is_active: true,
-  is_default: false,
+const getInitialFormData = (config: AIConfig | null): Partial<AIConfig> => {
+  if (config) return { ...config };
+  return {
+    name: "",
+    description: "",
+    provider: "",
+    model_name: "",
+    temperature: 0.7,
+    max_tokens: 1024,
+    system_prompt: "",
+    is_active: true,
+    is_default: false,
+  };
 };
 
-export const ConfigurationFormDialog = ({
+export default function ConfigurationFormDialog({
   open,
   onOpenChange,
   onSave,
-  saving,
+  isSaving,
   config,
   providers,
   models,
-}: ConfigurationFormDialogProps) => {
-  const [formData, setFormData] = useState<Partial<AIConfiguration>>(INITIAL_FORM_STATE);
+}: ConfigurationFormDialogProps) {
+  const [formData, setFormData] = useState<Partial<AIConfig>>(getInitialFormData(config));
 
-  // Effect to populate or reset the form when the dialog opens or the config changes
   useEffect(() => {
-    if (open) {
-      // If a config is provided, populate the form for editing
-      if (config) {
-        setFormData({
-          ...config,
-          api_key_encrypted: "", // Clear API key for security; only update if a new one is entered
-        });
-      } else {
-        // Otherwise, reset to the initial state for a new configuration
-        setFormData(INITIAL_FORM_STATE);
-      }
-    }
+    setFormData(getInitialFormData(config));
   }, [config, open]);
 
-  // A single handler to update any field in the form state
-  const handleFieldChange = (
-    field: keyof AIConfiguration,
-    value: string | number | boolean | null
-  ) => {
+  const handleFieldChange = (field: keyof AIConfig, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Trigger the save operation with the current form data
   const handleSave = () => {
     onSave(formData);
   };
 
-  const isEditing = config !== null;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col glass-card">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle className="gradient-text">
-            {isEditing ? "Edit AI Configuration" : "Create New AI Configuration"}
-          </DialogTitle>
-          <DialogDescription>
-            {isEditing
-              ? "Modify the settings for this AI model configuration."
-              : "Define a new AI model configuration for your platform."}
-          </DialogDescription>
+          <DialogTitle>{config ? "Edit" : "Create"} AI Configuration</DialogTitle>
         </DialogHeader>
-        
-        <div className="flex-grow overflow-y-auto py-4 pr-2">
+        <div className="py-4">
           <ConfigurationForm
             formData={formData}
             onFieldChange={handleFieldChange}
             providers={providers}
             models={models}
-            isEditing={isEditing}
           />
         </div>
-
-        <DialogFooter className="pt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="glass">
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saving} className="clay-button">
-            {saving ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4 mr-2" />
-            )}
-            {isEditing ? "Save Changes" : "Create Configuration"}
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-};
+}

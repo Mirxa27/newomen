@@ -142,12 +142,12 @@ export default function AccountSettings() {
                 {subscription ? (
                   <>
                     <p>
-                      Current Plan: <Badge variant="secondary">{subscription.tier || "Free"}</Badge>
+                      Current Plan: <Badge variant="secondary">{profile?.subscription_tier || "Free"}</Badge>
                     </p>
                     <p>Status: <Badge variant={subscription.status === "active" ? "default" : "destructive"}>{subscription.status}</Badge></p>
-                    <p>Renewal Date: {subscription.renewal_date ? new Date(subscription.renewal_date).toLocaleDateString() : 'N/A'}</p>
-                    {subscription.cancelled_at && (
-                      <p>Cancelled At: {new Date(subscription.cancelled_at).toLocaleDateString()}</p>
+                    <p>End Date: {subscription.end_date ? new Date(subscription.end_date).toLocaleDateString() : 'N/A'}</p>
+                    {subscription.status === "cancelled" && (
+                      <p>Access valid until: {subscription.end_date ? new Date(subscription.end_date).toLocaleDateString() : 'N/A'}</p>
                     )}
                     {subscription.status === "active" && (
                       <Button onClick={handleSubscriptionCancel} disabled={isSubmitting} variant="destructive" className="clay-button">

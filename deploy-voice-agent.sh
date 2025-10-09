@@ -49,14 +49,14 @@ npx supabase secrets set OPENAI_API_KEY="$OPENAI_KEY" --project-ref $PROJECT_REF
 
 echo -e "${GREEN}✅ OpenAI API Key configured${NC}"
 
-# Step 3: Deploy Edge Function
-echo -e "${YELLOW}📦 Deploying realtime-token edge function...${NC}"
-npx supabase functions deploy realtime-token --project-ref $PROJECT_REF || {
-    echo -e "${RED}❌ Failed to deploy edge function${NC}"
+# Step 3: Deploy Edge Functions
+echo -e "${YELLOW}📦 Deploying voice agent edge functions...${NC}"
+npx supabase functions deploy realtime-token ai-content-builder gamification-engine --project-ref $PROJECT_REF || {
+    echo -e "${RED}❌ Failed to deploy edge functions${NC}"
     exit 1
 }
 
-echo -e "${GREEN}✅ Edge function deployed successfully${NC}"
+echo -e "${GREEN}✅ Edge functions deployed successfully${NC}"
 
 # Step 4: Verify deployment
 echo -e "${YELLOW}🔍 Verifying deployment...${NC}"
@@ -64,7 +64,7 @@ npx supabase functions list --project-ref $PROJECT_REF
 
 # Step 5: Build frontend
 echo -e "${YELLOW}🏗️  Building frontend...${NC}"
-npm install
+npm install --legacy-peer-deps
 npm run build
 
 echo -e "${GREEN}✅ Frontend built successfully${NC}"
@@ -83,6 +83,18 @@ echo "4. Click 'Start Session' to begin conversation"
 echo ""
 echo -e "${YELLOW}Edge Function URL:${NC}"
 echo "https://$PROJECT_REF.supabase.co/functions/v1/realtime-token"
+echo ""
+echo -e "${YELLOW}Testing Voice Chat:${NC}"
+echo "1. Open your app in a browser"
+echo "2. Login and navigate to /chat/realtime"
+echo "3. Allow microphone access"
+echo "4. Click 'Start Session'"
+echo "5. Speak naturally - AI should respond"
+echo ""
+echo -e "${YELLOW}Troubleshooting:${NC}"
+echo "• Check browser console for WebSocket errors"
+echo "• Verify OpenAI API key is set correctly"
+echo "• Check Supabase function logs if needed"
 echo ""
 echo -e "${YELLOW}Documentation:${NC}"
 echo "See VOICE_AGENT_DEPLOYMENT.md for detailed info"

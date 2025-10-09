@@ -1,48 +1,45 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { UserProfiles } from '@/integrations/supabase/tables/user_profiles';
+import { useUserProfile } from './useUserProfile';
 
-type UserRole = UserProfiles['Row']['role'];
+type UserRole = 'guest' | 'member' | 'admin' | 'superadmin' | 'premium';
 
 export function useUserRole() {
-  const [role, setRole] = useState<UserRole>('user'); // Default to 'user'
+  const { profile, loading: profileLoading } = useUserProfile();
+  const [role, setRole] = useState<UserRole>('guest');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const fetchUserRole = useCallback(async () => {
+  const determineRole = useCallback(() => {
     setLoading(true);
-    try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
-      if (!user) {
-        setRole('user');
-        setLoading(false);
-        return;
-      }
-
-      const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('role')
-        .eq('user_id', user.id)
-        .single();
-
-      if (profileError) throw profileError;
-
-      const userRole = (profile?.role as UserRole) || 'user'; // Explicitly cast and default to 'user'
-      setRole(userRole);
-
-    } catch (e) {
-      console.error('Error fetching user role:', e);
-      setError(e instanceof Error ? e.message : 'An unexpected error occurred');
-      setRole('user');
-    } finally {
-      setLoading(false);
+    if (profileLoading) {
+      return;
     }
-  }, []);
+
+    if (!profile) {
+      setRole('guest');
+      setLoading(false);
+      return;
+    }
+
+    // Simple role mapping for now
+    switch (profile.role) {
+      case 'admin':
+      case 'superadmin':
+        setRole('admin');
+        break;
+      case 'premium':
+        setRole('premium');
+        break;
+      default:
+        setRole('member');
+        break;
+    }
+    setLoading(false);
+  }, [profile, profileLoading]);
 
   useEffect(() => {
-    fetchUserRole();
-  }, [fetchUserRole]);
+    determineRole();
+  }, [determineRole]);
 
-  return { role, loading, error };
+  return { role, loading };
 }
