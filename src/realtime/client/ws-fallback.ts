@@ -16,14 +16,13 @@ interface RealtimeClientListeners {
 // Define the session configuration
 interface SessionConfig {
   audioDeviceId?: string;
+  systemPrompt?: string;
+  memoryContext?: string;
 }
 
 export const createWsFallbackClient = (listeners: Partial<RealtimeClientListeners>) => {
   let websocket: WebSocket | null = null;
   let localStream: MediaStream | null = null;
-  let audioContext: AudioContext | null = null;
-  let scriptProcessor: ScriptProcessorNode | null = null;
-  let audioSource: MediaStreamAudioSourceNode | null = null;
 
   const {
     onConnecting = () => {},
@@ -51,43 +50,35 @@ export const createWsFallbackClient = (listeners: Partial<RealtimeClientListener
       const { data } = await supabase.functions.invoke('realtime-token');
       const { token, wsUrl } = data;
 
-      websocket = new WebSocket(`${wsUrl}?token=${token}`);
+      websocket = new WebSocket(wsUrl);
 
       websocket.onopen = () => {
         onConnected('ws-session-id'); // Placeholder
 
-        // 3. Setup audio processing and streaming
-        interface ExtendedWindow extends Window {
-          AudioContext: typeof AudioContext;
-          webkitAudioContext?: typeof AudioContext;
-        }
-        const win = window as ExtendedWindow;
-        const AudioContextClass = win.AudioContext || win.webkitAudioContext;
-        if (!AudioContextClass) {
-          throw new Error('AudioContext not supported in this browser');
-        }
-        audioContext = new AudioContextClass();
-        audioSource = audioContext.createMediaStreamSource(localStream);
-        scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
-
-        scriptProcessor.onaudioprocess = (event) => {
-          if (websocket?.readyState === WebSocket.OPEN) {
-            const inputData = event.inputBuffer.getChannelData(0);
-            // Convert to 16-bit PCM
-            const pcmData = new Int16Array(inputData.length);
-            let sum = 0;
-            for (let i = 0; i < inputData.length; i++) {
-              const s = Math.max(-1, Math.min(1, inputData[i]));
-              pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-              sum += Math.abs(s);
-            }
-            websocket.send(pcmData.buffer);
-            onAudioLevel(sum / inputData.length);
+        // Send session configuration
+        websocket?.send(JSON.stringify({
+          type: 'session.update',
+          session: {
+            modalities: ['text'],
+            instructions: config.systemPrompt || 'You are a helpful assistant for voice chat.',
+            voice: 'alloy',
+            input_audio_format: 'pcm16',
+            output_audio_format: 'pcm16',
+            input_audio_transcription: {
+              model: 'whisper-1'
+            },
+            turn_detection: {
+              type: 'server_vad',
+              threshold: 0.5,
+              prefix_padding_ms: 300,
+              silence_duration_ms: 500
+            },
+            tools: [],
+            tool_choice: 'auto',
+            temperature: 0.8,
+            max_response_output_tokens: 4096
           }
-        };
-
-        audioSource.connect(scriptProcessor);
-        scriptProcessor.connect(audioContext.destination);
+        }));
       };
 
       websocket.onmessage = (event) => {
@@ -121,17 +112,6 @@ export const createWsFallbackClient = (listeners: Partial<RealtimeClientListener
     if (localStream) {
       localStream.getTracks().forEach(track => track.stop());
       localStream = null;
-    }
-    if (scriptProcessor) {
-      scriptProcessor.disconnect();
-      scriptProcessor = null;
-    }
-    if (audioSource) {
-      audioSource.disconnect();
-      audioSource = null;
-    }
-    if (audioContext && audioContext.state !== 'closed') {
-      audioContext.close();
     }
     if (websocket) {
       websocket.close();

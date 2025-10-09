@@ -104,7 +104,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         token: sessionData.client_secret.value,
-        apiUrl: `https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17`,
+        apiUrl: `wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17`,
         sessionId: sessionData.id,
         expiresAt: sessionData.client_secret.expires_at
       }),
