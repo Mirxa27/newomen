@@ -44,7 +44,15 @@ export class PerformanceLogger {
     p95: number;
     p99: number;
   }> {
-    const summary: Record<string, any> = {};
+    const summary: Record<string, {
+      count: number;
+      average: number;
+      min: number;
+      max: number;
+      p50: number;
+      p95: number;
+      p99: number;
+    }> = {};
     
     for (const [name, values] of this.metrics) {
       if (values.length === 0) continue;

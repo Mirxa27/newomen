@@ -796,21 +796,38 @@ serve(async (req) => {
       hasProfile: !!subscriptionCheck.profile,
     });
 
+    // Dev-only admin fallback: allow token generation for admin users even without profile/subscription
     if (!subscriptionCheck.allowed) {
-      const status = subscriptionCheck.reason === 'PROFILE_NOT_FOUND' ? 404 : 402;
-      return new Response(
-        JSON.stringify({
-          error:
-            subscriptionCheck.reason === 'PROFILE_NOT_FOUND'
-              ? 'User profile not found'
-              : 'An active subscription or minutes are required to start a new session.',
-          code: subscriptionCheck.reason ?? 'SUBSCRIPTION_REQUIRED',
-        }),
-        {
-          status,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+      // Check if this is a development environment and user has admin privileges
+      const isDev = Deno.env.get('ENVIRONMENT') !== 'production';
+      const isAdmin = subscriptionCheck.profile?.role === 'admin' ||
+                     subscriptionCheck.profile?.role === 'superadmin' ||
+                     subscriptionCheck.profile?.subscription_tier === 'admin';
+
+      if (isDev && isAdmin) {
+        logRequest('Using admin fallback for dev environment', {
+          userId: body.userId,
+          reason: subscriptionCheck.reason,
+          adminRole: subscriptionCheck.profile?.role
+        });
+        // Allow admin to proceed even without valid subscription
+      } else {
+        const status = subscriptionCheck.reason === 'PROFILE_NOT_FOUND' ? 404 : 402;
+        return new Response(
+          JSON.stringify({
+            error:
+              subscriptionCheck.reason === 'PROFILE_NOT_FOUND'
+                ? 'User profile not found'
+                : 'An active subscription or minutes are required to start a new session.',
+            code: subscriptionCheck.reason ?? 'SUBSCRIPTION_REQUIRED',
+            hint: isDev ? 'For dev testing: ensure user has admin role or valid subscription' : undefined
+          }),
+          {
+            status,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
     }
 
     // Validate subscription and usage limits

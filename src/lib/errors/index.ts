@@ -291,7 +291,7 @@ export const globalErrorHandler = {
     return ErrorHandler.getInstance().handleError(error);
   },
 
-  wrapAsync: <T extends (...args: any[]) => Promise<any>>(fn: T): T => {
+  wrapAsync: <T extends (...args: unknown[]) => Promise<unknown>>(fn: T): T => {
     return (async (...args: Parameters<T>) => {
       try {
         return await fn(...args);
@@ -302,7 +302,7 @@ export const globalErrorHandler = {
   },
 
   // Express-style error handler
-  expressHandler: (err: unknown, req: any, res: any, next: any) => {
+  expressHandler: (err: unknown, req: unknown, res: unknown, next: unknown) => {
     const error = ErrorHandler.getInstance().handleError(err);
     
     if (ErrorHandler.getInstance().shouldLogError(error)) {

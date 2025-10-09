@@ -11,13 +11,21 @@ export class DatabaseAuditStorage implements AuditStorage {
     logger.debug('Storing audit logs in database', { count: logs.length });
   }
 
-  async search(criteria: any): Promise<AuditLogEntry[]> {
+  async search(criteria: Record<string, unknown>): Promise<AuditLogEntry[]> {
     // Implementation for database search
     // This would query the database based on criteria
     return [];
   }
 
-  async getStats(timeRange: any): Promise<any> {
+  async getStats(timeRange: Record<string, unknown>): Promise<{
+    totalEvents: number;
+    eventsByType: Record<string, number>;
+    eventsByLevel: Record<string, number>;
+    eventsByResult: Record<string, number>;
+    topUsers: Array<{ userId: string; count: number }>;
+    topResources: Array<{ resource: string; count: number }>;
+    topIpAddresses: Array<{ ipAddress: string; count: number }>;
+  }> {
     // Implementation for database statistics
     return {
       totalEvents: 0,

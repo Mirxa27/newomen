@@ -63,7 +63,7 @@ export class AuditLogger {
     errorMessage?: string;
     errorCode?: string;
     duration?: number;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }): Promise<void> {
     const eventTypeMap = {
       LOGIN: AuditEventType.LOGIN,
@@ -106,7 +106,7 @@ export class AuditLogger {
     ipAddress: string;
     userAgent: string;
     reason?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }): Promise<void> {
     await this.log({
       level: event.granted ? AuditLevel.INFO : AuditLevel.WARNING,
@@ -144,7 +144,7 @@ export class AuditLogger {
     ipAddress: string;
     userAgent: string;
     duration?: number;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }): Promise<void> {
     const eventTypeMap = {
       CREATE: AuditEventType.DATA_CREATED,
@@ -188,7 +188,7 @@ export class AuditLogger {
     description: string;
     threatType?: string;
     riskScore?: number;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }): Promise<void> {
     const eventTypeMap = {
       SECURITY_BREACH: AuditEventType.SECURITY_BREACH,
@@ -238,7 +238,7 @@ export class AuditLogger {
     errorMessage?: string;
     ipAddress: string;
     userAgent: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }): Promise<void> {
     const eventTypeMap = {
       GDPR: {
@@ -299,7 +299,7 @@ export class AuditLogger {
     component?: string;
     description: string;
     severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     error?: Error;
   }): Promise<void> {
     const eventTypeMap = {
@@ -352,7 +352,7 @@ export class AuditLogger {
     errorMessage?: string;
     ipAddress: string;
     userAgent: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }): Promise<void> {
     const eventTypeMap = {
       PAYMENT_PROCESSED: AuditEventType.PAYMENT_PROCESSED,
@@ -442,7 +442,7 @@ export class AuditLogger {
     return `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  private maskSensitiveData(data: Record<string, any>): Record<string, any> {
+  private maskSensitiveData(data: Record<string, unknown>): Record<string, unknown> {
     const masked = { ...data };
 
     for (const field of this.config.sensitiveFields) {

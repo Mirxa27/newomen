@@ -15,7 +15,7 @@ export class AuditLoggerUtils {
     return ipAddress.split(':')[0];
   }
 
-  static sanitizeDetails(details: Record<string, any>): Record<string, any> {
+  static sanitizeDetails(details: Record<string, unknown>): Record<string, unknown> {
     const sanitized = { ...details };
     
     // Remove sensitive fields

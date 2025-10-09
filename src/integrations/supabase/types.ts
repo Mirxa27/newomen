@@ -86,6 +86,7 @@ export type Database = {
       ai_assessment_configs: import('./tables/ai_assessment_configs').AiAssessmentConfigs;
       prompt_templates: import('./tables/prompt_templates').PromptTemplates;
       achievements: import('./tables/achievements').Achievements;
+      schema_migrations: { Row: any, Insert: any, Update: any };
     };
     Views: {
       [_ in never]: never
@@ -113,6 +114,28 @@ export type Database = {
       };
       increment_ai_rate_limit: {
         Args: { p_user_id: string; p_provider_name: string; p_max_requests?: number; p_window_minutes?: number; };
+        Returns: void;
+      };
+      admin_get_user_profiles: {
+        Args: { limit_count?: number; offset_count?: number; search_term?: string };
+        Returns: Json;
+      };
+      admin_update_user_profile: {
+        Args: {
+          target_user_id: string;
+          new_role?: string;
+          new_subscription_tier?: string;
+          new_remaining_minutes?: number;
+          new_nickname?: string
+        };
+        Returns: Json;
+      };
+      create_schema_migrations_table: {
+        Args: Record<string, never>;
+        Returns: void;
+      };
+      execute_sql: {
+        Args: { query: string };
         Returns: void;
       };
     };

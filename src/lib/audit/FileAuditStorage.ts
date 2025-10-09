@@ -1,4 +1,7 @@
 import type { AuditLogEntry, AuditLoggerConfig, AuditStorage } from './types';
+import { promises as fs } from 'fs';
+import path from 'path';
+import zlib from 'zlib';
 
 // File-based audit storage
 export class FileAuditStorage implements AuditStorage {
@@ -16,14 +19,13 @@ export class FileAuditStorage implements AuditStorage {
     const logContent = logs.map(log => JSON.stringify(log)).join('\n') + '\n';
 
     // Append to file
-    const fs = require('fs').promises;
     await fs.appendFile(filePath, logContent);
 
     // Check if file needs rotation
     await this.rotateIfNeeded(filePath);
   }
 
-  async search(criteria: any): Promise<AuditLogEntry[]> {
+  async search(criteria: Record<string, unknown>): Promise<AuditLogEntry[]> {
     // Simple file-based search implementation
     // In production, this would use a proper database
     const results: AuditLogEntry[] = [];
@@ -41,7 +43,15 @@ export class FileAuditStorage implements AuditStorage {
     return results;
   }
 
-  async getStats(timeRange: any): Promise<any> {
+  async getStats(timeRange: Record<string, unknown>): Promise<{
+    totalEvents: number;
+    eventsByType: Record<string, number>;
+    eventsByLevel: Record<string, number>;
+    eventsByResult: Record<string, number>;
+    topUsers: Array<{ userId: string; count: number }>;
+    topResources: Array<{ resource: string; count: number }>;
+    topIpAddresses: Array<{ ipAddress: string; count: number }>;
+  }> {
     // Implementation for getting statistics
     return {
       totalEvents: 0,
@@ -55,8 +65,6 @@ export class FileAuditStorage implements AuditStorage {
   }
 
   async cleanup(retentionDays: number): Promise<void> {
-    const fs = require('fs').promises;
-    const path = require('path');
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
 
@@ -76,7 +84,6 @@ export class FileAuditStorage implements AuditStorage {
   }
 
   private async ensureDirectoryExists(): Promise<void> {
-    const fs = require('fs').promises;
     try {
       await fs.mkdir(this.basePath, { recursive: true });
     } catch (error) {
@@ -85,7 +92,6 @@ export class FileAuditStorage implements AuditStorage {
   }
 
   private async rotateIfNeeded(filePath: string): Promise<void> {
-    const fs = require('fs').promises;
     const stats = await fs.stat(filePath);
     
     if (stats.size > this.config.maxFileSize) {
@@ -100,9 +106,6 @@ export class FileAuditStorage implements AuditStorage {
   }
 
   private async compressFile(filePath: string): Promise<void> {
-    const zlib = require('zlib');
-    const fs = require('fs').promises;
-    
     const input = await fs.readFile(filePath);
     const compressed = zlib.gzipSync(input);
     await fs.writeFile(`${filePath}.gz`, compressed);
@@ -110,9 +113,6 @@ export class FileAuditStorage implements AuditStorage {
   }
 
   private async getLogFiles(): Promise<string[]> {
-    const fs = require('fs').promises;
-    const path = require('path');
-    
     try {
       const files = await fs.readdir(this.basePath);
       return files
@@ -126,7 +126,6 @@ export class FileAuditStorage implements AuditStorage {
   }
 
   private async readLogFile(filePath: string): Promise<AuditLogEntry[]> {
-    const fs = require('fs').promises;
     const logs: AuditLogEntry[] = [];
     
     try {
@@ -148,7 +147,7 @@ export class FileAuditStorage implements AuditStorage {
     return logs;
   }
 
-  private matchesCriteria(log: AuditLogEntry, criteria: any): boolean {
+  private matchesCriteria(log: AuditLogEntry, criteria: Record<string, unknown>): boolean {
     if (criteria.startDate && log.timestamp < criteria.startDate) return false;
     if (criteria.endDate && log.timestamp > criteria.endDate) return false;
     if (criteria.userId && log.userId !== criteria.userId) return false;

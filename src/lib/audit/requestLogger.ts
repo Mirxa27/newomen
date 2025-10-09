@@ -4,13 +4,13 @@ import { logger } from '@/lib/logging';
 // Request logger middleware
 export class RequestLogger {
   static middleware() {
-    return (req: any, res: any, next: any) => {
+    return (req: Record<string, unknown>, res: Record<string, unknown>, next: () => void) => {
       const startTime = Date.now();
       const requestId = uuidv4();
       
       // Add request ID to request object
-      req.id = requestId;
-      (req as any).__requestId = requestId;
+      (req as Record<string, unknown>).id = requestId;
+      (req as Record<string, unknown>).__requestId = requestId;
 
       // Log request
       logger.info('Incoming request', {
@@ -22,7 +22,7 @@ export class RequestLogger {
 
       // Override res.end to log response
       const originalEnd = res.end;
-      res.end = function(chunk: any, encoding?: any) {
+      res.end = function(chunk: unknown, encoding?: string) {
         const duration = Date.now() - startTime;
         
         logger.info('Request completed', {

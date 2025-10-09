@@ -113,12 +113,12 @@ export interface AuditLogEntry {
   action: string;
   resource: string;
   resourceId?: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   result: 'SUCCESS' | 'FAILURE' | 'PARTIAL';
   errorMessage?: string;
   errorCode?: string;
   duration?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   tags?: string[];
   compliance?: {
     gdpr?: boolean;
@@ -150,7 +150,7 @@ export interface AuditLoggerConfig {
   includeResponseBody: boolean;
   maskSensitiveData: boolean;
   sensitiveFields: string[];
-  customSanitizers?: Record<string, (value: any) => any>;
+  customSanitizers?: Record<string, (value: unknown) => unknown>;
 }
 
 // Default audit logger configuration
@@ -184,7 +184,15 @@ export const defaultAuditLoggerConfig: AuditLoggerConfig = {
 // Audit storage interface
 export interface AuditStorage {
   store(logs: AuditLogEntry[]): Promise<void>;
-  search(criteria: any): Promise<AuditLogEntry[]>;
-  getStats(timeRange: any): Promise<any>;
+  search(criteria: Record<string, unknown>): Promise<AuditLogEntry[]>;
+  getStats(timeRange: Record<string, unknown>): Promise<{
+    totalEvents: number;
+    eventsByType: Record<string, number>;
+    eventsByLevel: Record<string, number>;
+    eventsByResult: Record<string, number>;
+    topUsers: Array<{ userId: string; count: number }>;
+    topResources: Array<{ resource: string; count: number }>;
+    topIpAddresses: Array<{ ipAddress: string; count: number }>;
+  }>;
   cleanup(retentionDays: number): Promise<void>;
 }
