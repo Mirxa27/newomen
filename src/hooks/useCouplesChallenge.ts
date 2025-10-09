@@ -82,7 +82,6 @@ export function useCouplesChallenge() {
     }
 
     try {
-      // Find partner by email
       const { data: partnerProfile, error: partnerError } = await supabase
         .from('user_profiles')
         .select('user_id')
@@ -99,7 +98,6 @@ export function useCouplesChallenge() {
         return null;
       }
 
-      // Find template
       const { data: template, error: templateError } = await supabase
         .from('challenge_templates')
         .select('questions')

@@ -1,129 +1,65 @@
-// src/contexts/LiveAPIContext.tsx
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
-import { createWebRTCClient } from '@/realtime/client/webrtc';
-
-interface LiveAPIConfig {
-  systemInstruction?: string;
-  voice?: string;
-  temperature?: number;
-  model?: string;
-}
+import { WebRTCClient } from '@/realtime/client/webrtc';
+import { RealtimeSession } from '@/realtime/session';
 
 interface LiveAPIContextType {
-  client: any;
-  setConfig: (config: LiveAPIConfig) => void;
-  connected: boolean;
-  connect: () => Promise<void>;
+  isConnected: boolean;
+  connect: (sessionId: string) => void;
   disconnect: () => void;
-  isConnecting: boolean;
-  error: string | null;
-  transcript: string;
-  audioLevel: number;
-  clearTranscript: () => void;
+  sendMessage: (message: any) => void;
+  onMessage: (callback: (message: any) => void) => void;
 }
 
 const LiveAPIContext = createContext<LiveAPIContextType | undefined>(undefined);
 
 export const LiveAPIProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [connected, setConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [transcript, setTranscript] = useState('');
-  const [audioLevel, setAudioLevel] = useState(0);
-  const [config, setConfigState] = useState<LiveAPIConfig>({});
-  const clientRef = useRef<any>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const clientRef = useRef<WebRTCClient | null>(null);
+  const sessionRef = useRef<RealtimeSession | null>(null);
 
-  const setConfig = useCallback((newConfig: LiveAPIConfig) => {
-    setConfigState(prev => ({ ...prev, ...newConfig }));
+  const connect = useCallback((sessionId: string) => {
+    const session = new RealtimeSession(sessionId);
+    session.join();
+    sessionRef.current = session;
+
+    const client = new WebRTCClient(session);
+    clientRef.current = client;
+
+    client.onConnect(() => setIsConnected(true));
+    client.onDisconnect(() => setIsConnected(false));
+
+    session.onSdp(sdp => client.handleSdp(sdp));
+    session.onIceCandidate(candidate => client.handleIceCandidate(candidate));
+
+    // Assuming the user joining is the offerer for simplicity
+    void client.start(true);
   }, []);
-
-  const connect = useCallback(async () => {
-    if (connected || isConnecting) return;
-
-    setIsConnecting(true);
-    setError(null);
-
-    try {
-      if (!clientRef.current) {
-        // Create WebRTC client with event listeners
-        clientRef.current = createWebRTCClient({
-          onConnecting: () => {
-            setIsConnecting(true);
-            setError(null);
-          },
-          onConnected: (sessionId: string) => {
-            setIsConnecting(false);
-            setConnected(true);
-            setError(null);
-          },
-          onDisconnected: (reason: string) => {
-            setIsConnecting(false);
-            setConnected(false);
-            setError(`Disconnected: ${reason}`);
-          },
-          onPartialTranscript: (text: string) => {
-            setTranscript(prev => prev + text);
-          },
-          onFinalTranscript: (text: string) => {
-            setTranscript(prev => prev + text + ' ');
-          },
-          onAudioLevel: (level: number) => {
-            setAudioLevel(level);
-          },
-          onError: (err: Error) => {
-            setError(err.message);
-            setIsConnecting(false);
-            setConnected(false);
-          },
-        });
-      }
-
-      // Start the session
-      await clientRef.current.startSession({
-        systemPrompt: config.systemInstruction || 'You are a helpful AI assistant.',
-        memoryContext: '',
-      });
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Connection failed';
-      setError(errorMessage);
-      setIsConnecting(false);
-    }
-  }, [connected, isConnecting, config.systemInstruction]);
 
   const disconnect = useCallback(() => {
-    if (clientRef.current) {
-      clientRef.current.stopSession();
-    }
-    setConnected(false);
-    setIsConnecting(false);
-    setError(null);
-    setTranscript('');
-    setAudioLevel(0);
+    clientRef.current?.close();
+    sessionRef.current?.leave();
+    clientRef.current = null;
+    sessionRef.current = null;
+    setIsConnected(false);
   }, []);
 
-  const clearTranscript = useCallback(() => {
-    setTranscript('');
+  const sendMessage = useCallback((message: any) => {
+    clientRef.current?.sendMessage(message);
   }, []);
 
-  const value: LiveAPIContextType = {
-    client: clientRef.current,
-    setConfig,
-    connected,
+  const onMessage = useCallback((callback: (message: any) => void) => {
+    clientRef.current?.onMessage(callback);
+  }, []);
+
+  const value = {
+    isConnected,
     connect,
     disconnect,
-    isConnecting,
-    error,
-    transcript,
-    audioLevel,
-    clearTranscript,
+    sendMessage,
+    onMessage,
   };
 
-  return (
-    <LiveAPIContext.Provider value={value}>
-      {children}
-    </LiveAPIContext.Provider>
-  );
+  return <LiveAPIContext.Provider value={value}>{children}</LiveAPIContext.Provider>;
 };
 
 export const useLiveAPI = () => {

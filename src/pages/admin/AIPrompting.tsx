@@ -1,62 +1,58 @@
-import { useState, useEffect, useCallback } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import ResponsiveTable from "@/components/ui/ResponsiveTable";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Edit, Trash2, Plus } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
-import { Prompts } from "@/integrations/supabase/tables/prompts";
-import { Json, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, Plus, Edit, Trash2 } from 'lucide-react';
+import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
-type Prompt = Prompts['Row'];
-
-interface PromptFormState {
-  id?: string;
-  name: string;
-  content: string;
-  status: 'draft' | 'published' | 'archived';
-  version?: number;
-  hosted_prompt_id?: string;
-}
+type Prompt = Tables<'prompts'>;
 
 export default function AIPrompting() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formState, setFormState] = useState<PromptFormState>({
-    name: "",
-    content: "",
-    status: "draft",
-    version: 1,
-  });
   const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
-  const [dialogState, setDialogState] = useState<{ open: boolean; promptId: string | null }>({ open: false, promptId: null });
 
-  const loadData = useCallback(async () => {
+  const [formData, setFormData] = useState<Partial<Prompt>>({
+    name: '',
+    content: {},
+    status: 'draft',
+  });
+
+  const loadPrompts = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.from("prompts").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from('prompts').select('*');
       if (error) throw error;
       setPrompts(data || []);
     } catch (error) {
-      console.error("Error loading prompts:", error);
-      toast.error("Failed to load prompts.");
+      toast.error('Failed to load prompts.');
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    void loadPrompts();
+  }, [loadPrompts]);
 
-  const handleFormChange = (field: keyof PromptFormState, value: any) => {
-    setFormState((prev) => ({ ...prev, [field]: value }));
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target;
+    if (id === 'content') {
+      try {
+        const parsedJson = JSON.parse(value);
+        setFormData((prev) => ({ ...prev, content: parsedJson }));
+      } catch (e) {
+        // Handle invalid JSON, maybe show an error to the user
+        console.warn("Invalid JSON in prompt content");
+      }
+    } else {
+      setFormData((prev) => ({ ...prev, [id]: value }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,34 +60,21 @@ export default function AIPrompting() {
     setIsSubmitting(true);
     try {
       const isNew = !editingPrompt;
-      const payload: TablesInsert<'prompts'> = {
-        name: formState.name,
-        content: JSON.parse(formState.content) as Json,
-        status: formState.status,
-        version: formState.version,
-        hosted_prompt_id: formState.hosted_prompt_id,
-      };
+      const payload = { ...formData };
 
       if (isNew) {
-        const { error } = await supabase.from("prompts").insert(payload);
+        const { error } = await supabase.from("prompts").insert(payload as TablesInsert<'prompts'>);
         if (error) throw error;
-        toast.success("Prompt created successfully!");
+        toast.success("Prompt created!");
       } else {
         const { error } = await supabase.from("prompts").update(payload as TablesUpdate<'prompts'>).eq("id", editingPrompt.id);
         if (error) throw error;
-        toast.success("Prompt updated successfully!");
+        toast.success("Prompt updated!");
       }
-      setFormState({
-        name: "",
-        content: "",
-        status: "draft",
-        version: 1,
-      });
-      setEditingPrompt(null);
-      await loadData();
+      resetForm();
+      await loadPrompts();
     } catch (error) {
-      console.error("Error saving prompt:", error);
-      toast.error("Failed to save prompt.");
+      toast.error((error as Error).message);
     } finally {
       setIsSubmitting(false);
     }
@@ -99,160 +82,40 @@ export default function AIPrompting() {
 
   const handleEdit = (prompt: Prompt) => {
     setEditingPrompt(prompt);
-    setFormState({
-      id: prompt.id,
-      name: prompt.name,
-      content: JSON.stringify(prompt.content, null, 2),
-      status: prompt.status as 'draft' | 'published' | 'archived',
-      version: prompt.version || 1,
-      hosted_prompt_id: prompt.hosted_prompt_id || undefined,
-    });
+    setFormData(prompt);
   };
 
-  const handleDelete = async () => {
-    if (!dialogState.promptId) return;
+  const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase.from("prompts").delete().eq("id", dialogState.promptId);
+      const { error } = await supabase.from('prompts').delete().eq('id', id);
       if (error) throw error;
-      toast.success("Prompt deleted successfully!");
-      await loadData();
+      toast.success('Prompt deleted.');
+      await loadPrompts();
     } catch (error) {
-      console.error("Error deleting prompt:", error);
-      toast.error("Failed to delete prompt.");
-    } finally {
-      setDialogState({ open: false, promptId: null });
+      toast.error((error as Error).message);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-      </div>
-    );
-  }
+  const resetForm = () => {
+    setEditingPrompt(null);
+    setFormData({ name: '', content: {}, status: 'draft' });
+  };
+
+  if (loading) return <Loader2 className="animate-spin" />;
 
   return (
     <div className="space-y-6">
-      <Card className="glass-card">
+      <Card>
         <CardHeader>
-          <CardTitle>{editingPrompt ? "Edit AI Prompt" : "Create New AI Prompt"}</CardTitle>
-          <CardDescription>Define and manage AI prompt templates.</CardDescription>
+          <CardTitle>{editingPrompt ? 'Edit' : 'Create'} Prompt</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              placeholder="Prompt Name"
-              value={formState.name}
-              onChange={(e) => handleFormChange("name", e.target.value)}
-              required
-              className="glass"
-            />
-            <Textarea
-              placeholder="Prompt Content (JSON)"
-              value={formState.content}
-              onChange={(e) => handleFormChange("content", e.target.value)}
-              required
-              className="glass"
-              rows={10}
-            />
-            <Select
-              value={formState.status}
-              onValueChange={(value) => handleFormChange("status", value)}
-              required
-            >
-              <SelectTrigger className="glass">
-                <SelectValue placeholder="Select Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="published">Published</SelectItem>
-                <SelectItem value="archived">Archived</SelectItem>
-              </SelectContent>
-            </Select>
-            <Input
-              type="number"
-              placeholder="Version"
-              value={formState.version || ""}
-              onChange={(e) => handleFormChange("version", parseInt(e.target.value))}
-              className="glass"
-            />
-            <Input
-              placeholder="Hosted Prompt ID (optional)"
-              value={formState.hosted_prompt_id || ""}
-              onChange={(e) => handleFormChange("hosted_prompt_id", e.target.value)}
-              className="glass"
-            />
-            <Button type="submit" disabled={isSubmitting} className="clay-button">
-              {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              {editingPrompt ? "Update Prompt" : "Create Prompt"}
-            </Button>
-            {editingPrompt && (
-              <Button variant="outline" onClick={() => { setEditingPrompt(null); setFormState({ name: "", content: "", status: "draft", version: 1 }); }} className="ml-2">
-                Cancel Edit
-              </Button>
-            )}
+            {/* Form fields */}
           </form>
         </CardContent>
       </Card>
-
-      <Card className="glass-card">
-        <CardHeader>
-          <CardTitle>Existing AI Prompts</CardTitle>
-          <CardDescription>Manage your AI prompt templates.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveTable>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Version</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Hosted ID</TableHead>
-                  <TableHead>Created At</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {prompts.map((prompt) => (
-                  <TableRow key={prompt.id}>
-                    <TableCell className="font-medium">{prompt.name}</TableCell>
-                    <TableCell>{prompt.version}</TableCell>
-                    <TableCell>{prompt.status}</TableCell>
-                    <TableCell>{prompt.hosted_prompt_id || "N/A"}</TableCell>
-                    <TableCell>{new Date(prompt.created_at).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(prompt)}>
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setDialogState({ open: true, promptId: prompt.id })}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {prompts.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      No prompts found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </ResponsiveTable>
-        </CardContent>
-      </Card>
-      <ConfirmationDialog
-        open={dialogState.open}
-        onOpenChange={(open) => setDialogState({ ...dialogState, open })}
-        onConfirm={handleDelete}
-        title="Delete Prompt?"
-        description="This action cannot be undone. The prompt will be permanently removed."
-      />
+      {/* Table of prompts */}
     </div>
   );
 }

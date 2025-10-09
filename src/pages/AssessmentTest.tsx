@@ -45,7 +45,7 @@ export default function AssessmentTest() {
         .single();
       if (error) throw error;
       setAssessment(data);
-      if (data.questions && Array.isArray(data.questions)) {
+      if (data?.questions && Array.isArray(data.questions)) {
         setQuestions(data.questions as Question[]);
       }
     } catch (err) {

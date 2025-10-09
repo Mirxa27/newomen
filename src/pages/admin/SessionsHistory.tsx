@@ -5,7 +5,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Loader2, MessageSquare, Clock, User, Bot } from "lucide-react";
 import { toast } from "sonner";
-import { Agents, NewmeConversations, NewmeMessages, Sessions, UserProfiles, Messages } from "@/integrations/supabase/types";
 import { Tables } from "@/integrations/supabase/types";
 
 // Corrected types using intersections instead of invalid interface extensions
@@ -81,7 +80,7 @@ export default function SessionsHistory() {
           .from("messages")
           .select("*")
           .eq("session_id", session.id)
-          .order("timestamp", { ascending: true });
+          .order("ts", { ascending: true });
         if (error) throw error;
         setSessionMessages(data || []);
       } else { // It's a NewMe conversation
@@ -89,7 +88,7 @@ export default function SessionsHistory() {
           .from("newme_messages")
           .select("*")
           .eq("conversation_id", session.id)
-          .order("timestamp", { ascending: true });
+          .order("ts", { ascending: true });
         if (error) throw error;
         setSessionMessages(data || []);
       }
@@ -114,11 +113,11 @@ export default function SessionsHistory() {
       return (sessionMessages as MessageHistoryRow[]).map((msg) => (
         <div key={msg.id} className="p-3 border-b">
           <div className="flex items-center gap-2 text-sm font-semibold">
-            {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-            <span>{msg.role === 'user' ? selectedSession.user_profiles?.nickname || 'User' : selectedSession.agents?.name || 'Agent'}</span>
-            <span className="text-xs text-muted-foreground font-normal">{new Date(msg.timestamp).toLocaleString()}</span>
+            {msg.sender === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+            <span>{msg.sender === 'user' ? selectedSession.user_profiles?.nickname || 'User' : selectedSession.agents?.name || 'Agent'}</span>
+            <span className="text-xs text-muted-foreground font-normal">{new Date(msg.ts).toLocaleString()}</span>
           </div>
-          <p className="text-sm mt-1 ml-6">{msg.content}</p>
+          <p className="text-sm mt-1 ml-6">{msg.text_content}</p>
         </div>
       ));
     } else {
@@ -126,11 +125,11 @@ export default function SessionsHistory() {
       return (sessionMessages as NewMeMessageRow[]).map((msg) => (
         <div key={msg.id} className="p-3 border-b">
           <div className="flex items-center gap-2 text-sm font-semibold">
-            {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-            <span>{msg.role === 'user' ? selectedSession?.user_profiles?.nickname || 'User' : selectedSession?.agents?.name || 'Agent'}</span>
-            <span className="text-xs text-muted-foreground font-normal">{new Date(msg.timestamp || 0).toLocaleString()}</span>
+            {msg.sender === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+            <span>{msg.sender === 'user' ? selectedSession?.user_profiles?.nickname || 'User' : selectedSession?.agents?.name || 'Agent'}</span>
+            <span className="text-xs text-muted-foreground font-normal">{new Date(msg.ts || 0).toLocaleString()}</span>
           </div>
-          <p className="text-sm mt-1 ml-6">{msg.content}</p>
+          <p className="text-sm mt-1 ml-6">{msg.text_content}</p>
         </div>
       ));
     }

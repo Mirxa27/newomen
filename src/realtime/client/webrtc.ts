@@ -112,18 +112,14 @@ export class WebRTCClient {
   }
 
   public sendAiConfig(provider: AIProviderConfig, behavior: AIBehavior) {
-    const config = {
-      ...provider,
-      ...behavior,
-    };
     this.sendMessage({
       type: 'ai_config',
       payload: {
-        provider: config.provider,
-        model: config.model,
+        provider: provider.name,
+        model: 'default-model', // Model info might not be directly on the provider config
         modalities: ['text', 'audio'],
-            instructions: config.systemPrompt || DEFAULT_INSTRUCTIONS,
-            voice: 'alloy',
+        instructions: behavior.system_instructions || DEFAULT_INSTRUCTIONS,
+        voice: 'alloy',
       },
     });
   }

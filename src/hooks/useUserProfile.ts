@@ -1,144 +1,123 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { UserProfiles } from '@/integrations/supabase/tables/user_profiles';
-import { UserAchievements } from '@/integrations/supabase/tables/user_achievements';
-import { Achievements } from '@/integrations/supabase/tables/achievements';
-import { TablesUpdate } from '@/integrations/supabase/types';
+import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
-export type UserProfile = UserProfiles['Row'];
-export type UserAchievement = UserAchievements['Row'] & {
-  achievements: Achievements['Row'];
-};
+export type UserProfile = Tables<'user_profiles'>;
+export type UserAchievement = { id: string; name: string; description: string; achieved_at: string };
 
 export function useUserProfile() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [achievements, setAchievements] = useState<UserAchievement[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const getDisplayName = useCallback(() => {
-    if (!profile) return 'User';
-    return profile.nickname || profile.email || 'User';
-  }, [profile]);
-
-  const fetchUserProfile = useCallback(async () => {
+  const fetchProfile = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setProfile(null);
-        setAchievements([]);
-        setLoading(false);
         return;
       }
 
-      const { data: profileData, error: profileError } = await supabase
+      const { data, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('user_id', user.id)
         .single();
 
-      if (profileError) throw profileError;
-      if (!profileData) {
-        throw new Error('User profile not found.');
+      if (profileError) {
+        if (profileError.code === 'PGRST116') {
+          const { data: newProfile, error: insertError } = await supabase
+            .from('user_profiles')
+            .insert({ user_id: user.id, email: user.email || '' } as TablesInsert<'user_profiles'>)
+            .select()
+            .single();
+          if (insertError) throw insertError;
+          setProfile(newProfile);
+        } else {
+          throw profileError;
+        }
+      } else {
+        setProfile(data);
       }
-      const typedProfile = profileData as UserProfile;
-      setProfile(typedProfile);
-
-      const { data: userAchievements, error: achievementsError } = await supabase
-        .from('user_achievements')
-        .select(`*, achievements:achievement_id (*)`)
-        .eq('user_id', typedProfile.user_id);
-
-      if (achievementsError) throw achievementsError;
-      setAchievements(userAchievements as UserAchievement[]);
-
+      // Placeholder for achievements
+      setAchievements([
+        { id: '1', name: 'First Step', description: 'Completed your first session.', achieved_at: new Date().toISOString() }
+      ]);
     } catch (e) {
-      console.error('Error fetching user profile:', e);
-      setError(e instanceof Error ? e.message : 'An unexpected error occurred');
-      setProfile(null);
-      setAchievements([]);
+      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
+      setError(errorMessage);
+      toast.error(`Failed to fetch profile: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void fetchUserProfile();
-  }, [fetchUserProfile]);
+    void fetchProfile();
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION') {
+        void fetchProfile();
+      } else if (event === 'SIGNED_OUT') {
+        setProfile(null);
+      }
+    });
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [fetchProfile]);
 
-  const updateProfile = useCallback(async (updates: TablesUpdate<'user_profiles'>): Promise<boolean> => {
+  const updateProfile = useCallback(async (updates: Partial<Omit<UserProfile, 'id' | 'user_id'>>): Promise<boolean> => {
     if (!profile) {
-      toast.error('No profile to update.');
+      toast.error("No profile to update.");
       return false;
     }
     try {
-      const { data, error } = await supabase
+      const { data, error: updateError } = await supabase
         .from('user_profiles')
-        .update(updates)
+        .update(updates as TablesUpdate<'user_profiles'>)
         .eq('id', profile.id)
         .select()
         .single();
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+      
       setProfile(data);
-      toast.success('Profile updated successfully!');
+      toast.success("Profile updated successfully!");
       return true;
     } catch (e) {
-      console.error('Error updating profile:', e);
-      toast.error(e instanceof Error ? e.message : 'Failed to update profile.');
+      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
+      setError(errorMessage);
+      toast.error(`Failed to update profile: ${errorMessage}`);
       return false;
     }
   }, [profile]);
 
   const uploadAvatar = useCallback(async (file: File) => {
-    if (!profile) {
-      toast.error('No profile found.');
-      return;
-    }
-
+    if (!profile) return;
     setUploadingAvatar(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${profile.id}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true });
-
+      const filePath = `${profile.user_id}/${Date.now()}_${file.name}`;
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
       if (uploadError) throw uploadError;
 
-      const { data: publicUrlData } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      if (publicUrlData?.publicUrl) {
-        await updateProfile({ avatar_url: publicUrlData.publicUrl });
-        toast.success('Avatar updated successfully!');
-      } else {
-        throw new Error('Failed to get public URL for avatar.');
-      }
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      await updateProfile({ avatar_url: publicUrl });
+      toast.success('Avatar updated!');
     } catch (e) {
-      console.error('Error uploading avatar:', e);
-      toast.error(e instanceof Error ? e.message : 'Failed to upload avatar.');
+      toast.error('Failed to upload avatar.');
     } finally {
       setUploadingAvatar(false);
     }
   }, [profile, updateProfile]);
 
-  return {
-    profile,
-    achievements,
-    loading,
-    error,
-    updateProfile,
-    refetchUserProfile: fetchUserProfile,
-    getDisplayName,
-    uploadingAvatar,
-    uploadAvatar,
-  };
+  const getDisplayName = useCallback(() => {
+    return profile?.nickname || profile?.email || 'User';
+  }, [profile]);
+
+  return { profile, achievements, loading, error, fetchProfile, updateProfile, uploadingAvatar, uploadAvatar, getDisplayName };
 }

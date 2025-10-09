@@ -1,303 +1,127 @@
-import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, ArrowLeft, Send, Heart, Users, Lock } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { trackCouplesChallengeCompletion } from "@/lib/gamification-events";
-import type { Json, Tables, TablesUpdate } from "@/integrations/supabase/types";
-
-interface Question {
-  id: string;
-  text: string;
-}
-
-type ChallengeTemplate = Omit<Tables<'challenge_templates'>, 'questions'> & {
-  questions: Question[];
-};
-
-type Challenge = Omit<Tables<'couples_challenges'>, 'responses' | 'question_set'> & {
-  responses: Json;
-  question_set: { questions: Question[] };
-  challenge_templates: ChallengeTemplate;
-};
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { useCouplesChallenge } from '@/hooks/useCouplesChallenge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
+import { Json, TablesUpdate } from '@/integrations/supabase/types';
 
 export default function CouplesChallenge() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { toast } = useToast();
+  const { profile } = useUserProfile();
+  const { activeChallenges, loading, acceptChallenge, declineChallenge } = useCouplesChallenge();
+  const [selectedChallenge, setSelectedChallenge] = useState<any>(null);
+  const [responses, setResponses] = useState<Record<string, string>>({});
 
-  const [challenge, setChallenge] = useState<Challenge | null>(null);
-  const [template, setTemplate] = useState<ChallengeTemplate | null>(null);
-  const [responses, setResponses] = useState<Record<string, unknown>>({});
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
-
-  const loadChallenge = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
-      setUserId(user.id);
-
-      const { data: challengeData, error: challengeError } = await supabase
-        .from("couples_challenges")
-        .select("*, challenge_templates(*)")
-        .eq("id", id)
-        .single();
-
-      if (challengeError) throw challengeError;
-      if (!challengeData) {
-        setError("Challenge data not found.");
-        return;
-      }
-
-      const typedChallenge = challengeData as unknown as Challenge;
-      setChallenge(typedChallenge);
-      setTemplate(typedChallenge.challenge_templates);
-      setResponses((typedChallenge.responses as Record<string, unknown>) || {});
-    } catch (err) {
-      console.error("Error loading challenge:", err);
-      setError("Failed to load the challenge. It might not exist or you may not have access.");
-    } finally {
-      setLoading(false);
-    }
-  }, [id, navigate]);
-
-  useEffect(() => {
-    void loadChallenge();
-  }, [loadChallenge]);
-
-  const handleResponseChange = (questionIndex: string, value: string) => {
-    const isInitiator = userId === challenge?.initiator_id;
-    const responseKey = isInitiator ? "initiator_response" : "partner_response";
-
-    setResponses(prev => ({
-      ...prev,
-      [questionIndex]: {
-        ...(prev[questionIndex] as Record<string, string> || {}),
-        [responseKey]: value,
-      },
-    }));
+  const handleResponseChange = (questionId: string, value: string) => {
+    setResponses(prev => ({ ...prev, [questionId]: value }));
   };
 
-  const handleSubmit = async () => {
-    if (!challenge) return;
-    setSubmitting(true);
+  const submitResponses = async () => {
+    if (!selectedChallenge || !profile) return;
+
+    const isInitiator = selectedChallenge.initiator_id === profile.user_id;
+    const userType = isInitiator ? 'initiator_response' : 'partner_response';
+
+    const newResponses = { ...selectedChallenge.responses };
+    Object.keys(responses).forEach(questionId => {
+      if (!newResponses[questionId]) {
+        newResponses[questionId] = {};
+      }
+      newResponses[questionId][userType] = responses[questionId];
+    });
+
     try {
-      const { error: updateError } = await supabase
+      const { error } = await supabase
         .from("couples_challenges")
-        .update({ responses: responses as Json })
-        .eq("id", challenge.id);
+        .update({ responses: newResponses as Json } as TablesUpdate<'couples_challenges'>)
+        .eq("id", selectedChallenge.id);
 
-      if (updateError) throw updateError;
+      if (error) throw error;
+      toast.success("Responses submitted!");
 
-      const allAnswered = template?.questions && Array.isArray(template.questions) && template.questions.every((_q, index) => {
-        const res = responses[String(index)] as Record<string, string> | undefined;
-        return res?.initiator_response && res?.partner_response;
-      });
+      // Check if both have responded to all questions
+      const allAnswered = selectedChallenge.question_set.every((q: any) =>
+        newResponses[q.id]?.initiator_response && newResponses[q.id]?.partner_response
+      );
 
-      if (allAnswered && challenge.status !== 'completed') {
-        const { error: completeError } = await supabase
+      if (allAnswered) {
+        await supabase
           .from("couples_challenges")
-          .update({ status: 'completed', updated_at: new Date().toISOString() })
-          .eq("id", challenge.id);
-        if (completeError) throw completeError;
-        
-        if (challenge.initiator_id) {
-          trackCouplesChallengeCompletion(challenge.initiator_id, challenge.id);
-        }
-        if (challenge.partner_id) {
-          trackCouplesChallengeCompletion(challenge.partner_id, challenge.id);
-        }
-
-        toast({
-          title: "Challenge Complete!",
-          description: "You've both answered all questions. Time to see the results!",
-        });
-        await loadChallenge();
-      } else {
-        toast({
-          title: "Responses Saved!",
-          description: "Your answers have been saved. Waiting for your partner.",
-        });
+          .update({ status: 'completed', updated_at: new Date().toISOString() } as TablesUpdate<'couples_challenges'>)
+          .eq("id", selectedChallenge.id);
+        toast.info("Challenge complete! View your insights soon.");
       }
-    } catch (err) {
-      console.error("Error submitting responses:", err);
-      toast({
-        title: "Error",
-        description: "Failed to save your responses. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setSubmitting(false);
+
+      // Refetch or update local state
+      setSelectedChallenge((prev: any) => ({ ...prev, responses: newResponses }));
+      setResponses({});
+
+    } catch (e) {
+      console.error("Error submitting responses:", e);
+      toast.error("Failed to submit responses.");
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin" />
-      </div>
-    );
-  }
+  if (loading) return <div className="flex justify-center items-center h-screen"><Loader2 className="w-8 h-8 animate-spin" /></div>;
 
-  if (error || !challenge || !template) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Error</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-destructive mb-4">{error}</p>
-            <Button onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Dashboard
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const isInitiator = userId === challenge.initiator_id;
-  const questionsArray = Array.isArray(template.questions) ? template.questions : [];
-  const progress = (Object.keys(responses).length / questionsArray.length) * 100;
-
-  if (challenge.status === 'completed') {
-    return (
-      <div className="min-h-screen bg-background py-12 px-4">
-        <div className="max-w-4xl mx-auto space-y-6">
+  return (
+    <div className="p-6">
+      <h1 className="text-3xl font-bold mb-6">Couples Challenges</h1>
+      <div className="grid md:grid-cols-3 gap-6">
+        <div className="md:col-span-1">
           <Card>
-            <CardHeader className="text-center">
-              <Heart className="w-12 h-12 mx-auto text-primary" />
-              <CardTitle className="text-3xl mt-4">Challenge Complete!</CardTitle>
-              <CardDescription>{template.title}</CardDescription>
+            <CardHeader>
+              <CardTitle>Your Active Challenges</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-8">
-              {questionsArray.map((question: Question, index) => {
-                const questionResponses = (responses[String(index)] as { initiator_response?: string; partner_response?: string }) || {};
-                const initiatorResponse = questionResponses.initiator_response;
-                const partnerResponse = questionResponses.partner_response;
-
-                return (
-                  <div key={index}>
-                    <h3 className="font-semibold text-lg mb-4">
-                      {index + 1}. {question.text}
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Card className="bg-muted/50">
-                        <CardHeader>
-                          <CardTitle className="text-base">Your Answer</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-muted-foreground">
-                            {isInitiator ? initiatorResponse : partnerResponse}
-                          </p>
-                        </CardContent>
-                      </Card>
-                      <Card className="bg-muted/50">
-                        <CardHeader>
-                          <CardTitle className="text-base">Partner's Answer</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-muted-foreground">
-                            {isInitiator ? partnerResponse : initiatorResponse}
-                          </p>
-                        </CardContent>
-                      </Card>
+            <CardContent>
+              {activeChallenges.map(challenge => (
+                <div key={challenge.id} className="p-2 border-b">
+                  <p>Challenge with {challenge.initiator_id === profile?.user_id ? 'your partner' : 'your partner'}</p>
+                  <p className="text-sm text-muted-foreground">Status: {challenge.status}</p>
+                  {challenge.status === 'pending' && challenge.partner_id === profile?.user_id && (
+                    <div className="flex gap-2 mt-2">
+                      <Button size="sm" onClick={() => acceptChallenge(challenge.id)}>Accept</Button>
+                      <Button size="sm" variant="destructive" onClick={() => declineChallenge(challenge.id)}>Decline</Button>
                     </div>
-                  </div>
-                );
-              })}
-              <div className="text-center pt-4">
-                <Button onClick={() => navigate('/dashboard')}>
-                  Back to Dashboard
-                </Button>
-              </div>
+                  )}
+                  {challenge.status === 'active' && (
+                    <Button size="sm" variant="outline" onClick={() => setSelectedChallenge(challenge)}>View</Button>
+                  )}
+                </div>
+              ))}
             </CardContent>
           </Card>
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-background py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-start">
-              <div>
-                <CardTitle className="text-3xl">{template.title}</CardTitle>
-                <CardDescription>{template.description}</CardDescription>
-              </div>
-              <Badge variant="secondary" className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Couples Challenge
-              </Badge>
+        <div className="md:col-span-2">
+          {selectedChallenge ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Challenge Questions</CardTitle>
+                <CardDescription>Answer the questions below.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {(selectedChallenge.question_set as any[]).map((q: any) => (
+                  <div key={q.id}>
+                    <label className="font-semibold">{q.text}</label>
+                    <Textarea
+                      className="mt-2"
+                      value={responses[q.id] || ''}
+                      onChange={(e) => handleResponseChange(q.id, e.target.value)}
+                    />
+                  </div>
+                ))}
+                <Button onClick={submitResponses}>Submit Responses</Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="flex justify-center items-center h-full bg-muted rounded-lg">
+              <p>Select a challenge to view questions.</p>
             </div>
-            <div className="pt-4">
-              <Progress value={progress} className="h-2" />
-              <p className="text-sm text-muted-foreground mt-2">
-                {Object.keys(responses).length} of {questionsArray.length} questions answered.
-              </p>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-8">
-            {questionsArray.map((question: Question, index) => {
-              const questionResponses = (responses[String(index)] as { initiator_response?: string; partner_response?: string }) || {};
-              const initiatorResponse = questionResponses.initiator_response;
-              const partnerResponse = questionResponses.partner_response;
-              const myResponse = isInitiator ? initiatorResponse : partnerResponse;
-              const partnerHasResponded = isInitiator ? !!partnerResponse : !!initiatorResponse;
-
-              return (
-                <div key={index}>
-                  <h3 className="font-semibold text-lg mb-2">
-                    {index + 1}. {question.text}
-                  </h3>
-                  <Textarea
-                    value={myResponse || ""}
-                    onChange={(e) => handleResponseChange(String(index), e.target.value)}
-                    placeholder="Your answer..."
-                    rows={4}
-                  />
-                  {!partnerHasResponded && (
-                    <Alert variant="default" className="mt-2">
-                      <Lock className="h-4 w-4" />
-                      <AlertDescription>
-                        Your partner hasn't answered this question yet. Your answers will be revealed to each other once you've both responded.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-              );
-            })}
-            <div className="flex justify-end">
-              <Button onClick={handleSubmit} disabled={submitting}>
-                {submitting ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4 mr-2" />
-                )}
-                Save Responses
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+          )}
+        </div>
       </div>
     </div>
   );

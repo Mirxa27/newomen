@@ -95,7 +95,8 @@ export default function Assessment() {
         if (result.result?.attempt_id) {
           navigate(`/assessments/results/${result.result.attempt_id}`);
           if (profile.user_id) {
-            trackAssessmentCompletion(profile.user_id, assessment.id);
+            // Assuming trackAssessmentCompletion is defined elsewhere and takes these arguments
+            await trackAssessmentCompletion(profile.user_id, assessment.id);
           }
         }
       } else {

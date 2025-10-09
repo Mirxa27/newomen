@@ -88,7 +88,7 @@ export default function AssessmentsOptimized() {
               <Brain className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.average_score?.toFixed(1) || 'N/A'}%</div>
+              <div className="text-2xl font-bold">{stats?.average_assessment_score?.toFixed(1) || 'N/A'}%</div>
             </CardContent>
           </Card>
         </div>

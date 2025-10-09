@@ -1,7 +1,7 @@
 import { logger } from '@/lib/logging';
 import { newMeMemoryService } from '@/services/NewMeMemoryService';
-import { aiService } from '@/services/ai/aiService';
-import { AIMessage } from '../aiService';
+import { aiService } from '@/services/AIService';
+import { AIMessage } from '@/services/AIService';
 
 export class NewMeService {
   private static instance: NewMeService;

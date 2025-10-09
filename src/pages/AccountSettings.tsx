@@ -8,15 +8,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { Subscriptions } from "@/integrations/supabase/tables/subscriptions";
-import { Badge } from "@/components/ui/badge"; // Import Badge component
-import { TablesUpdate } from "@/integrations/supabase/types";
+import { Tables, TablesUpdate } from "@/integrations/supabase/types";
+import { Badge } from "@/components/ui/badge";
+
+type Subscription = Tables<'subscriptions'>;
 
 export default function AccountSettings() {
   const { profile, loading: profileLoading, error: profileError, updateProfile } = useUserProfile();
   const [email, setEmail] = useState("");
   const [nickname, setNickname] = useState("");
-  const [subscription, setSubscription] = useState<Subscriptions['Row'] | null>(null);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -32,7 +33,7 @@ export default function AccountSettings() {
         .limit(1)
         .single();
 
-      if (error && error.code !== 'PGRST116') throw error; // PGRST116 means no rows found, which is fine
+      if (error && error.code !== 'PGRST116') throw error;
       setSubscription(data);
     } catch (e) {
       console.error("Error fetching subscription:", e);

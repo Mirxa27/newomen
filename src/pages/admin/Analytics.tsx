@@ -1,123 +1,101 @@
 import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, MessageCircle, Clock, DollarSign, Eye } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Users, Clock, MessageSquare, BarChart, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { Sessions } from "@/integrations/supabase/tables/sessions";
-import { NewmeConversations } from "@/integrations/supabase/tables/newme_conversations";
-import { UserProfiles } from "@/integrations/supabase/tables/user_profiles";
-import { Agents } from "@/integrations/supabase/tables/agents"; // Import Agents table
-import { Badge } from "@/components/ui/badge"; // Import Badge
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Tables } from "@/integrations/supabase/types";
 
-type SessionWithUser = Sessions['Row'] & {
-  user_profiles: UserProfiles['Row'] | null;
-  agents: Agents['Row'] | null;
-  message_count: number;
-};
+type Session = Tables<'sessions'>;
+type NewMeConversation = Tables<'newme_conversations'>;
+type UserProfile = Tables<'user_profiles'>;
 
-type NewMeConversationWithUser = NewmeConversations['Row'] & {
-  user_profiles: UserProfiles['Row'] | null;
-  agents: Agents['Row'] | null;
-};
-
-// Helper function to format duration
-const formatDuration = (seconds: number | null) => {
-  if (seconds === null) return "N/A";
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${minutes}m ${remainingSeconds}s`;
-};
-
-// Helper function to format cost
-const formatCost = (cost: number | null) => {
-  if (cost === null) return "$0.00";
-  return `$${cost.toFixed(2)}`;
-};
+type SessionWithUser = Session & { user_profiles: UserProfile | null };
+type NewMeConversationWithUser = NewMeConversation & { user_profiles: UserProfile | null };
 
 export default function Analytics() {
-  const [loading, setLoading] = useState(true);
-  const [sessions, setSessions] = useState<SessionWithUser[]>([]);
-  const [newMeConversations, setNewMeConversations] = useState<NewMeConversationWithUser[]>([]);
-  const [sessionStats, setSessionStats] = useState({
-    totalSessions: 0,
+  const [stats, setStats] = useState({
+    totalUsers: 0,
     activeSessions: 0,
     completedSessions: 0,
     avgDuration: 0,
-    totalUsers: 0,
-  });
-  const [newMeStats, setNewMeStats] = useState({
-    totalConversations: 0,
-    activeConversations: 0,
-    completedConversations: 0,
+    uniqueUsersSessions: 0,
+    activeNewMe: 0,
+    completedNewMe: 0,
     avgMessageCount: 0,
-    totalUsers: 0,
+    uniqueUsersNewMe: 0,
   });
-  const [searchTerm, setSearchTerm] = useState(""); // Added search term state
+  const [recentSessions, setRecentSessions] = useState<SessionWithUser[]>([]);
+  const [recentNewMe, setRecentNewMe] = useState<NewMeConversationWithUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
+  const loadAnalyticsData = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
       const [
+        { count: totalUsers, error: usersError },
         { data: sessionsData, error: sessionsError },
-        { data: newMeConversationsData, error: newMeConversationsError },
+        { data: newMeConversationsData, error: newMeError },
       ] = await Promise.all([
-        supabase.from("sessions").select(`*, user_profiles(*), agents(*)`).order("created_at", { ascending: false }),
-        supabase.from("newme_conversations").select(`*, user_profiles(*), agents(*)`).order("created_at", { ascending: false }),
+        supabase.from("user_profiles").select("*", { count: "exact", head: true }),
+        supabase.from("sessions").select("*, user_profiles(*)").gte("start_ts", thirtyDaysAgo.toISOString()),
+        supabase.from("newme_conversations").select("*, user_profiles(*)").gte("created_at", thirtyDaysAgo.toISOString()),
       ]);
 
+      if (usersError) throw usersError;
       if (sessionsError) throw sessionsError;
-      if (newMeConversationsError) throw newMeConversationsError;
+      if (newMeError) throw newMeError;
 
-      setSessions(sessionsData as SessionWithUser[] || []);
-      setNewMeConversations(newMeConversationsData as NewMeConversationWithUser[] || []);
-
-      // Calculate Session Stats
+      // Process sessions data
       const totalSessions = sessionsData?.length || 0;
       const activeSessions = sessionsData?.filter(s => s.status === "active").length || 0;
       const completedSessions = sessionsData?.filter(s => s.status === "completed").length || 0;
       const avgDuration = totalSessions > 0
         ? (sessionsData?.reduce((acc, curr) => acc + (curr.duration_seconds || 0), 0) || 0) / totalSessions
         : 0;
-      const uniqueSessionUsers = new Set(
+      const uniqueUsersSessions = new Set(
         sessionsData
           ?.map((session) => session.user_id)
-          .filter((value): value is string => Boolean(value)) // Correctly filter out null/undefined
+          .filter((value): value is string => Boolean(value))
       ).size;
 
-      setSessionStats({
-        totalSessions,
-        activeSessions,
-        completedSessions,
-        avgDuration: parseFloat(avgDuration.toFixed(2)),
-        totalUsers: uniqueSessionUsers,
-      });
-
-      // Calculate NewMe Conversation Stats
+      // Process NewMe conversations data
       const totalNewMeConversations = newMeConversationsData?.length || 0;
-      const activeNewMeConversations = newMeConversationsData?.filter(c => !c.ended_at).length || 0;
-      const completedNewMeConversations = newMeConversationsData?.filter(c => c.ended_at).length || 0;
+      const activeNewMe = newMeConversationsData?.filter(c => !c.ended_at).length || 0;
+      const completedNewMe = newMeConversationsData?.filter(c => c.ended_at).length || 0;
       const avgMessageCount = totalNewMeConversations > 0
         ? (newMeConversationsData?.reduce((acc, curr) => acc + (curr.message_count || 0), 0) || 0) / totalNewMeConversations
         : 0;
-      const uniqueNewMeUsers = new Set(
+      const uniqueUsersNewMe = new Set(
         newMeConversationsData
           ?.map((conv) => conv.user_id)
-          .filter((value): value is string => Boolean(value)) // Correctly filter out null/undefined
+          .filter((value): value is string => Boolean(value))
       ).size;
 
-      setNewMeStats({
-        totalConversations: totalNewMeConversations,
-        activeConversations: activeNewMeConversations,
-        completedConversations: completedNewMeConversations,
-        avgMessageCount: parseFloat(avgMessageCount.toFixed(2)),
-        totalUsers: uniqueNewMeUsers,
+      setStats({
+        totalUsers: totalUsers || 0,
+        activeSessions,
+        completedSessions,
+        avgDuration,
+        uniqueUsersSessions,
+        activeNewMe,
+        completedNewMe,
+        avgMessageCount,
+        uniqueUsersNewMe,
       });
 
-    } catch (error) {
-      console.error("Error loading analytics data:", error);
+      setRecentSessions((sessionsData as SessionWithUser[]).sort((a, b) => new Date(b.start_ts!).getTime() - new Date(a.start_ts!).getTime()).slice(0, 5));
+      setRecentNewMe((newMeConversationsData as NewMeConversationWithUser[]).sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime()).slice(0, 5));
+
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
+      setError(errorMessage);
       toast.error("Failed to load analytics data.");
     } finally {
       setLoading(false);
@@ -125,251 +103,112 @@ export default function Analytics() {
   }, []);
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
-
-  const filteredSessions = sessions.filter((session) =>
-    session.user_profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    session.user_profiles?.nickname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (session.agents?.name?.toLowerCase() || "").includes(searchTerm.toLowerCase())
-  );
-
-  const filteredNewMeConversations = newMeConversations.filter((conv) =>
-    conv.user_profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (conv.user_profiles?.nickname?.toLowerCase() || "").includes(searchTerm.toLowerCase())
-  );
+    void loadAnalyticsData();
+  }, [loadAnalyticsData]);
 
   if (loading) {
+    return <div className="flex justify-center items-center h-screen"><Loader2 className="w-8 h-8 animate-spin" /></div>;
+  }
+
+  if (error) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+      <div className="flex flex-col justify-center items-center h-screen text-destructive">
+        <AlertCircle className="w-12 h-12 mb-4" />
+        <h2 className="text-2xl font-bold">Failed to load data</h2>
+        <p>{error}</p>
+        <Button onClick={loadAnalyticsData} className="mt-4">Try Again</Button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <Card className="glass-card">
-        <CardHeader>
-          <CardTitle>Overall Analytics</CardTitle>
-          <CardDescription>High-level overview of platform activity.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="text-lg font-semibold mb-2">Realtime Sessions</h3>
-            <div className="space-y-1">
-              <p>Total Sessions: {sessionStats.totalSessions}</p>
-              <p>Active Sessions: {sessionStats.activeSessions}</p>
-              <p>Completed Sessions: {sessionStats.completedSessions}</p>
-              <p>Average Duration: {sessionStats.avgDuration} seconds</p>
-              <p>Unique Users: {sessionStats.totalUsers}</p>
-            </div>
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold mb-2">NewMe Conversations</h3>
-            <div className="space-y-1">
-              <p>Total Conversations: {newMeStats.totalConversations}</p>
-              <p>Active Conversations: {newMeStats.activeConversations}</p>
-              <p>Completed Conversations: {newMeStats.completedConversations}</p>
-              <p>Average Message Count: {newMeStats.avgMessageCount}</p>
-              <p>Unique Users: {newMeStats.totalUsers}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="p-6 space-y-6">
+      <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <StatCard title="Total Users" value={stats.totalUsers} icon={<Users />} />
+        <StatCard title="Avg. Session Duration" value={`${stats.avgDuration.toFixed(2)}s`} icon={<Clock />} />
+        <StatCard title="Avg. NewMe Messages" value={stats.avgMessageCount.toFixed(2)} icon={<MessageSquare />} />
+      </div>
 
-      <Card className="glass-card">
-        <CardHeader>
-          <CardTitle>Recent Realtime Sessions</CardTitle>
-          <CardDescription>Latest interactions with AI agents.</CardDescription>
-          <Input
-            placeholder="Search sessions by user or agent..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="mt-4 glass"
-          />
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Agent</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created At</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredSessions.slice(0, 10).map((session) => (
-                <TableRow key={session.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      {session.user_profiles?.avatar_url ? (
-                        <img
-                          src={session.user_profiles.avatar_url}
-                          alt="Avatar"
-                          className="h-6 w-6 rounded-full"
-                        />
-                      ) : (
-                        <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-xs">
-                          {session.user_profiles?.nickname?.[0]?.toUpperCase() || session.user_profiles?.email?.[0]?.toUpperCase() || 'U'}
-                        </div>
-                      )}
-                      <div className="font-medium">
-                        {session.user_profiles?.nickname || "Anonymous"}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {session.user_profiles?.email}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className="rounded-sm">Legacy</Badge> {session.agents?.name || "Default"}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {formatDuration(session.duration_seconds)}
-                    </div>
-                    {session.cost_usd !== null && (
-                      <div className="text-xs text-muted-foreground flex items-center gap-1">
-                        <DollarSign className="w-3 h-3" />
-                        {formatCost(session.cost_usd)}
-                      </div>
-                    )}
-                    {session.tokens_used !== null && (
-                      <div className="text-xs text-muted-foreground">
-                        {session.tokens_used || 0} tokens
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={
-                      session.status === "completed" ? "default" :
-                      session.status === "active" ? "secondary" : "destructive"
-                    }>
-                      {session.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(session.created_at).toLocaleDateString()}
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(session.created_at).toLocaleTimeString()}
-                    </div>
-                  </TableCell>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Realtime Sessions</CardTitle>
+            <CardDescription>Last 5 sessions initiated.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Date</TableHead>
                 </TableRow>
-              ))}
-              {filteredSessions.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No sessions found.</TableCell></TableRow>}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {recentSessions.map((session) => (
+                  <TableRow key={session.id}>
+                    <TableCell>{session.user_profiles?.nickname || session.user_profiles?.email || 'N/A'}</TableCell>
+                    <TableCell><Badge variant={session.status === 'completed' ? 'default' : 'secondary'}>{session.status}</Badge></TableCell>
+                    <TableCell>
+                      {new Date(session.start_ts!).toLocaleDateString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
-      <Card className="glass-card">
-        <CardHeader>
-          <CardTitle>Recent NewMe Conversations</CardTitle>
-          <CardDescription>Latest conversations with the NewMe AI.</CardDescription>
-          <Input
-            placeholder="Search conversations by user..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="mt-4 glass"
-          />
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Messages</TableHead>
-                <TableHead>Started At</TableHead>
-                <TableHead>Emotional Tone</TableHead>
-                <TableHead>Topics Discussed</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredNewMeConversations.slice(0, 10).map((conversation) => (
-                <TableRow key={conversation.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      {conversation.user_profiles?.avatar_url ? (
-                        <img
-                          src={conversation.user_profiles.avatar_url}
-                          alt="Avatar"
-                          className="h-6 w-6 rounded-full"
-                        />
-                      ) : (
-                        <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-xs">
-                          {conversation.user_profiles?.nickname?.[0]?.toUpperCase() || conversation.user_profiles?.email?.[0]?.toUpperCase() || 'U'}
-                        </div>
-                      )}
-                      <div className="font-medium">
-                        {conversation.user_profiles?.nickname || "Anonymous"}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {conversation.user_profiles?.email}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>{conversation.title || "Untitled"}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <MessageCircle className="w-3 h-3" />
-                      {conversation.message_count}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(conversation.created_at).toLocaleDateString()}
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(conversation.created_at).toLocaleTimeString()}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      {conversation.emotional_tone && (
-                        <Badge variant="outline" className="mb-1">
-                          {conversation.emotional_tone}
-                        </Badge>
-                      )}
-                      {conversation.topics_discussed && Array.isArray(conversation.topics_discussed) && conversation.topics_discussed.length > 0 && (
-                        <div className="text-xs text-muted-foreground">
-                          {(conversation.topics_discussed as string[]).slice(0, 2).join(', ')}
-                          {(conversation.topics_discussed as string[]).length > 2 && '...'}
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      {conversation.topics_discussed && Array.isArray(conversation.topics_discussed) && conversation.topics_discussed.length > 0 && (
-                        <div className="text-xs text-muted-foreground">
-                          {(conversation.topics_discussed as string[]).slice(0, 2).join(', ')}
-                          {(conversation.topics_discussed as string[]).length > 2 && '...'}
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={conversation.ended_at ? "default" : "secondary"}>
-                      {conversation.ended_at ? "Completed" : "Active"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => alert("View conversation not implemented yet")} disabled={conversation.message_count === 0}>
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                  </TableCell>
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent NewMe Conversations</CardTitle>
+            <CardDescription>Last 5 conversations started.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Messages</TableHead>
+                  <TableHead>Date</TableHead>
                 </TableRow>
-              ))}
-              {filteredNewMeConversations.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No NewMe conversations found.</TableCell></TableRow>}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {recentNewMe.map((conv) => (
+                  <TableRow key={conv.id}>
+                    <TableCell>{conv.user_profiles?.nickname || conv.user_profiles?.email || 'N/A'}</TableCell>
+                    <TableCell>{conv.message_count}</TableCell>
+                    <TableCell>
+                      {new Date(conv.created_at!).toLocaleDateString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
     </div>
+  );
+}
+
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ReactNode;
+}
+
+function StatCard({ title, value, icon }: StatCardProps) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <div className="text-muted-foreground">{icon}</div>
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+      </CardContent>
+    </Card>
   );
 }

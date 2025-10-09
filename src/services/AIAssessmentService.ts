@@ -32,7 +32,7 @@ export class AIAssessmentService {
       });
 
       if (error) {
-        logger.error(`Error fetching AI config for ${serviceType}:`, error);
+        logger.error(`Error fetching AI config for ${serviceType}:`, error as unknown as Record<string, unknown>);
         return null;
       }
       return data;

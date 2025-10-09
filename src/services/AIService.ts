@@ -66,7 +66,7 @@ export class AIService {
           presencePenalty: config.presence_penalty,
           systemPrompt: config.system_prompt,
           isDefault: config.is_default,
-          custom_headers: config.custom_headers,
+          custom_headers: config.custom_headers as Record<string, string> | null,
           cost_per_1k_input_tokens: config.cost_per_1k_prompt_tokens,
           cost_per_1k_output_tokens: config.cost_per_1k_completion_tokens,
           user_prompt_template: config.user_prompt_template,

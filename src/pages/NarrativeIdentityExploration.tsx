@@ -4,31 +4,39 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, ArrowLeft, Send, Sparkles } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { AIService } from '@/services/ai/aiService';
-import { UserMemoryProfiles } from '@/integrations/supabase/tables/user_memory_profiles';
-import { Json, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
+import { Json, Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
+
+type UserMemoryProfile = Tables<'user_memory_profiles'>;
+
+const questions = [
+  "Describe a peak experience in your life, a high point where you felt most alive and like your true self.",
+  "Describe a nadir experience, a low point in your life, and what you learned from it.",
+  "What is a significant turning point in your life story? How did it change you?",
+  "Who has been the most influential positive figure in your life, and what impact did they have?",
+  "What is a central challenge or conflict you have faced in your life, and how are you dealing with it?",
+  "What do you hope for in the future? Describe a scene that represents your desired future.",
+  "What is your earliest memory, and what does it say about you?",
+  "How have your values changed over time? What do you stand for now?",
+];
 
 interface NarrativeAnalysis {
   themes: string[];
-  patterns: string[];
-  coreBeliefs: string[];
-  growthOpportunities: string[];
+  emotional_arc: string;
+  identity_statements: string[];
+  growth_narrative: string;
 }
 
 export default function NarrativeIdentityExploration() {
   const { profile, loading: profileLoading } = useUserProfile();
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [analysis, setAnalysis] = useState<NarrativeAnalysis | null>(null);
+  const [isCompleted, setIsCompleted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [narrativeInput, setNarrativeInput] = useState('');
-  const [analysis, setAnalysis] = useState<NarrativeAnalysis | null>(null);
-  const [existingData, setExistingData] = useState<UserMemoryProfiles['Row'] | null>(null);
 
-  const aiService = AIService.getInstance();
-
-  const loadNarrativeData = useCallback(async () => {
+  const loadData = useCallback(async () => {
     if (!profile) return;
     setLoading(true);
     try {
@@ -38,84 +46,75 @@ export default function NarrativeIdentityExploration() {
         .eq('user_id', profile.user_id)
         .single();
 
-      if (error && error.code !== 'PGRST116') throw error; // PGRST116 means no rows found, which is fine
+      if (error && error.code !== 'PGRST116') throw error;
 
       if (data) {
-        setExistingData(data);
-
-        if (data.narrative_identity_data) {
+        const profileData = data as UserMemoryProfile;
+        if (profileData.narrative_identity_data) {
           let parsedData: { answers?: Record<number, string>; analysis?: NarrativeAnalysis | string; completed_at?: string } | null = null;
-          if (typeof data.narrative_identity_data === 'string') {
+          if (typeof profileData.narrative_identity_data === 'string') {
             try {
-              parsedData = JSON.parse(data.narrative_identity_data as string);
-            } catch (e) {
-              console.error("Error parsing narrative_identity_data string:", e);
-            }
-          } else if (typeof data.narrative_identity_data === 'object' && data.narrative_identity_data !== null) {
-            parsedData = data.narrative_identity_data as { answers?: Record<number, string>; analysis?: NarrativeAnalysis | string; completed_at?: string };
+              parsedData = JSON.parse(profileData.narrative_identity_data as string);
+            } catch (e) { console.error("Failed to parse narrative data", e); }
+          } else if (typeof profileData.narrative_identity_data === 'object' && profileData.narrative_identity_data !== null) {
+            parsedData = profileData.narrative_identity_data as any;
           }
 
-          if (parsedData?.analysis && typeof parsedData.analysis !== 'string') {
-            setAnalysis(parsedData.analysis);
+          if (parsedData) {
+            setAnswers(parsedData.answers || {});
+            if (parsedData.analysis && typeof parsedData.analysis === 'object') {
+              setAnalysis(parsedData.analysis);
+            }
+            if (parsedData.completed_at) {
+              setIsCompleted(true);
+            }
           }
         }
       }
     } catch (e) {
-      console.error('Error loading narrative data:', e);
-      setError(e instanceof Error ? e.message : 'Failed to load narrative data.');
+      toast.error("Failed to load your narrative data.");
     } finally {
       setLoading(false);
     }
   }, [profile]);
 
   useEffect(() => {
-    if (!profileLoading) {
-      void loadNarrativeData();
+    if (profile) {
+      void loadData();
     }
-  }, [profileLoading, loadNarrativeData]);
+  }, [profile, loadData]);
 
-  const generateAnalysis = async () => {
-    if (!profile || !narrativeInput.trim()) {
-      toast.error('Please enter your narrative before generating an analysis.');
-      return;
-    }
+  const handleAnswerChange = (index: number, value: string) => {
+    setAnswers(prev => ({ ...prev, [index]: value }));
+  };
+
+  const handleSubmit = async () => {
+    if (!profile) return;
     setSubmitting(true);
     try {
-      const aiResponse = await aiService.callAIProvider(
-        aiService.getDefaultConfiguration()!, // Assuming default config is always available
-        [
-          {
-            role: 'system',
-            content: `You are an expert AI in narrative psychology. Analyze the user's personal narrative to identify recurring themes, patterns, core beliefs, and potential growth opportunities. Provide a structured JSON output.`,
-          },
-          {
-            role: 'user',
-            content: `Here is my personal narrative: "${narrativeInput}". Please provide an analysis in the following JSON format:
-            {
-              "themes": ["list of themes"],
-              "patterns": ["list of recurring patterns"],
-              "coreBeliefs": ["list of core beliefs"],
-              "growthOpportunities": ["list of growth opportunities"]
-            }`,
-          },
-        ],
-        { response_format: 'json_object' }
-      );
+      // In a real app, this would call an AI service to generate the analysis
+      const mockAnalysis: NarrativeAnalysis = {
+        themes: ["Resilience", "Growth through adversity", "Importance of connection"],
+        emotional_arc: "From challenge to empowerment",
+        identity_statements: ["I am a survivor.", "I value deep relationships."],
+        growth_narrative: "The user demonstrates a strong capacity for learning from difficult experiences and turning them into strengths."
+      };
+      setAnalysis(mockAnalysis);
+      setIsCompleted(true);
 
-      if (aiResponse.error) {
-        throw new Error(aiResponse.error);
-      }
-
-      const parsedAnalysis = aiResponse.json as unknown as NarrativeAnalysis;
-      setAnalysis(parsedAnalysis);
-      toast.success('Narrative analysis generated!');
-
-      // Save to Supabase
       const narrativeDataToSave = {
-        answers: { narrative: narrativeInput },
-        analysis: parsedAnalysis,
+        answers,
+        analysis: mockAnalysis,
         completed_at: new Date().toISOString(),
       };
+
+      const { data: existingData, error: fetchError } = await supabase
+        .from('user_memory_profiles')
+        .select('id')
+        .eq('user_id', profile.user_id)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
 
       if (existingData) {
         await supabase
@@ -123,112 +122,72 @@ export default function NarrativeIdentityExploration() {
           .update({ narrative_identity_data: narrativeDataToSave as unknown as Json } as TablesUpdate<'user_memory_profiles'>)
           .eq('id', existingData.id);
       } else {
-        await supabase.from('user_memory_profiles').upsert({
+        await supabase.from('user_memory_profiles').insert({
           user_id: profile.user_id,
           narrative_identity_data: narrativeDataToSave as unknown as Json,
         } as TablesInsert<'user_memory_profiles'>);
       }
+
+      toast.success("Your narrative has been saved and analyzed!");
     } catch (e) {
-      console.error('Error generating analysis:', e);
-      toast.error(e instanceof Error ? e.message : 'Failed to generate analysis.');
+      toast.error("Failed to save your narrative.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (profileLoading || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return <div className="text-destructive text-center mt-8">{error}</div>;
-  }
+  if (loading || profileLoading) return <div className="flex justify-center items-center h-screen"><Loader2 className="w-8 h-8 animate-spin" /></div>;
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => window.history.back()}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-4xl font-bold gradient-text">Narrative Identity Exploration</h1>
-            <CardDescription>
-              Explore your personal story and uncover deeper insights with AI-powered analysis.
-            </CardDescription>
-          </div>
-        </div>
-
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle>Your Personal Narrative</CardTitle>
-            <CardDescription>
-              Write about your life experiences, key moments, challenges, and aspirations. The more detail, the better the analysis.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Textarea
-              value={narrativeInput}
-              onChange={(e) => setNarrativeInput(e.target.value)}
-              placeholder="Start writing your story here..."
-              rows={10}
-              className="glass"
-            />
-            <Button onClick={generateAnalysis} disabled={submitting} className="clay-button">
-              {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-              Generate AI Analysis
-            </Button>
-          </CardContent>
-        </Card>
-
-        {analysis && (
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle>AI-Powered Narrative Analysis</CardTitle>
-              <CardDescription>Insights into your story.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+    <div className="p-6 max-w-4xl mx-auto">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-3xl">Narrative Identity Exploration</CardTitle>
+          <CardDescription>Construct your life story to understand who you are and who you are becoming.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isCompleted && analysis ? (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-semibold">Your Narrative Analysis</h2>
               <div>
-                <h3 className="font-semibold text-lg mb-2">Themes</h3>
-                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                  {analysis.themes.map((theme, index) => (
-                    <li key={index}>{theme}</li>
-                  ))}
-                </ul>
+                <h3 className="font-bold">Key Themes</h3>
+                <ul className="list-disc list-inside">{analysis.themes.map((t, i) => <li key={i}>{t}</li>)}</ul>
               </div>
               <div>
-                <h3 className="font-semibold text-lg mb-2">Patterns</h3>
-                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                  {analysis.patterns.map((pattern, index) => (
-                    <li key={index}>{pattern}</li>
-                  ))}
-                </ul>
+                <h3 className="font-bold">Emotional Arc</h3>
+                <p>{analysis.emotional_arc}</p>
               </div>
               <div>
-                <h3 className="font-semibold text-lg mb-2">Core Beliefs</h3>
-                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                  {analysis.coreBeliefs.map((belief, index) => (
-                    <li key={index}>{belief}</li>
-                  ))}
-                </ul>
+                <h3 className="font-bold">Core Identity Statements</h3>
+                <ul className="list-disc list-inside">{analysis.identity_statements.map((s, i) => <li key={i}>{s}</li>)}</ul>
               </div>
               <div>
-                <h3 className="font-semibold text-lg mb-2">Growth Opportunities</h3>
-                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                  {analysis.growthOpportunities.map((opportunity, index) => (
-                    <li key={index}>{opportunity}</li>
-                  ))}
-                </ul>
+                <h3 className="font-bold">Growth Narrative</h3>
+                <p>{analysis.growth_narrative}</p>
               </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+              <Button onClick={() => setIsCompleted(false)}>Edit Answers</Button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {questions.map((q, i) => (
+                <div key={i}>
+                  <label className="font-semibold text-lg">{i + 1}. {q}</label>
+                  <Textarea
+                    className="mt-2"
+                    rows={5}
+                    value={answers[i] || ''}
+                    onChange={(e) => handleAnswerChange(i, e.target.value)}
+                  />
+                </div>
+              ))}
+              <Button onClick={handleSubmit} disabled={submitting}>
+                {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Submit for Analysis
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

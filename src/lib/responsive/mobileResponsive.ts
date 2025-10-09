@@ -373,7 +373,7 @@ export class MobileResponsiveManager {
   }
 
   public lockScreenOrientation(orientation: 'portrait' | 'landscape'): Promise<void> {
-    return screen.orientation.lock(orientation);
+    return (screen.orientation as any).lock(orientation);
   }
 
   public unlockScreenOrientation(): void {

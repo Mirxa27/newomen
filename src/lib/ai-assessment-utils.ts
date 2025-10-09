@@ -61,7 +61,7 @@ export const saveInitialAttempt = async (assessmentId: string, userId: string, a
       attempt_number: attemptNumber,
       status: 'in-progress',
       raw_responses: rawResponses,
-    })
+    } as TablesInsert<'assessment_attempts'>)
     .select()
     .single();
 
@@ -78,7 +78,7 @@ export const updateAttemptWithAIResult = async (attemptId: string, analysisResul
       ai_analysis: analysisResult as unknown as Json,
       ai_score: analysisResult.ai_score,
       ai_feedback: analysisResult.ai_feedback,
-    })
+    } as TablesUpdate<'assessment_attempts'>)
     .eq('id', attemptId)
     .select()
     .single();
@@ -107,7 +107,7 @@ export const saveAssessmentResult = async (
       is_passed: isPassed,
       ai_feedback: analysisResult.ai_feedback,
       ai_insights: analysisResult as unknown as Json,
-    });
+    } as TablesInsert<'assessment_results'>);
 
   if (error) throw error;
   return data;
@@ -128,10 +128,10 @@ export const logAIUsage = async (
     provider_name: config.provider,
     model_name: config.model_name,
     ...usage,
-  });
+  } as TablesInsert<'ai_usage_logs'>);
 
   if (error) {
-    logger.error('Error logging AI usage:', error);
+    logger.error('Error logging AI usage:', error as unknown as Record<string, unknown>);
   }
 };
 
@@ -141,11 +141,11 @@ export const updateAttemptError = async (attemptId: string, errorMessage: string
     .update({
       status: 'error',
       ai_feedback: errorMessage,
-    })
+    } as TablesUpdate<'assessment_attempts'>)
     .eq('id', attemptId);
 
   if (error) {
-    logger.error('Error updating attempt with error status:', error);
+    logger.error('Error updating attempt with error status:', error as unknown as Record<string, unknown>);
   }
 };
 
@@ -175,7 +175,7 @@ export const createNewAttempt = async (assessmentId: string, userId: string, raw
       attempt_number: newAttemptNumber,
       status: 'in-progress',
       raw_responses: rawResponses,
-    })
+    } as TablesInsert<'assessment_attempts'>)
     .select()
     .single();
 
@@ -227,7 +227,7 @@ export const updateUserAssessmentProgress = async (
         last_attempt_at: new Date().toISOString(),
         is_completed: isCompleted,
         completion_date: isCompleted && !progress.is_completed ? new Date().toISOString() : progress.completion_date,
-      })
+      } as TablesUpdate<'user_assessment_progress'>)
       .eq('id', progress.id);
     if (error) throw error;
   } else {
@@ -240,7 +240,7 @@ export const updateUserAssessmentProgress = async (
       last_attempt_at: new Date().toISOString(),
       is_completed: result.is_passed,
       completion_date: result.is_passed ? new Date().toISOString() : null,
-    });
+    } as TablesInsert<'user_assessment_progress'>);
     if (error) throw error;
   }
 };
