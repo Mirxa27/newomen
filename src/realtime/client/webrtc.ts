@@ -28,6 +28,8 @@ export const createWebRTCClient = (listeners: Partial<RealtimeClientListeners>) 
   let analyser: AnalyserNode | null = null;
   let audioSource: MediaStreamAudioSourceNode | null = null;
   let animationFrameId: number | null = null;
+  let websocket: WebSocket | null = null;
+  let mediaRecorder: MediaRecorder | null = null;
 
   const {
     onConnecting = () => {},
@@ -97,31 +99,87 @@ export const createWebRTCClient = (listeners: Partial<RealtimeClientListeners>) 
         }
       };
 
-      // 6. Fetch token and create offer
-      const { data } = await supabase.functions.invoke('realtime-token', {
+      // 6. Fetch ephemeral token from Supabase edge function
+      const { data, error: tokenError } = await supabase.functions.invoke('realtime-token', {
         body: {
           systemPrompt: config.systemPrompt,
           memoryContext: config.memoryContext,
         },
       });
-      const { token, apiUrl } = data;
 
-      const offer = await peerConnection.createOffer();
-      await peerConnection.setLocalDescription(offer);
-
-      // 7. Send offer to AI service and set remote description
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sdp: peerConnection.localDescription }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Signaling server returned ${response.status}`);
+      if (tokenError || !data) {
+        throw new Error(`Failed to get realtime token: ${tokenError?.message || 'Unknown error'}`);
       }
 
-      const answer = await response.json();
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(answer.sdp));
+      const { token, apiUrl, sessionId } = data;
+      console.log('Realtime session created:', sessionId);
+
+      // 7. Connect to OpenAI Realtime API via WebSocket
+      websocket = new WebSocket(`${apiUrl}&access_token=${token}`);
+
+      websocket.onopen = () => {
+        console.log('WebSocket connected to OpenAI Realtime API');
+        onConnected(sessionId);
+      };
+
+      websocket.onerror = (event) => {
+        console.error('WebSocket error:', event);
+        onError(new Error('WebSocket connection failed'));
+      };
+
+      websocket.onclose = () => {
+        console.log('WebSocket closed');
+        onDisconnected('WebSocket closed');
+      };
+
+      websocket.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          
+          // Handle different message types from OpenAI Realtime API
+          switch (message.type) {
+            case 'response.audio_transcript.delta':
+              onPartialTranscript(message.delta);
+              break;
+            case 'response.audio_transcript.done':
+              onFinalTranscript(message.transcript);
+              break;
+            case 'conversation.item.input_audio_transcription.completed':
+              onFinalTranscript(message.transcript);
+              break;
+            case 'error':
+              onError(new Error(message.error?.message || 'API error'));
+              break;
+          }
+        } catch (err) {
+          console.error('Error parsing WebSocket message:', err);
+        }
+      };
+
+      // 8. Send audio data through WebSocket
+      const audioTrack = localStream.getTracks().find(track => track.kind === 'audio');
+      if (audioTrack) {
+        mediaRecorder = new MediaRecorder(new MediaStream([audioTrack]), {
+          mimeType: 'audio/webm;codecs=opus'
+        });
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0 && websocket?.readyState === WebSocket.OPEN) {
+            // Convert to base64 and send
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const base64Audio = (reader.result as string).split(',')[1];
+              websocket?.send(JSON.stringify({
+                type: 'input_audio_buffer.append',
+                audio: base64Audio
+              }));
+            };
+            reader.readAsDataURL(event.data);
+          }
+        };
+
+        mediaRecorder.start(100); // Send chunks every 100ms
+      }
 
     } catch (error) {
       console.error('Error starting WebRTC session:', error);
@@ -134,6 +192,14 @@ export const createWebRTCClient = (listeners: Partial<RealtimeClientListeners>) 
     if (animationFrameId) {
       cancelAnimationFrame(animationFrameId);
       animationFrameId = null;
+    }
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+      mediaRecorder = null;
+    }
+    if (websocket && websocket.readyState === WebSocket.OPEN) {
+      websocket.close();
+      websocket = null;
     }
     if (localStream) {
       localStream.getTracks().forEach(track => track.stop());

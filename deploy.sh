@@ -4,7 +4,7 @@
 set -e
 
 # Install dependencies
-npm install
+npm install --legacy-peer-deps
 
 # Build the project
 npm run build

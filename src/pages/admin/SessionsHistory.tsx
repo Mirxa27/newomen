@@ -17,24 +17,19 @@ import { NewmeMessages } from "@/integrations/supabase/tables/newme_messages";
 import { Input } from "@/components/ui/input";
 
 // Define types for joined data
-interface SessionWithUserAndAgent extends Sessions['Row'] {
+type SessionWithUserAndAgent = Sessions['Row'] & {
   user_profiles: UserProfiles['Row'] | null;
   agents: Agents['Row'] | null;
   message_count: number;
-}
+};
 
-interface NewMeConversationWithUserAndAgent extends NewmeConversations['Row'] {
+type NewMeConversationWithUserAndAgent = NewmeConversations['Row'] & {
   user_profiles: UserProfiles['Row'] | null;
   agents: Agents['Row'] | null;
-}
+};
 
-interface MessageHistoryRow extends Messages['Row'] {
-  // Add any specific relations if needed for 'messages' table
-}
-
-interface NewMeMessageRow extends NewmeMessages['Row'] {
-  // Add any specific relations if needed for 'newme_messages' table
-}
+type MessageHistoryRow = Messages['Row'];
+type NewMeMessageRow = NewmeMessages['Row'];
 
 // Helper function to format duration
 const formatDuration = (seconds: number | null) => {
@@ -60,7 +55,7 @@ export default function SessionsHistory() {
 
   const [isViewConversationOpen, setIsViewConversationOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<SessionWithUserAndAgent | NewMeConversationWithUserAndAgent | null>(null);
-  const [conversationTranscript, setConversationTranscript] = useState("");
+  const [conversationMessages, setConversationMessages] = useState<(MessageHistoryRow | NewMeMessageRow)[]>([]);
   const [isNewMeConversation, setIsNewMeConversation] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -70,8 +65,8 @@ export default function SessionsHistory() {
         { data: sessionsData, error: sessionsError },
         { data: newMeConversationsData, error: newMeConversationsError },
       ] = await Promise.all([
-        supabase.from("sessions").select(`*, user_profiles(*), agents(*)`).order("created_at", { ascending: false }),
-        supabase.from("newme_conversations").select(`*, user_profiles(*), agents(*)`).order("created_at", { ascending: false }),
+        supabase.from("sessions").select(`*, user_profiles(*), agents(*)`).order("start_ts", { ascending: false }),
+        supabase.from("newme_conversations").select(`*, user_profiles(*)`).order("started_at", { ascending: false }),
       ]);
 
       if (sessionsError) throw sessionsError;
@@ -80,7 +75,6 @@ export default function SessionsHistory() {
       setSessions(sessionsData as SessionWithUserAndAgent[] || []);
       setNewMeConversations(newMeConversationsData as NewMeConversationWithUserAndAgent[] || []);
 
-      // For stats, we might want to process the raw data or fetch aggregated data
       setSessionStats(sessionsData as SessionWithUserAndAgent[] || []);
       setNewMeConversationStats(newMeConversationsData as NewMeConversationWithUserAndAgent[] || []);
 
@@ -99,52 +93,53 @@ export default function SessionsHistory() {
   const viewConversation = async (session: SessionWithUserAndAgent | NewMeConversationWithUserAndAgent, isNewMe: boolean) => {
     setSelectedSession(session);
     setIsNewMeConversation(isNewMe);
-    setConversationTranscript("Loading transcript...");
+    setConversationMessages([]);
     setIsViewConversationOpen(true);
 
     try {
-      let transcript = "";
       if (isNewMe) {
         const { data: messagesData, error } = await supabase
           .from('newme_messages')
           .select('*')
           .eq('conversation_id', session.id)
-          .order('ts', { ascending: true });
+          .order('timestamp', { ascending: true });
 
         if (error) throw error;
-        const conversationMessages = messagesData as NewMeMessageRow[];
-        transcript = conversationMessages.map(msg => {
-          const timestamp = new Date(msg.ts || '').toLocaleString();
-          const role = msg.sender === 'user' ? 'User' :
-                       msg.sender === 'assistant' ? 'AI Assistant' : 'System';
-          return `[${timestamp}] ${role}: ${msg.text_content || '[Audio message]'}`;
-        }).join('\n\n');
+        setConversationMessages(messagesData as NewMeMessageRow[]);
       } else {
         const { data: messagesData, error } = await supabase
           .from('messages')
           .select('*')
           .eq('session_id', session.id)
-          .order('timestamp', { ascending: true });
+          .order('ts', { ascending: true });
 
         if (error) throw error;
-        const conversationMessages = messagesData as MessageHistoryRow[];
-        transcript = conversationMessages.map(msg => {
-          const timestamp = new Date(msg.timestamp || '').toLocaleString();
-          const role = msg.role === 'user' ? 'User' :
-                       msg.role === 'assistant' ? 'AI Assistant' : 'System';
-          return `[${timestamp}] ${role}: ${msg.content}`;
-        }).join('\n\n');
+        setConversationMessages(messagesData as MessageHistoryRow[]);
       }
-      setConversationTranscript(transcript);
     } catch (error) {
       console.error("Error loading conversation transcript:", error);
-      setConversationTranscript("Failed to load transcript.");
+      toast.error("Failed to load transcript.");
     }
   };
 
   const downloadTranscript = () => {
-    if (!selectedSession || !conversationTranscript) return;
-    const blob = new Blob([conversationTranscript], { type: 'text/plain' });
+    if (!selectedSession || conversationMessages.length === 0) return;
+    
+    const transcript = conversationMessages.map(msg => {
+      if ('role' in msg && 'content' in msg) { // NewMeMessageRow
+        const timestamp = new Date(msg.timestamp || '').toLocaleString();
+        const role = msg.role === 'user' ? 'User' : 'AI Assistant';
+        return `[${timestamp}] ${role}: ${msg.content}`;
+      }
+      if ('sender' in msg && 'text_content' in msg) { // MessageHistoryRow
+        const timestamp = new Date(msg.ts || '').toLocaleString();
+        const role = msg.sender === 'user' ? 'User' : 'AI Assistant';
+        return `[${timestamp}] ${role}: ${msg.text_content || '[Audio message]'}`;
+      }
+      return '';
+    }).join('\n\n');
+
+    const blob = new Blob([transcript], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -239,88 +234,72 @@ export default function SessionsHistory() {
               <TableRow>
                 <TableHead>User</TableHead>
                 <TableHead>Agent</TableHead>
-                <TableHead>Messages</TableHead>
                 <TableHead>Duration</TableHead>
-                <TableHead>Cost/Tokens</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Started At</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>Created At</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredSessions.map((session) => (
-                      <TableRow key={session.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            {session.user_profiles?.avatar_url ? (
-                              <img
-                                src={session.user_profiles.avatar_url}
-                                alt="Avatar"
-                                className="h-6 w-6 rounded-full"
-                              />
-                            ) : (
-                              <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-xs">
-                                {session.user_profiles?.nickname?.[0]?.toUpperCase() || session.user_profiles?.email?.[0]?.toUpperCase() || 'U'}
-                              </div>
-                            )}
-                            <div className="font-medium">
-                                {session.user_profiles?.nickname || "Anonymous"}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {session.user_profiles?.email}
-                              </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="rounded-sm">Legacy</Badge> {session.agents?.name || "Default"}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <MessageCircle className="w-3 h-3" />
-                            {session.message_count}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {formatDuration(session.duration_seconds)}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {session.cost_usd !== null && (
-                            <div className="text-xs text-muted-foreground flex items-center gap-1">
-                              <DollarSign className="w-3 h-3" />
-                              {formatCost(session.cost_usd)}
-                            </div>
-                          )}
-                          {session.tokens_used !== null && (
-                            <div className="text-xs text-muted-foreground">
-                              {session.tokens_used || 0} tokens
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={
-                            session.status === "completed" ? "default" :
-                            session.status === "active" ? "secondary" : "destructive"
-                          }>
-                            {session.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {new Date(session.created_at).toLocaleDateString()}
-                          <div className="text-xs text-muted-foreground">
-                            {new Date(session.created_at).toLocaleTimeString()}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => viewConversation(session, false)} disabled={session.message_count === 0}>
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-              {filteredSessions.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No sessions found.</TableCell></TableRow>}
+              {filteredSessions.slice(0, 10).map((session) => (
+                <TableRow key={session.id}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {session.user_profiles?.avatar_url ? (
+                        <img
+                          src={session.user_profiles.avatar_url}
+                          alt="Avatar"
+                          className="h-6 w-6 rounded-full"
+                        />
+                      ) : (
+                        <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-xs">
+                          {session.user_profiles?.nickname?.[0]?.toUpperCase() || session.user_profiles?.email?.[0]?.toUpperCase() || 'U'}
+                        </div>
+                      )}
+                      <div className="font-medium">
+                        {session.user_profiles?.nickname || "Anonymous"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {session.user_profiles?.email}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="rounded-sm">Legacy</Badge> {session.agents?.name || "Default"}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {formatDuration(session.duration_seconds)}
+                    </div>
+                    {session.cost_usd !== null && (
+                      <div className="text-xs text-muted-foreground flex items-center gap-1">
+                        <DollarSign className="w-3 h-3" />
+                        {formatCost(session.cost_usd)}
+                      </div>
+                    )}
+                    {session.tokens_used !== null && (
+                      <div className="text-xs text-muted-foreground">
+                        {session.tokens_used || 0} tokens
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={
+                      session.status === "completed" ? "default" :
+                      session.status === "active" ? "secondary" : "destructive"
+                    }>
+                      {session.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {new Date(session.start_ts || '').toLocaleDateString()}
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(session.start_ts || '').toLocaleTimeString()}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filteredSessions.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No sessions found.</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
@@ -352,79 +331,73 @@ export default function SessionsHistory() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredNewMeConversations.map((conversation) => (
-                      <TableRow key={conversation.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            {conversation.user_profiles?.avatar_url ? (
-                              <img
-                                src={conversation.user_profiles.avatar_url}
-                                alt="Avatar"
-                                className="h-6 w-6 rounded-full"
-                              />
-                            ) : (
-                              <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-xs">
-                                {conversation.user_profiles?.nickname?.[0]?.toUpperCase() || conversation.user_profiles?.email?.[0]?.toUpperCase() || 'U'}
-                              </div>
-                            )}
-                            <div className="font-medium">
-                                {conversation.user_profiles?.nickname || "Anonymous"}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {conversation.user_profiles?.email}
-                              </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>{conversation.title || "Untitled"}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <MessageCircle className="w-3 h-3" />
-                            {conversation.message_count}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {new Date(conversation.created_at).toLocaleDateString()}
-                          <div className="text-xs text-muted-foreground">
-                            {new Date(conversation.created_at).toLocaleTimeString()}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            {conversation.emotional_tone && (
-                              <Badge variant="outline" className="mb-1">
-                                {conversation.emotional_tone}
-                              </Badge>
-                            )}
-                            {conversation.topics_discussed && Array.isArray(conversation.topics_discussed) && conversation.topics_discussed.length > 0 && (
-                              <div className="text-xs text-muted-foreground">
-                                {(conversation.topics_discussed as string[]).slice(0, 2).join(', ')}
-                                {(conversation.topics_discussed as string[]).length > 2 && '...'}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            {conversation.topics_discussed && Array.isArray(conversation.topics_discussed) && conversation.topics_discussed.length > 0 && (
-                              <div className="text-xs text-muted-foreground">
-                                {(conversation.topics_discussed as string[]).slice(0, 2).join(', ')}
-                                {(conversation.topics_discussed as string[]).length > 2 && '...'}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={conversation.ended_at ? "default" : "secondary"}>
-                            {conversation.ended_at ? "Completed" : "Active"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => viewConversation(conversation, true)} disabled={conversation.message_count === 0}>
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+              {filteredNewMeConversations.slice(0, 10).map((conversation) => (
+                <TableRow key={conversation.id}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {conversation.user_profiles?.avatar_url ? (
+                        <img
+                          src={conversation.user_profiles.avatar_url}
+                          alt="Avatar"
+                          className="h-6 w-6 rounded-full"
+                        />
+                      ) : (
+                        <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-xs">
+                          {conversation.user_profiles?.nickname?.[0]?.toUpperCase() || conversation.user_profiles?.email?.[0]?.toUpperCase() || 'U'}
+                        </div>
+                      )}
+                      <div className="font-medium">
+                        {conversation.user_profiles?.nickname || "Anonymous"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {conversation.user_profiles?.email}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>{conversation.title || "Untitled"}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <MessageCircle className="w-3 h-3" />
+                      {conversation.message_count}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {new Date(conversation.started_at || '').toLocaleDateString()}
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(conversation.started_at || '').toLocaleTimeString()}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      {conversation.emotional_tone && (
+                        <Badge variant="outline" className="mb-1">
+                          {conversation.emotional_tone}
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      {conversation.topics_discussed && Array.isArray(conversation.topics_discussed) && conversation.topics_discussed.length > 0 && (
+                        <div className="text-xs text-muted-foreground">
+                          {(conversation.topics_discussed as string[]).slice(0, 2).join(', ')}
+                          {(conversation.topics_discussed as string[]).length > 2 && '...'}
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={conversation.ended_at ? "default" : "secondary"}>
+                      {conversation.ended_at ? "Completed" : "Active"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="sm" onClick={() => viewConversation(conversation, true)} disabled={conversation.message_count === 0}>
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
               {filteredNewMeConversations.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No NewMe conversations found.</TableCell></TableRow>}
             </TableBody>
           </Table>
@@ -462,27 +435,29 @@ export default function SessionsHistory() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Session ID: <span className="font-mono text-xs">{selectedSession.id}</span></p>
-                    <p className="text-muted-foreground">Agent: {selectedSession.agents?.name || "Default"}</p>
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Clock className="w-3 h-3" />
-                      {selectedSession ? formatDuration(selectedSession.duration_seconds || null) : "N/A"}
-                    </div>
-                    {selectedSession && 'cost_usd' in selectedSession && (
+                    {'agents' in selectedSession && <p className="text-muted-foreground">Agent: {selectedSession.agents?.name || "Default"}</p>}
+                    {'duration_seconds' in selectedSession && (
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Clock className="w-3 h-3" />
+                        {formatDuration(selectedSession.duration_seconds || null)}
+                      </div>
+                    )}
+                    {'cost_usd' in selectedSession && (
                       <div className="text-xs text-muted-foreground flex items-center gap-1">
                         <DollarSign className="w-3 h-3" />
                         {formatCost(selectedSession.cost_usd || null)}
                       </div>
                     )}
-                    {selectedSession && 'tokens_used' in selectedSession && (
+                    {'tokens_used' in selectedSession && (
                       <div className="text-xs text-muted-foreground">
                         {selectedSession.tokens_used || 0} tokens
                       </div>
                     )}
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Status: <Badge variant={selectedSession.status === "completed" || selectedSession.ended_at ? "default" : "secondary"}>{selectedSession.status || (selectedSession.ended_at ? "Completed" : "Active")}</Badge></p>
-                    <p className="text-muted-foreground">Started: {new Date(selectedSession.created_at).toLocaleString()}</p>
-                    {selectedSession.ended_at && <p className="text-muted-foreground">Ended: {new Date(selectedSession.ended_at).toLocaleString()}</p>}
+                    <p className="text-muted-foreground">Status: <Badge variant={'status' in selectedSession && selectedSession.status === "completed" || 'ended_at' in selectedSession && selectedSession.ended_at ? "default" : "secondary"}>{'status' in selectedSession ? selectedSession.status : ('ended_at' in selectedSession && selectedSession.ended_at ? "Completed" : "Active")}</Badge></p>
+                    <p className="text-muted-foreground">Started: {new Date('start_ts' in selectedSession ? selectedSession.start_ts || '' : selectedSession.started_at || '').toLocaleString()}</p>
+                    {'ended_at' in selectedSession && selectedSession.ended_at && <p className="text-muted-foreground">Ended: {new Date(selectedSession.ended_at).toLocaleString()}</p>}
                     <Badge variant="outline">
                       {selectedSession.user_profiles?.subscription_tier || "discovery"}
                     </Badge>
@@ -501,81 +476,12 @@ export default function SessionsHistory() {
               </div>
             )}
             <h3 className="text-lg font-semibold mt-4 mb-2">Conversation Log:</h3>
-            {isNewMeConversation ? (
-              <div className="space-y-4">
-                {(conversationMessages as NewMeMessageRow[]).map((message, index) => (
-                      <div key={index} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[80%] p-3 rounded-lg ${
-                          message.sender === 'user'
-                            ? 'bg-primary text-primary-foreground'
-                            : message.sender === 'system'
-                            ? 'bg-muted/50 border border-border'
-                            : 'bg-muted text-muted-foreground'
-                        }`}>
-                          <div className="text-sm font-medium mb-1">
-                            {message.sender === 'user' ? 'User' :
-                             message.sender === 'assistant' ? 'AI Assistant' : 'System'}
-                          </div>
-                          <div className="text-sm whitespace-pre-wrap">
-                            {message.text_content || "Audio message"}
-                          </div>
-                          {message.audio_url && (
-                            <div className="mt-2">
-                              <audio controls className="w-full">
-                                <source src={message.audio_url} type="audio/mpeg" />
-                                Your browser does not support the audio element.
-                              </audio>
-                            </div>
-                          )}
-                          <div className="text-xs opacity-70 mt-1">
-                            {new Date(message.ts).toLocaleString()}
-                          </div>
-                          {message.emotion_detected && (
-                            <div className="mt-2">
-                              <Badge variant="outline" className="text-xs">
-                                {message.emotion_detected}
-                                {message.sentiment_score !== null && ` (${message.sentiment_score?.toFixed(2)})`}
-                              </Badge>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {(conversationMessages as MessageHistoryRow[]).map((message, index) => (
-                      <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[80%] p-3 rounded-lg ${
-                          message.role === 'user'
-                            ? 'bg-primary text-primary-foreground'
-                            : message.role === 'system'
-                            ? 'bg-muted/50 border border-border'
-                            : 'bg-muted text-muted-foreground'
-                        }`}>
-                          <div className="text-sm font-medium mb-1">
-                            {message.role === 'user' ? 'User' :
-                             message.role === 'assistant' ? 'AI Assistant' : 'System'}
-                          </div>
-                          <div className="text-sm whitespace-pre-wrap">
-                            {message.content}
-                          </div>
-                          <div className="text-xs opacity-70 mt-1">
-                            {new Date(message.timestamp || '').toLocaleString()}
-                          </div>
-                          {message.emotion_detected && (
-                            <div className="mt-2">
-                              <Badge variant="outline" className="text-xs">
-                                {message.emotion_detected}
-                                {message.sentiment_score !== null && ` (${message.sentiment_score?.toFixed(2)})`}
-                              </Badge>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-              </div>
-            )}
+            <Textarea
+              readOnly
+              value={conversationTranscript}
+              className="w-full h-64 bg-background"
+              rows={20}
+            />
           </div>
           <div className="flex justify-end gap-2 mt-4">
             <Button onClick={downloadTranscript} variant="outline">

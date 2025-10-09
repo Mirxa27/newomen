@@ -18,8 +18,8 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
   NavigationMenuLink,
-  navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
+import { navigationMenuTriggerStyle } from "@/lib/ui-variants";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { 
   Loader2, 
@@ -50,6 +50,7 @@ const memberNavigationItems = [
     items: [
       { name: "Dashboard", href: "/dashboard", icon: Home, description: "Your personal growth dashboard" },
       { name: "AI Chat", href: "/chat", icon: MessageCircle, description: "Connect with your AI companion" },
+      { name: "Voice Chat", href: "/chat/realtime", icon: MessageCircle, description: "Real-time voice conversation" },
       { name: "Wellness Library", href: "/wellness-library", icon: BookOpen, description: "Guided meditations and resources" },
       { name: "Assessments", href: "/assessments", icon: TestTube, description: "Personal growth assessments" },
     ]
@@ -173,11 +174,14 @@ export default function Header() {
             ) : (
               visitorNavItems.map((item) => (
                 <NavigationMenuItem key={item.name}>
-                  <Link to={item.href} legacyBehavior passHref>
-                    <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                  <NavigationMenuLink asChild>
+                    <Link
+                      to={item.href}
+                      className={navigationMenuTriggerStyle()}
+                    >
                       {item.name}
-                    </NavigationMenuLink>
-                  </Link>
+                    </Link>
+                  </NavigationMenuLink>
                 </NavigationMenuItem>
               ))
             )}

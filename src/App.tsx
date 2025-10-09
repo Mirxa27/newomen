@@ -15,6 +15,7 @@ const Auth = lazy(() => import("./pages/Auth"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Chat = lazy(() => import("./pages/Chat"));
+const RealtimeChatPage = lazy(() => import("./pages/RealtimeChatPage"));
 const CouplesChallenge = lazy(() => import("./pages/CouplesChallenge"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Profile = lazy(() => import("./pages/Profile"));
@@ -100,6 +101,11 @@ const App = () => (
           <Route path="/chat" element={
             <ProtectedRoute>
               <MainLayout><Chat /></MainLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/chat/realtime" element={
+            <ProtectedRoute>
+              <MainLayout><RealtimeChatPage /></MainLayout>
             </ProtectedRoute>
           } />
           <Route path="/wellness-library" element={
