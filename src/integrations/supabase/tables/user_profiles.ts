@@ -4,6 +4,7 @@ export type UserProfiles = {
     user_id: string | null;
     email: string;
     nickname: string | null;
+    frontend_name: string | null;
     avatar_url: string | null;
     subscription_tier: string | null;
     remaining_minutes: number | null;
@@ -20,6 +21,7 @@ export type UserProfiles = {
     user_id?: string | null;
     email: string;
     nickname?: string | null;
+    frontend_name?: string | null;
     avatar_url?: string | null;
     subscription_tier?: string | null;
     remaining_minutes?: number | null;
@@ -36,6 +38,7 @@ export type UserProfiles = {
     user_id?: string | null;
     email?: string;
     nickname?: string | null;
+    frontend_name?: string | null;
     avatar_url?: string | null;
     subscription_tier?: string | null;
     remaining_minutes?: number | null;

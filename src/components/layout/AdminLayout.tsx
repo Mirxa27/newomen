@@ -13,6 +13,7 @@ const adminNavItems = [
   { name: 'Live Sessions', path: '/admin/sessions-live' },
   { name: 'Session History', path: '/admin/sessions-history' },
   { name: 'User Management', path: '/admin/user-management' },
+  { name: 'Wellness Library', path: '/admin/wellness-library' },
   { name: 'Content Management', path: '/admin/content-management' },
   { name: 'Gamification', path: '/admin/gamification-settings' },
   { name: 'Branding', path: '/admin/branding' },

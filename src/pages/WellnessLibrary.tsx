@@ -17,6 +17,9 @@ interface Resource {
   category: string;
   duration: number;
   audio_url: string;
+  youtube_url?: string;
+  audio_type: 'file' | 'youtube';
+  youtube_audio_extracted: boolean;
   description: string;
 }
 
@@ -82,6 +85,13 @@ export default function WellnessLibrary() {
   };
 
   const handlePlay = async (resource: Resource) => {
+    if (resource.audio_type === 'youtube' && resource.youtube_url) {
+      // For YouTube audio, we'll use a different approach
+      // This is a placeholder - in a real implementation, you'd use a YouTube audio extraction service
+      toast.info("YouTube audio playback coming soon!");
+      return;
+    }
+
     if (currentlyPlaying === resource.id && isPlaying) {
       audioRef.current?.pause();
       setIsPlaying(false);
@@ -206,8 +216,11 @@ export default function WellnessLibrary() {
                     onClick={() => handlePlay(resource)}
                     className="flex-1 clay-button"
                     variant={currentlyPlaying === resource.id && isPlaying ? "secondary" : "default"}
+                    disabled={resource.audio_type === 'youtube' && !resource.youtube_audio_extracted}
                   >
-                    {currentlyPlaying === resource.id && isPlaying ? (
+                    {resource.audio_type === 'youtube' && !resource.youtube_audio_extracted ? (
+                      <><Clock className="w-4 h-4 mr-2" /> Processing...</>
+                    ) : currentlyPlaying === resource.id && isPlaying ? (
                       <><Pause className="w-4 h-4 mr-2" /> Pause</>
                     ) : (
                       <><Play className="w-4 h-4 mr-2" /> Play</>

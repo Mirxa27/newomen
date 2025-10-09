@@ -112,6 +112,11 @@ export function useUserProfile() {
     }
   }, [profile, updateProfile]);
 
+  const getDisplayName = useCallback(() => {
+    if (!profile) return 'Unknown User';
+    return profile.frontend_name || profile.nickname || 'Unknown User';
+  }, [profile]);
+
   return {
     loading,
     profile,
@@ -121,5 +126,6 @@ export function useUserProfile() {
     loadProfile,
     updateProfile,
     uploadAvatar,
+    getDisplayName,
   };
 }

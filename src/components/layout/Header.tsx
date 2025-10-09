@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import {
   Menu,
   X,
@@ -31,23 +32,12 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-interface UserProfile {
-  id: string;
-  user_id: string;
-  nickname?: string;
-  avatar_url?: string;
-  subscription_tier?: string;
-  remaining_minutes?: number;
-  role?: string;
-}
-
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [profileLoading, setProfileLoading] = useState(false);
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdmin();
+  const { profile, loading: profileLoading, getDisplayName } = useUserProfile();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -61,37 +51,6 @@ export default function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadProfile = async () => {
-      if (!user) {
-        setProfile(null);
-        return;
-      }
-
-      setProfileLoading(true);
-      const { data, error } = await supabase
-        .from("user_profiles")
-        .select("id, user_id, nickname, avatar_url, subscription_tier, remaining_minutes, role")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (!isMounted) return;
-
-      if (error) {
-        console.error("Error loading profile", error);
-      }
-
-      setProfile(data ?? null);
-      setProfileLoading(false);
-    };
-
-    loadProfile();
-    return () => {
-      isMounted = false;
-    };
-  }, [user]);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -131,6 +90,7 @@ export default function Header() {
 
   const subscriptionTier = profile?.subscription_tier?.replace(/\b\w/g, (char) => char.toUpperCase()) ?? "Discovery";
   const remainingMinutes = profile?.remaining_minutes ?? 0;
+  const displayName = getDisplayName();
 
   return (
     <header
@@ -186,11 +146,11 @@ export default function Header() {
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={profile?.avatar_url} />
                     <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white">
-                      {profile?.nickname?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
+                      {(displayName || user?.email || "U")[0].toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-sm font-medium hidden lg:block">
-                    {profile?.nickname || "User"}
+                    {displayName}
                   </span>
                 </Button>
               </DropdownMenuTrigger>

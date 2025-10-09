@@ -15,6 +15,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import type { Database } from "@/integrations/supabase/types";
 import { trackDailyLogin } from "@/lib/gamification-events";
 
@@ -29,37 +30,15 @@ const AFFIRMATIONS = [
 const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<Database["public"]["Tables"]["user_profiles"]["Row"] | null>(null);
+  const { profile, loading, getDisplayName } = useUserProfile();
   const [levelThresholds, setLevelThresholds] = useState<Database["public"]["Tables"]["level_thresholds"]["Row"][]>([]);
   const [affirmation, setAffirmation] = useState("");
 
   useEffect(() => {
-    let isMounted = true;
+    const loadGamificationData = async () => {
+      if (!profile) return;
 
-    const loadProfileAndGamificationData = async () => {
       try {
-        setLoading(true);
-
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (!user) {
-          navigate("/auth");
-          return;
-        }
-
-        const { data: profileData, error: profileError } = await supabase
-          .from("user_profiles")
-          .select("*")
-          .eq("user_id", user.id)
-          .single();
-
-        if (profileError) {
-          throw profileError;
-        }
-
         const { data: thresholdsData, error: thresholdsError } = await supabase
           .from("level_thresholds")
           .select("*")
@@ -69,33 +48,24 @@ const Dashboard = () => {
           throw thresholdsError;
         }
 
-        if (isMounted) {
-          setProfile(profileData);
-          setLevelThresholds(thresholdsData);
-          // Track daily login after profile is loaded
-          void trackDailyLogin(user.id);
-        }
+        setLevelThresholds(thresholdsData);
+        // Track daily login after profile is loaded
+        void trackDailyLogin(profile.user_id!);
       } catch (error) {
-        console.error("Error loading dashboard data:", error);
+        console.error("Error loading gamification data:", error);
         toast({
-          title: "Unable to load dashboard data",
-          description: "Please refresh or try signing in again.",
+          title: "Unable to load gamification data",
+          description: "Some features may not work correctly.",
           variant: "destructive",
         });
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
       }
     };
 
-    void loadProfileAndGamificationData();
+    if (profile) {
+      void loadGamificationData();
+    }
     setAffirmation(AFFIRMATIONS[Math.floor(Math.random() * AFFIRMATIONS.length)]);
-
-    return () => {
-      isMounted = false;
-    };
-  }, [navigate, toast]);
+  }, [profile, toast]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -136,16 +106,18 @@ const Dashboard = () => {
       : 0;
 
 
+  const displayName = getDisplayName();
+
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto space-y-8">
         <div className="flex justify-between items-center">
           <div className="space-y-1">
             <h1 className="text-4xl font-bold gradient-text">
-              Welcome back, {profile?.nickname || "Friend"}!
+              Welcome back, {displayName}!
             </h1>
             <p className="text-xl text-muted-foreground flex items-center gap-2">
-              <Zap className="w-5 h-5 text-accent" /> 
+              <Zap className="w-5 h-5 text-accent" />
               <span>{affirmation}</span>
             </p>
           </div>

@@ -42,6 +42,7 @@ const VoiceTraining = lazy(() => import("./pages/admin/VoiceTraining"));
 const SessionsLive = lazy(() => import("./pages/admin/SessionsLive"));
 const SessionsHistory = lazy(() => import("./pages/admin/SessionsHistory"));
 const UserManagement = lazy(() => import("./pages/admin/UserManagement"));
+const WellnessLibraryManagement = lazy(() => import("./pages/admin/WellnessLibraryManagement"));
 const ContentManagement = lazy(() => import("./pages/admin/ContentManagement"));
 const GamificationSettings = lazy(() => import("./pages/admin/GamificationSettings"));
 const BrandingAssetManagement = lazy(() => import("./pages/admin/BrandingAssetManagement"));
@@ -144,6 +145,7 @@ const App = () => (
             <Route path="sessions-live" element={<SessionsLive />} />
             <Route path="sessions-history" element={<SessionsHistory />} />
             <Route path="user-management" element={<UserManagement />} />
+            <Route path="wellness-library" element={<WellnessLibraryManagement />} />
             <Route path="content-management" element={<ContentManagement />} />
             <Route path="gamification-settings" element={<GamificationSettings />} />
             <Route path="branding" element={<BrandingAssetManagement />} />

@@ -16,6 +16,7 @@ interface UserProfile {
   user_id: string;
   email: string;
   nickname: string | null;
+  frontend_name: string | null;
   role: string;
   subscription_tier: string | null;
   remaining_minutes: number | null;
@@ -31,6 +32,17 @@ interface EditUserForm {
   subscription_tier: string;
   remaining_minutes: number;
   nickname: string;
+  frontend_name: string;
+}
+
+// Type for RPC parameters to avoid TypeScript errors
+interface RpcParams {
+  [key: string]: unknown;
+}
+
+// Type for Supabase RPC function with proper typing
+interface TypedSupabaseClient {
+  rpc: (fn: string, params?: RpcParams) => Promise<{ data: unknown; error: unknown }>;
 }
 
 export default function AdminUserManagement() {
@@ -44,13 +56,14 @@ export default function AdminUserManagement() {
     role: 'member',
     subscription_tier: 'discovery',
     remaining_minutes: 10,
-    nickname: ''
+    nickname: '',
+    frontend_name: ''
   });
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('admin_get_user_profiles', {
+      const { data, error } = await (supabase as unknown as TypedSupabaseClient).rpc('admin_get_user_profiles', {
         limit_count: 100,
         offset_count: 0,
         search_term: searchTerm || null
@@ -76,7 +89,8 @@ export default function AdminUserManagement() {
       role: user.role,
       subscription_tier: user.subscription_tier || 'discovery',
       remaining_minutes: user.remaining_minutes || 0,
-      nickname: user.nickname || ''
+      nickname: user.nickname || '',
+      frontend_name: user.frontend_name || ''
     });
     setDialogOpen(true);
   };
@@ -86,12 +100,13 @@ export default function AdminUserManagement() {
     setSaving(true);
 
     try {
-      const { data, error } = await supabase.rpc('admin_update_user_profile', {
+      const { data, error } = await (supabase as unknown as TypedSupabaseClient).rpc('admin_update_user_profile', {
         target_user_id: selectedUser.user_id,
         new_role: formData.role,
         new_subscription_tier: formData.subscription_tier,
         new_remaining_minutes: formData.remaining_minutes,
-        new_nickname: formData.nickname || null
+        new_nickname: formData.nickname || null,
+        new_frontend_name: formData.frontend_name || null
       });
 
       if (error) throw error;
@@ -206,8 +221,11 @@ export default function AdminUserManagement() {
                     <TableRow key={user.id}>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{user.nickname || 'No nickname'}</div>
+                          <div className="font-medium">{user.frontend_name || user.nickname || 'No display name'}</div>
                           <div className="text-sm text-muted-foreground">{user.email}</div>
+                          {user.frontend_name && user.nickname && user.frontend_name !== user.nickname && (
+                            <div className="text-xs text-gray-500">Original: {user.nickname}</div>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -265,6 +283,19 @@ export default function AdminUserManagement() {
                 onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
                 placeholder="User's display name"
               />
+            </div>
+
+            <div>
+              <Label htmlFor="frontend_name">Frontend Display Name</Label>
+              <Input
+                id="frontend_name"
+                value={formData.frontend_name}
+                onChange={(e) => setFormData({ ...formData, frontend_name: e.target.value })}
+                placeholder="Custom display name for frontend (optional)"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                If set, this will be shown instead of the nickname throughout the app
+              </p>
             </div>
 
             <div>
