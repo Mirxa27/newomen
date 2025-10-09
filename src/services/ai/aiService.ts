@@ -4,7 +4,7 @@ import { AIConfigService, AIConfiguration } from './configService';
 import { AIConfigurations } from '@/integrations/supabase/tables/ai_configurations';
 import { AssessmentsEnhanced } from '@/integrations/supabase/tables/assessments_enhanced';
 import { ChallengeTemplates } from '@/integrations/supabase/tables/challenge_templates';
-import { Json } from '@/integrations/supabase/types';
+import { Json, Tables } from '@/integrations/supabase/types';
 
 export interface AIResponse {
   text?: string; // Made optional
@@ -50,8 +50,10 @@ export class AIService {
 
       if (error) throw error;
 
+      const configs = data as Tables<'ai_configurations'>['Row'][];
+
       this.configurations.clear();
-      data?.forEach(config => {
+      configs?.forEach(config => {
         this.configurations.set(config.id, {
           id: config.id,
           name: config.name,
@@ -81,7 +83,7 @@ export class AIService {
       });
 
       // Also load the NewMe configuration with the system prompt
-      const newMeConfig = data?.find(c => c.name === 'NewMe Voice Agent');
+      const newMeConfig = configs?.find(c => c.name === 'NewMe Voice Agent');
       if (newMeConfig) {
         const baseConfig = this.configurations.get(newMeConfig.id);
         if (baseConfig) {

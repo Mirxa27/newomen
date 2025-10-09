@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logging';
 import { AIConfigurations } from '@/integrations/supabase/tables/ai_configurations';
-import { Json } from '@/integrations/supabase/types';
+import { Json, Tables } from '@/integrations/supabase/types';
 import { PostgrestError } from '@supabase/supabase-js'; // Import PostgrestError
 
 export interface AIConfiguration {
@@ -55,8 +55,10 @@ export class AIConfigService {
 
       if (error) throw error;
 
+      const configs = data as Tables<'ai_configurations'>['Row'][];
+
       this.configurations.clear();
-      data?.forEach(config => {
+      configs?.forEach(config => {
         this.configurations.set(config.id, {
           id: config.id,
           name: config.name,
@@ -85,7 +87,7 @@ export class AIConfigService {
         });
       });
 
-      const newMeConfig = data?.find(c => c.name === 'NewMe Voice Agent');
+      const newMeConfig = configs?.find(c => c.name === 'NewMe Voice Agent');
       if (newMeConfig) {
         const baseConfig = this.configurations.get(newMeConfig.id);
         if (baseConfig) {
@@ -115,11 +117,11 @@ export class AIConfigService {
       });
 
       if (error) {
-        logger.error(`Error fetching AI config for service ${serviceType}:`, error as Record<string, unknown>);
+        logger.error(`Error fetching AI config for service ${serviceType}:`, error as unknown as Record<string, unknown>);
         return null;
       }
 
-      const configData = data; // RPC returns a single row or null, not an array
+      const configData = data as any; // RPC returns a single row or null, not an array
       if (!configData) return this.getDefaultConfiguration();
 
       return {

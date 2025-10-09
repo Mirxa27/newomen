@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, ArrowLeft, Send, Heart, Users, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { trackCouplesChallengeCompletion } from "@/lib/gamification-events";
-import type { Json, TablesUpdate, TablesInsert } from "@/integrations/supabase/types";
+import type { Json, Tables, TablesUpdate, TablesInsert } from "@/integrations/supabase/types";
 import { CouplesChallenges } from "@/integrations/supabase/tables/couples_challenges";
 import { ChallengeTemplates } from "@/integrations/supabase/tables/challenge_templates";
 import { UserProfiles } from "@/integrations/supabase/tables/user_profiles"; // Import UserProfiles
@@ -20,12 +20,14 @@ interface Question {
   text: string;
 }
 
-interface ChallengeTemplate extends Omit<ChallengeTemplates['Row'], 'questions'> {
+interface ChallengeTemplate extends Omit<Tables<'challenge_templates'>['Row'], 'questions'> {
   questions: Question[]; // Assuming questions is JSON
 }
 
-interface Challenge extends Omit<CouplesChallenges['Row'], 'responses'> {
+interface Challenge extends Omit<Tables<'couples_challenges'>['Row'], 'responses' | 'question_set'> {
   responses: Json;
+  question_set: { questions: Question[] };
+  challenge_templates: ChallengeTemplate;
 }
 
 export default function CouplesChallenge() {
@@ -64,9 +66,10 @@ export default function CouplesChallenge() {
         return;
       }
 
-      setChallenge(challengeData as unknown as Challenge);
-      setTemplate(challengeData.challenge_templates as unknown as ChallengeTemplate);
-      setResponses((challengeData.responses as Record<string, unknown>) || {});
+      const typedChallenge = challengeData as unknown as Challenge;
+      setChallenge(typedChallenge);
+      setTemplate(typedChallenge.challenge_templates);
+      setResponses((typedChallenge.responses as Record<string, unknown>) || {});
     } catch (err) {
       console.error("Error loading challenge:", err);
       setError("Failed to load the challenge. It might not exist or you may not have access.");

@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { NewmeConversations } from '@/integrations/supabase/tables/newme_conversations';
 import { UserProfiles } from '@/integrations/supabase/tables/user_profiles';
 import { NewmeMessages } from '@/integrations/supabase/tables/newme_messages';
-import { Json } from '@/integrations/supabase/types';
+import { Json, Tables, TablesInsert } from '@/integrations/supabase/types';
 
 export interface Message { // Exported Message interface
   id: string;
@@ -17,7 +17,7 @@ export interface Message { // Exported Message interface
 }
 
 interface ChatState {
-  conversation: NewmeConversations['Row'] | null;
+  conversation: Tables<'newme_conversations'>['Row'] | null;
   messages: Message[];
   input: string;
   setInput: Dispatch<SetStateAction<string>>;
@@ -38,7 +38,7 @@ interface ChatState {
 }
 
 export function useChat(initialConversationId?: string): ChatState {
-  const [conversation, setConversation] = useState<NewmeConversations['Row'] | null>(null);
+  const [conversation, setConversation] = useState<Tables<'newme_conversations'>['Row'] | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -80,13 +80,14 @@ export function useChat(initialConversationId?: string): ChatState {
       }
       setConversation(data);
 
-      const { data: msgs, error: msgsError } = await supabase
+      const { data: msgsData, error: msgsError } = await supabase
         .from('newme_messages')
         .select('*')
         .eq('conversation_id', convId)
         .order('ts', { ascending: true });
 
       if (msgsError) throw msgsError;
+      const msgs = msgsData as Tables<'newme_messages'>['Row'][];
       setMessages(msgs.map(m => ({
         id: m.id,
         content: m.text_content || '',
@@ -117,7 +118,7 @@ export function useChat(initialConversationId?: string): ChatState {
 
       const { data: newConv, error: newConvError } = await supabase
         .from('newme_conversations')
-        .insert({ user_id: user.id, title: 'New Conversation' } as NewmeConversations['Insert'])
+        .insert({ user_id: user.id, title: 'New Conversation' } as TablesInsert<'newme_conversations'>)
         .select()
         .single();
 
@@ -153,7 +154,7 @@ export function useChat(initialConversationId?: string): ChatState {
         return;
       }
 
-      const { data: existingConversations, error: convError } = await supabase
+      const { data: existingConversationsData, error: convError } = await supabase
         .from('newme_conversations')
         .select('*')
         .eq('user_id', user.id)
@@ -161,6 +162,8 @@ export function useChat(initialConversationId?: string): ChatState {
         .limit(1);
 
       if (convError) throw convError;
+      
+      const existingConversations = existingConversationsData as Tables<'newme_conversations'>['Row'][];
 
       if (existingConversations && existingConversations.length > 0) {
         await loadConversation(existingConversations[0].id);

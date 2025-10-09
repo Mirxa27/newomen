@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 import { WellnessResources } from "@/integrations/supabase/tables/wellness_resources";
 import { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type WellnessResource = WellnessResources['Row'];
 

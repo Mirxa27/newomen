@@ -12,7 +12,7 @@ import type { Database, TablesUpdate } from "@/integrations/supabase/types";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
-type LevelThreshold = Database["public"]["Tables"]["level_thresholds"];
+type LevelThreshold = Database["public"]["Tables"]["level_thresholds"]['Row'];
 
 export default function Profile() {
   const {
