@@ -91,8 +91,8 @@ export class AIConfigService {
   public async getAIConfigForService(serviceType: string, serviceId?: string): Promise<AIConfiguration | null> {
     try {
       const { data, error } = await supabase.rpc('get_ai_config_for_service', {
-        p_service_type: serviceType,
-        p_service_id: serviceId,
+        service_type_param: serviceType,
+        service_id_param: serviceId,
       });
 
       if (error) {

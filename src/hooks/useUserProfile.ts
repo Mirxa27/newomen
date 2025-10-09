@@ -30,7 +30,7 @@ export function useUserProfile() {
         .single();
 
       if (profileError) {
-        if (profileError.code === 'PGRST116') {
+        if (profileError.code === 'PGRST116') { // No profile found, create one
           const { data: newProfile, error: insertError } = await supabase
             .from('user_profiles')
             .insert({ user_id: user.id, email: user.email || '' } as TablesInsert<'user_profiles'>)
@@ -59,13 +59,15 @@ export function useUserProfile() {
 
   useEffect(() => {
     void fetchProfile();
-    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION') {
         void fetchProfile();
       } else if (event === 'SIGNED_OUT') {
         setProfile(null);
       }
     });
+
     return () => {
       authListener.subscription.unsubscribe();
     };

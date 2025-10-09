@@ -70,7 +70,7 @@ export default function AssessmentsOptimized() {
               <BarChart className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.total_assessments_taken || 0}</div>
+              <div className="text-2xl font-bold">{stats?.total_attempts || 0}</div>
             </CardContent>
           </Card>
           <Card className="glass-card">
@@ -79,7 +79,7 @@ export default function AssessmentsOptimized() {
               <CheckCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.total_assessments_completed || 0}</div>
+              <div className="text-2xl font-bold">{stats?.total_completed || 0}</div>
             </CardContent>
           </Card>
           <Card className="glass-card">
@@ -88,7 +88,7 @@ export default function AssessmentsOptimized() {
               <Brain className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.average_assessment_score?.toFixed(1) || 'N/A'}%</div>
+              <div className="text-2xl font-bold">{stats?.average_score?.toFixed(1) || 'N/A'}%</div>
             </CardContent>
           </Card>
         </div>

@@ -215,7 +215,7 @@ export const updateUserAssessmentProgress = async (
   if (progressError && progressError.code !== 'PGRST116') throw progressError;
 
   if (progress) {
-    const bestScore = Math.max(progress.best_score || 0, result.percentage_score);
+    const bestScore = Math.max(progress.best_score || 0, result.percentage_score || 0);
     const isCompleted = progress.is_completed || result.is_passed;
 
     const { error } = await supabase
@@ -250,7 +250,7 @@ export const submitAssessmentResponses = async (
   assessmentId: string,
   userId: string,
   answers: Record<string, string>
-) => {
+): Promise<{ success: boolean; result?: Tables<'assessment_results'> | null; analysis?: AIAnalysisResult; error?: string }> => {
   try {
     const assessmentData = await getAssessmentAndConfig(assessmentId);
     const attempt = await createNewAttempt(assessmentId, userId, answers as unknown as Json);

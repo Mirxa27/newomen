@@ -48,14 +48,14 @@ export function useCouplesChallenge() {
 
   const updateChallengeStatus = useCallback(async (challengeId: string, status: ChallengeStatus, partnerId?: string) => {
     try {
-      const updates: TablesUpdate<'couples_challenges'> = { status };
+      const updates: Partial<CouplesChallenge> = { status };
       if (partnerId) {
         updates.partner_id = partnerId;
       }
       
       const { error } = await supabase
         .from('couples_challenges')
-        .update(updates)
+        .update(updates as TablesUpdate<'couples_challenges'>)
         .eq('id', challengeId);
 
       if (error) throw error;
@@ -115,7 +115,6 @@ export function useCouplesChallenge() {
         status: 'pending',
         question_set: template.questions,
         responses: {},
-        challenge_template_id: templateId,
       };
 
       const { data: createdChallenge, error: createError } = await supabase

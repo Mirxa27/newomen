@@ -7,25 +7,19 @@ import { Loader2, MessageSquare, Clock, User, Bot } from "lucide-react";
 import { toast } from "sonner";
 import { Tables } from "@/integrations/supabase/types";
 
-// Corrected types using intersections instead of invalid interface extensions
 type SessionWithUser = Tables<'sessions'> & {
   user_profiles: Tables<'user_profiles'> | null;
-};
-type SessionWithUserAndAgent = SessionWithUser & {
   agents: Tables<'agents'> | null;
 };
 type NewMeConversationWithUser = Tables<'newme_conversations'> & {
   user_profiles: Tables<'user_profiles'> | null;
-};
-type NewMeConversationWithUserAndAgent = NewMeConversationWithUser & {
   agents: Tables<'agents'> | null;
 };
 
-// Define types for message rows based on schema
 type NewMeMessageRow = Tables<'newme_messages'>;
 type MessageHistoryRow = Tables<'messages'>;
 
-type CombinedSession = SessionWithUserAndAgent | NewMeConversationWithUserAndAgent;
+type CombinedSession = SessionWithUser | NewMeConversationWithUser;
 
 export default function SessionsHistory() {
   const [sessions, setSessions] = useState<CombinedSession[]>([]);
@@ -46,7 +40,7 @@ export default function SessionsHistory() {
 
       const { data: newmeConversations, error: newmeError } = await supabase
         .from("newme_conversations")
-        .select("*, user_profiles(*), agents(*)")
+        .select("*, user_profiles(*), agents:id(*)") // Assuming no direct agent link
         .order("created_at", { ascending: false });
 
       if (newmeError) throw newmeError;
@@ -75,7 +69,7 @@ export default function SessionsHistory() {
     setSelectedSession(session);
     setLoadingMessages(true);
     try {
-      if ('start_ts' in session) { // It's a realtime session
+      if ('start_ts' in session) {
         const { data, error } = await supabase
           .from("messages")
           .select("*")
@@ -83,12 +77,12 @@ export default function SessionsHistory() {
           .order("ts", { ascending: true });
         if (error) throw error;
         setSessionMessages(data || []);
-      } else { // It's a NewMe conversation
+      } else {
         const { data, error } = await supabase
           .from("newme_messages")
           .select("*")
           .eq("conversation_id", session.id)
-          .order("ts", { ascending: true });
+          .order("timestamp", { ascending: true });
         if (error) throw error;
         setSessionMessages(data || []);
       }
@@ -108,31 +102,16 @@ export default function SessionsHistory() {
       return <div className="text-center text-muted-foreground p-4">No messages in this session.</div>;
     }
 
-    if (selectedSession && 'start_ts' in selectedSession) {
-      // Realtime session messages
-      return (sessionMessages as MessageHistoryRow[]).map((msg) => (
-        <div key={msg.id} className="p-3 border-b">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            {msg.sender === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-            <span>{msg.sender === 'user' ? selectedSession.user_profiles?.nickname || 'User' : selectedSession.agents?.name || 'Agent'}</span>
-            <span className="text-xs text-muted-foreground font-normal">{new Date(msg.ts).toLocaleString()}</span>
-          </div>
-          <p className="text-sm mt-1 ml-6">{msg.text_content}</p>
+    return sessionMessages.map((msg: any) => (
+      <div key={msg.id} className="p-3 border-b">
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          {msg.sender === 'user' || msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+          <span>{msg.sender === 'user' || msg.role === 'user' ? selectedSession?.user_profiles?.nickname || 'User' : 'Agent'}</span>
+          <span className="text-xs text-muted-foreground font-normal">{new Date(msg.ts || msg.timestamp).toLocaleString()}</span>
         </div>
-      ));
-    } else {
-      // NewMe conversation messages
-      return (sessionMessages as NewMeMessageRow[]).map((msg) => (
-        <div key={msg.id} className="p-3 border-b">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            {msg.sender === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-            <span>{msg.sender === 'user' ? selectedSession?.user_profiles?.nickname || 'User' : selectedSession?.agents?.name || 'Agent'}</span>
-            <span className="text-xs text-muted-foreground font-normal">{new Date(msg.ts || 0).toLocaleString()}</span>
-          </div>
-          <p className="text-sm mt-1 ml-6">{msg.text_content}</p>
-        </div>
-      ));
-    }
+        <p className="text-sm mt-1 ml-6">{msg.text_content || msg.content}</p>
+      </div>
+    ));
   };
 
   const renderSessionDetails = () => {
@@ -148,18 +127,15 @@ export default function SessionsHistory() {
             <p><strong>Type:</strong> Realtime Voice</p>
             <p><strong>Status:</strong> <Badge variant={selectedSession.status === 'completed' ? 'default' : 'secondary'}>{selectedSession.status}</Badge></p>
             <p><strong>Duration:</strong> {selectedSession.duration_seconds ? `${selectedSession.duration_seconds}s` : 'N/A'}</p>
-            <p><strong>Cost:</strong> ${selectedSession.cost_usd?.toFixed(4) || '0.00'}</p>
-            <p><strong>Tokens Used:</strong> {selectedSession.tokens_used || 0}</p>
             <p><strong>Started:</strong> {new Date(selectedSession.start_ts || 0).toLocaleString()}</p>
             <p><strong>Ended:</strong> {selectedSession.end_ts ? new Date(selectedSession.end_ts).toLocaleString() : 'N/A'}</p>
           </>
         ) : (
           <>
             <p><strong>Type:</strong> NewMe Chat</p>
-            <p><strong>Title:</strong> {selectedSession.title}</p>
+            <p><strong>Summary:</strong> {selectedSession.summary}</p>
             <p><strong>Message Count:</strong> {selectedSession.message_count}</p>
             <p><strong>Started:</strong> {new Date(selectedSession.created_at || 0).toLocaleString()}</p>
-            <p><strong>Last Message:</strong> {selectedSession.last_message_at ? new Date(selectedSession.last_message_at).toLocaleString() : 'N/A'}</p>
             <p><strong>Emotional Tone:</strong> {selectedSession.emotional_tone || 'N/A'}</p>
             <p><strong>Topics:</strong> {Array.isArray(selectedSession.topics_discussed) ? selectedSession.topics_discussed.join(', ') : 'N/A'}</p>
           </>

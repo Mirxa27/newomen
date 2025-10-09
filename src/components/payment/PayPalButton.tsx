@@ -12,7 +12,6 @@ interface PayPalButtonProps {
 }
 
 interface PayPalCreateOrderData {
-  // PayPal create order data structure
   [key: string]: unknown;
 }
 
@@ -25,30 +24,32 @@ interface PayPalOnApproveData {
 export const PayPalButton = ({ amount, currency = 'USD', onSuccess, onError, tier }: PayPalButtonProps) => {
   const { user } = useAuth();
 
-  const createOrder = (_data: PayPalCreateOrderData, _actions: Record<string, unknown>): Promise<string> => {
-    return supabase.functions.invoke('paypal-create-order', {
-      body: { tier },
-    }).then((res) => {
-      if (res.error) {
-        console.error('Error creating order:', res.error);
-        return '';
-      }
-      return res.data.orderID;
-    });
+  const createOrder = async (_data: PayPalCreateOrderData, _actions: Record<string, unknown>): Promise<string> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('paypal-create-order', {
+        body: { tier },
+      });
+      if (error) throw error;
+      if (!data || !data.orderID) throw new Error("Order ID not returned from function.");
+      return data.orderID;
+    } catch (e) {
+      console.error('Error creating order:', e);
+      return '';
+    }
   };
 
-  const onApprove = (data: PayPalOnApproveData, _actions: Record<string, unknown>): Promise<void> => {
-    return supabase.functions.invoke('paypal-capture-order', {
-      body: { orderID: data.orderID, tier, userId: user?.id },
-    }).then((res) => {
-      if (res.error) {
-        console.error('Error capturing order:', res.error);
-        // Handle error, show message to user
-      } else {
-        console.log('Order captured:', res.data);
-        // Handle success, update UI, show confirmation
-      }
-    });
+  const onApprove = async (data: PayPalOnApproveData, _actions: Record<string, unknown>): Promise<void> => {
+    try {
+      const { error } = await supabase.functions.invoke('paypal-capture-order', {
+        body: { orderID: data.orderID, tier, userId: user?.id },
+      });
+      if (error) throw error;
+      console.log('Order captured successfully');
+      // Handle success, update UI, show confirmation
+    } catch (e) {
+      console.error('Error capturing order:', e);
+      // Handle error, show message to user
+    }
   };
 
   return (

@@ -119,7 +119,7 @@ export default function AIConfigurationManager() {
       if (isSuccess) {
         await supabase
           .from('ai_configurations')
-          .update({ test_status: 'success', last_tested: new Date().toISOString() } as TablesUpdate<'ai_configurations'>)
+          .update({ test_status: 'success', last_tested_at: new Date().toISOString() } as TablesUpdate<'ai_configurations'>)
           .eq('id', config.id);
         toast.success(`Test successful for ${config.name}`);
       } else {
@@ -128,7 +128,7 @@ export default function AIConfigurationManager() {
     } catch (error) {
       await supabase
         .from('ai_configurations')
-        .update({ test_status: 'failed', last_tested: new Date().toISOString() } as TablesUpdate<'ai_configurations'>)
+        .update({ test_status: 'failed', last_tested_at: new Date().toISOString() } as TablesUpdate<'ai_configurations'>)
         .eq('id', config.id);
       toast.error(`Test failed for ${config.name}: ${(error as Error).message}`);
     } finally {

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Users, Clock, MessageSquare, BarChart, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Tables } from "@/integrations/supabase/types";
+import { Button } from "@/components/ui/button";
 
 type Session = Tables<'sessions'>;
 type NewMeConversation = Tables<'newme_conversations'>;

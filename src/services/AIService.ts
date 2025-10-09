@@ -72,7 +72,7 @@ export class AIService {
           user_prompt_template: config.user_prompt_template,
           created_by: config.created_by,
           test_status: config.test_status,
-          last_tested: config.last_tested,
+          last_tested: config.last_tested_at,
           is_active: config.is_active,
           description: config.description,
         });

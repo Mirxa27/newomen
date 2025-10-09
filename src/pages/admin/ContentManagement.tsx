@@ -71,7 +71,7 @@ export default function ContentManagement() {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     try {
       const { error } = await supabase.from('affirmations').delete().eq('id', id);
       if (error) throw error;

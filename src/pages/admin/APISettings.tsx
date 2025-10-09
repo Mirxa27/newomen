@@ -78,7 +78,7 @@ export default function APISettings() {
       } else {
         const { data, error } = await supabase
           .from('api_integrations')
-          .insert([configData] as TablesInsert<'api_integrations'>)
+          .insert([configData] as TablesInsert<'api_integrations'>[])
           .select()
           .single();
         if (error) throw error;
@@ -107,7 +107,7 @@ export default function APISettings() {
       } else {
         const { data, error } = await supabase
           .from('ai_configurations')
-          .insert([configData] as TablesInsert<'ai_configurations'>)
+          .insert([configData] as TablesInsert<'ai_configurations'>[])
           .select()
           .single();
         if (error) throw error;

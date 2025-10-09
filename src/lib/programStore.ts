@@ -63,7 +63,7 @@ export const useProgramStore = create<ProgramState>((set, get) => ({
         .eq('program_id', programId)
         .single();
 
-      if (progressError && progressError.code !== 'PGRST116') {
+      if (progressError && progressError.code !== 'PGRST116') { // Ignore "no rows found"
         throw progressError;
       }
 
@@ -126,21 +126,20 @@ export const useProgramStore = create<ProgramState>((set, get) => ({
 
     const { error } = await supabase
       .from('assessment_results')
-      .insert({
-        user_id: user.id,
-        assessment_id: assessmentId,
-        answers,
-        ai_insights: analysis,
-        raw_score: analysis.score,
-        percentage_score: analysis.score,
-        attempt_id: 'placeholder-attempt-id', // This should come from an attempt record
-      } as TablesInsert<'assessment_results'>);
+        .insert({
+          user_id: user.id,
+          assessment_id: assessmentId,
+          answers,
+          score: analysis.score,
+          completed_at: new Date().toISOString(),
+        } as TablesInsert<'assessment_results'>);
 
     if (error) {
       set({ error: error.message });
     }
   },
 
+  // Placeholder implementations for missing methods
   addAnswer: (answer) => set(state => ({
     userProgress: {
       ...state.userProgress,
@@ -152,7 +151,7 @@ export const useProgramStore = create<ProgramState>((set, get) => ({
   quitProgram: () => set({ activeProgram: null }),
   generateAIReport: async () => {
     set({ isAnalyzing: true });
-    await new Promise(res => setTimeout(res, 1000));
+    await new Promise(res => setTimeout(res, 1000)); // Simulate API call
     set({ isAnalyzing: false, finalReport: { summary: 'AI Generated Report', strengths: ['Good listener'], growthAreas: ['More detail'], recommendations: ['Practice more'] } });
   },
   resetReport: () => set({ finalReport: null }),

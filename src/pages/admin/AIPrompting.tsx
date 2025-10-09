@@ -20,7 +20,7 @@ export default function AIPrompting() {
   const [formData, setFormData] = useState<Partial<Prompt>>({
     name: '',
     content: {},
-    status: 'draft',
+    status: 'active',
   });
 
   const loadPrompts = useCallback(async () => {
@@ -98,7 +98,7 @@ export default function AIPrompting() {
 
   const resetForm = () => {
     setEditingPrompt(null);
-    setFormData({ name: '', content: {}, status: 'draft' });
+    setFormData({ name: '', content: {}, status: 'active' });
   };
 
   if (loading) return <Loader2 className="animate-spin" />;

@@ -25,7 +25,7 @@ export default function AdminUserManagement() {
       });
 
       if (error) throw error;
-      setUsers(data || []);
+      setUsers(data as UserProfile[] || []);
     } catch (e) {
       toast.error('Failed to fetch users.');
     } finally {
@@ -56,7 +56,7 @@ export default function AdminUserManagement() {
       if (error) throw error;
       toast.success('User updated successfully!');
       await fetchUsers(searchTerm);
-      setSelectedUser(data[0]);
+      setSelectedUser(data as UserProfile);
     } catch (e) {
       toast.error('Failed to update user.');
     }
