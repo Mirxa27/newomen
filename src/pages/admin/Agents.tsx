@@ -26,12 +26,12 @@ type Voice = Voices['Row'];
 interface AgentFormState {
   id?: string;
   name: string;
-  prompt_id: string;
-  model_id: string;
-  voice_id: string;
+  prompt_id: string | null;
+  model_id: string | null;
+  voice_id: string | null;
   status: 'active' | 'inactive';
-  tool_policy: Json;
-  vad_config: Json;
+  tool_policy: Json | null;
+  vad_config: Json | null;
 }
 
 export default function AgentsPage() {
@@ -43,9 +43,9 @@ export default function AgentsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formState, setFormState] = useState<AgentFormState>({
     name: "",
-    prompt_id: "",
-    model_id: "",
-    voice_id: "",
+    prompt_id: null,
+    model_id: null,
+    voice_id: null,
     status: "active",
     tool_policy: {},
     vad_config: {},
@@ -121,9 +121,9 @@ export default function AgentsPage() {
       }
       setFormState({
         name: "",
-        prompt_id: "",
-        model_id: "",
-        voice_id: "",
+        prompt_id: null,
+        model_id: null,
+        voice_id: null,
         status: "active",
         tool_policy: {},
         vad_config: {},
@@ -143,12 +143,12 @@ export default function AgentsPage() {
     setFormState({
       id: agent.id,
       name: agent.name,
-      prompt_id: agent.prompt_id || "",
-      model_id: agent.model_id || "",
-      voice_id: agent.voice_id || "",
+      prompt_id: agent.prompt_id,
+      model_id: agent.model_id,
+      voice_id: agent.voice_id,
       status: agent.status,
-      tool_policy: agent.tool_policy || {},
-      vad_config: agent.vad_config || {},
+      tool_policy: agent.tool_policy,
+      vad_config: agent.vad_config,
     });
   };
 
@@ -192,7 +192,7 @@ export default function AgentsPage() {
               className="glass"
             />
             <Select
-              value={formState.prompt_id}
+              value={formState.prompt_id || ""}
               onValueChange={(value) => handleFormChange("prompt_id", value)}
             >
               <SelectTrigger className="glass">
@@ -207,7 +207,7 @@ export default function AgentsPage() {
               </SelectContent>
             </Select>
             <Select
-              value={formState.model_id}
+              value={formState.model_id || ""}
               onValueChange={(value) => handleFormChange("model_id", value)}
             >
               <SelectTrigger className="glass">
@@ -222,7 +222,7 @@ export default function AgentsPage() {
               </SelectContent>
             </Select>
             <Select
-              value={formState.voice_id}
+              value={formState.voice_id || ""}
               onValueChange={(value) => handleFormChange("voice_id", value)}
             >
               <SelectTrigger className="glass">
@@ -275,7 +275,7 @@ export default function AgentsPage() {
               {editingAgent ? "Update Agent" : "Create Agent"}
             </Button>
             {editingAgent && (
-              <Button variant="outline" onClick={() => { setEditingAgent(null); setFormState({ name: "", prompt_id: "", model_id: "", voice_id: "", status: "active", tool_policy: {}, vad_config: {} }); }} className="ml-2">
+              <Button variant="outline" onClick={() => { setEditingAgent(null); setFormState({ name: "", prompt_id: null, model_id: null, voice_id: null, status: "active", tool_policy: {}, vad_config: {} }); }} className="ml-2">
                 Cancel Edit
               </Button>
             )}
@@ -314,7 +314,7 @@ export default function AgentsPage() {
                         <Button variant="ghost" size="sm" onClick={() => handleEdit(agent)}>
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setDialogState({ open: true, agentId: agent.id })}>
+                        <Button variant="ghost" size="sm" onClick={() => setDialogState({ open: true, type: 'assessment', agentId: agent.id })}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>

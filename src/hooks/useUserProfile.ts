@@ -63,15 +63,14 @@ export function useUserProfile() {
   }, []);
 
   useEffect(() => {
-    if (!profileLoading) {
-      void fetchUserProfile();
-    }
-  }, [profileLoading, fetchUserProfile]);
+    // Removed profileLoading from dependency array as it's not a direct dependency for initial fetch
+    void fetchUserProfile();
+  }, [fetchUserProfile]);
 
   const updateProfile = useCallback(async (updates: Partial<TablesUpdate<'user_profiles'>>) => {
     if (!profile) {
       toast.error('No profile to update.');
-      return;
+      return false; // Indicate failure
     }
     try {
       const { data, error } = await supabase

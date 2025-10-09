@@ -7,14 +7,33 @@ import { toast } from "sonner";
 import { Sessions } from "@/integrations/supabase/tables/sessions";
 import { NewmeConversations } from "@/integrations/supabase/tables/newme_conversations";
 import { UserProfiles } from "@/integrations/supabase/tables/user_profiles";
+import { Agents } from "@/integrations/supabase/tables/agents"; // Import Agents table
+import { Badge } from "@/components/ui/badge"; // Import Badge
+import { Clock, MessageCircle, DollarSign } from "lucide-react"; // Import icons
 
 interface SessionWithUser extends Sessions['Row'] {
   user_profiles: UserProfiles['Row'] | null;
+  agents: Agents['Row'] | null; // Add agents relationship
 }
 
 interface NewMeConversationWithUser extends NewmeConversations['Row'] {
   user_profiles: UserProfiles['Row'] | null;
+  agents: Agents['Row'] | null; // Add agents relationship
 }
+
+// Helper function to format duration
+const formatDuration = (seconds: number | null) => {
+  if (seconds === null) return "N/A";
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}m ${remainingSeconds}s`;
+};
+
+// Helper function to format cost
+const formatCost = (cost: number | null) => {
+  if (cost === null) return "$0.00";
+  return `$${cost.toFixed(2)}`;
+};
 
 export default function Analytics() {
   const [loading, setLoading] = useState(true);
@@ -34,6 +53,7 @@ export default function Analytics() {
     avgMessageCount: 0,
     totalUsers: 0,
   });
+  const [searchTerm, setSearchTerm] = useState(""); // Added search term state
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -42,8 +62,8 @@ export default function Analytics() {
         { data: sessionsData, error: sessionsError },
         { data: newMeConversationsData, error: newMeConversationsError },
       ] = await Promise.all([
-        supabase.from("sessions").select(`*, user_profiles(*)`).order("created_at", { ascending: false }),
-        supabase.from("newme_conversations").select(`*, user_profiles(*)`).order("created_at", { ascending: false }),
+        supabase.from("sessions").select(`*, user_profiles(*), agents(*)`).order("created_at", { ascending: false }),
+        supabase.from("newme_conversations").select(`*, user_profiles(*), agents(*)`).order("created_at", { ascending: false }),
       ]);
 
       if (sessionsError) throw sessionsError;
@@ -106,6 +126,17 @@ export default function Analytics() {
     void loadData();
   }, [loadData]);
 
+  const filteredSessions = sessions.filter((session) =>
+    session.user_profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    session.user_profiles?.nickname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (session.agents?.name?.toLowerCase() || "").includes(searchTerm.toLowerCase())
+  );
+
+  const filteredNewMeConversations = newMeConversations.filter((conv) =>
+    conv.user_profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (conv.user_profiles?.nickname?.toLowerCase() || "").includes(searchTerm.toLowerCase())
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -149,6 +180,12 @@ export default function Analytics() {
         <CardHeader>
           <CardTitle>Recent Realtime Sessions</CardTitle>
           <CardDescription>Latest interactions with AI agents.</CardDescription>
+          <Input
+            placeholder="Search sessions by user or agent..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="mt-4 glass"
+          />
         </CardHeader>
         <CardContent>
           <Table>
@@ -162,16 +199,66 @@ export default function Analytics() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sessions.slice(0, 10).map((session) => (
+              {filteredSessions.slice(0, 10).map((session) => (
                 <TableRow key={session.id}>
-                  <TableCell>{session.user_profiles?.nickname || session.user_profiles?.email || "N/A"}</TableCell>
-                  <TableCell>{session.agent_id || "N/A"}</TableCell>
-                  <TableCell>{session.duration_seconds ? `${session.duration_seconds}s` : "N/A"}</TableCell>
-                  <TableCell>{session.status}</TableCell>
-                  <TableCell>{new Date(session.created_at).toLocaleString()}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {session.user_profiles?.avatar_url ? (
+                        <img
+                          src={session.user_profiles.avatar_url}
+                          alt="Avatar"
+                          className="h-6 w-6 rounded-full"
+                        />
+                      ) : (
+                        <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-xs">
+                          {session.user_profiles?.nickname?.[0]?.toUpperCase() || session.user_profiles?.email?.[0]?.toUpperCase() || 'U'}
+                        </div>
+                      )}
+                      <div className="font-medium">
+                        {session.user_profiles?.nickname || "Anonymous"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {session.user_profiles?.email}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="rounded-sm">Legacy</Badge> {session.agents?.name || "Default"}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {formatDuration(session.duration_seconds)}
+                    </div>
+                    {session.cost_usd !== null && (
+                      <div className="text-xs text-muted-foreground flex items-center gap-1">
+                        <DollarSign className="w-3 h-3" />
+                        {formatCost(session.cost_usd)}
+                      </div>
+                    )}
+                    {session.tokens_used !== null && (
+                      <div className="text-xs text-muted-foreground">
+                        {session.tokens_used || 0} tokens
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={
+                      session.status === "completed" ? "default" :
+                      session.status === "active" ? "secondary" : "destructive"
+                    }>
+                      {session.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {new Date(session.created_at).toLocaleDateString()}
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(session.created_at).toLocaleTimeString()}
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
-              {sessions.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No sessions found.</TableCell></TableRow>}
+              {filteredSessions.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No sessions found.</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
@@ -181,6 +268,12 @@ export default function Analytics() {
         <CardHeader>
           <CardTitle>Recent NewMe Conversations</CardTitle>
           <CardDescription>Latest conversations with the NewMe AI.</CardDescription>
+          <Input
+            placeholder="Search conversations by user..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="mt-4 glass"
+          />
         </CardHeader>
         <CardContent>
           <Table>
@@ -189,21 +282,88 @@ export default function Analytics() {
                 <TableHead>User</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead>Messages</TableHead>
+                <TableHead>Started At</TableHead>
+                <TableHead>Emotional Tone</TableHead>
+                <TableHead>Topics Discussed</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Last Message</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {newMeConversations.slice(0, 10).map((conv) => (
-                <TableRow key={conv.id}>
-                  <TableCell>{conv.user_profiles?.nickname || conv.user_profiles?.email || "N/A"}</TableCell>
-                  <TableCell>{conv.title || "Untitled"}</TableCell>
-                  <TableCell>{conv.message_count}</TableCell>
-                  <TableCell>{conv.ended_at ? "Completed" : "Active"}</TableCell>
-                  <TableCell>{conv.last_message_at ? new Date(conv.last_message_at).toLocaleString() : "N/A"}</TableCell>
+              {filteredNewMeConversations.slice(0, 10).map((conversation) => (
+                <TableRow key={conversation.id}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {conversation.user_profiles?.avatar_url ? (
+                        <img
+                          src={conversation.user_profiles.avatar_url}
+                          alt="Avatar"
+                          className="h-6 w-6 rounded-full"
+                        />
+                      ) : (
+                        <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-xs">
+                          {conversation.user_profiles?.nickname?.[0]?.toUpperCase() || conversation.user_profiles?.email?.[0]?.toUpperCase() || 'U'}
+                        </div>
+                      )}
+                      <div className="font-medium">
+                        {conversation.user_profiles?.nickname || "Anonymous"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {conversation.user_profiles?.email}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>{conversation.title || "Untitled"}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <MessageCircle className="w-3 h-3" />
+                      {conversation.message_count}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {new Date(conversation.created_at).toLocaleDateString()}
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(conversation.created_at).toLocaleTimeString()}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      {conversation.emotional_tone && (
+                        <Badge variant="outline" className="mb-1">
+                          {conversation.emotional_tone}
+                        </Badge>
+                      )}
+                      {conversation.topics_discussed && Array.isArray(conversation.topics_discussed) && conversation.topics_discussed.length > 0 && (
+                        <div className="text-xs text-muted-foreground">
+                          {(conversation.topics_discussed as string[]).slice(0, 2).join(', ')}
+                          {(conversation.topics_discussed as string[]).length > 2 && '...'}
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      {conversation.topics_discussed && Array.isArray(conversation.topics_discussed) && conversation.topics_discussed.length > 0 && (
+                        <div className="text-xs text-muted-foreground">
+                          {(conversation.topics_discussed as string[]).slice(0, 2).join(', ')}
+                          {(conversation.topics_discussed as string[]).length > 2 && '...'}
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={conversation.ended_at ? "default" : "secondary"}>
+                      {conversation.ended_at ? "Completed" : "Active"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="sm" onClick={() => alert("View conversation not implemented yet")} disabled={conversation.message_count === 0}>
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
-              {newMeConversations.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No NewMe conversations found.</TableCell></TableRow>}
+              {filteredNewMeConversations.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No NewMe conversations found.</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>

@@ -15,8 +15,8 @@ interface NewMeMessage {
 interface NewMeConversation {
   id: string;
   user_id: string;
-  agent_id?: string;
-  title?: string;
+  agent_id?: string | null;
+  title?: string | null;
   messages: NewMeMessage[];
   created_at: string;
   updated_at: string;
@@ -143,9 +143,7 @@ export class NewMeMemoryService {
             last_referenced_at: new Date().toISOString(),
             reference_count: Number(existingMemory.reference_count) + 1,
           } as NewmeUserMemories['Update']) // Cast to Update type
-          .eq('id', existingMemory.id)
-          .select()
-          .single();
+          .eq('id', existingMemory.id);
 
         if (error) throw error;
         return data;

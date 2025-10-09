@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Edit, Save, Camera, Award, Zap } from "lucide-react";
+import { Loader2, Edit, Save, Camera, Award, Zap, User } from "lucide-react"; // Import User icon
 import { toast } from "sonner";
 import { useUserProfile, UserProfile, UserAchievement } from "@/hooks/useUserProfile";
 import type { Database, TablesUpdate } from "@/integrations/supabase/types";

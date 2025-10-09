@@ -15,7 +15,7 @@ export type UserProfiles = {
     daily_streak: number;
     last_streak_date: string | null;
     created_at: string;
-    role: string;
+    role: "user" | "admin" | "moderator"; // Explicitly define roles
     updated_at: string;
   };
   Insert: {
@@ -32,7 +32,7 @@ export type UserProfiles = {
     daily_streak?: number;
     last_streak_date?: string | null;
     created_at?: string;
-    role?: string;
+    role?: "user" | "admin" | "moderator";
     updated_at?: string;
   };
   Update: {
@@ -49,7 +49,7 @@ export type UserProfiles = {
     daily_streak?: number;
     last_streak_date?: string | null;
     created_at?: string;
-    role?: string;
+    role?: "user" | "admin" | "moderator";
     updated_at?: string;
   };
   Relationships: [];

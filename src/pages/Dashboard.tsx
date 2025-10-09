@@ -11,12 +11,12 @@ import { trackDailyLogin } from "@/lib/gamification-events";
 import { Loader2, Brain, Heart, Users, Award, TrendingUp, BookOpen, MessageCircle, Zap } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
-type LevelThreshold = Database["public"]["Tables"]["level_thresholds"];
+type LevelThreshold = Database["public"]["Tables"]["level_thresholds"]['Row'];
 
 export default function Dashboard() {
   const { toast } = useToast();
   const { profile, loading, getDisplayName } = useUserProfile();
-  const [levelThresholds, setLevelThresholds] = useState<LevelThreshold['Row'][]>([]);
+  const [levelThresholds, setLevelThresholds] = useState<LevelThreshold[]>([]);
   const [affirmation, setAffirmation] = useState("");
   const navigate = useNavigate();
 
@@ -51,7 +51,7 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    if (profile && profile.user_id) {
+    if (profile?.user_id) { // Use optional chaining for profile
       // Track daily login after profile is loaded
       void trackDailyLogin(profile.user_id);
     }
