@@ -86,7 +86,11 @@ export type Database = {
       ai_assessment_configs: import('./tables/ai_assessment_configs').AiAssessmentConfigs['Row'];
       prompt_templates: import('./tables/prompt_templates').PromptTemplates['Row'];
       achievements: import('./tables/achievements').Achievements['Row'];
-      schema_migrations: { Row: any, Insert: any, Update: any };
+      schema_migrations: {
+        Row: { version: string; dirty: boolean };
+        Insert: { version: string; dirty?: boolean };
+        Update: { version?: string; dirty?: boolean };
+      };
     };
     Views: {
       [_ in never]: never

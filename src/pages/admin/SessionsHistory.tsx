@@ -1,308 +1,150 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import ResponsiveTable from "@/components/ui/ResponsiveTable";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import { Loader2, MessageCircle, Clock, DollarSign, Download, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
-import { Search, Eye, MessageSquare, User, Clock, DollarSign, Download, Filter, BarChart3, Calendar, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
-import { useUserRole } from "@/hooks/useUserRole";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Sessions } from "@/integrations/supabase/tables/sessions";
+import { NewmeConversations } from "@/integrations/supabase/tables/newme_conversations";
+import { UserProfiles } from "@/integrations/supabase/tables/user_profiles";
+import { Agents } from "@/integrations/supabase/tables/agents";
+import { Messages } from "@/integrations/supabase/tables/messages";
+import { NewmeMessages } from "@/integrations/supabase/tables/newme_messages";
+import { Input } from "@/components/ui/input";
 
-// Original session type
-type SessionHistoryRow = Tables<"sessions"> & {
-  user_profiles: Pick<Tables<"user_profiles">, "nickname" | "email" | "avatar_url" | "subscription_tier"> | null;
-  agents: { name: string } | null;
+// Define types for joined data
+interface SessionWithUserAndAgent extends Sessions['Row'] {
+  user_profiles: UserProfiles['Row'] | null;
+  agents: Agents['Row'] | null;
   message_count: number;
+}
+
+interface NewMeConversationWithUserAndAgent extends NewmeConversations['Row'] {
+  user_profiles: UserProfiles['Row'] | null;
+  agents: Agents['Row'] | null;
+}
+
+interface MessageHistoryRow extends Messages['Row'] {
+  // Add any specific relations if needed for 'messages' table
+}
+
+interface NewMeMessageRow extends NewmeMessages['Row'] {
+  // Add any specific relations if needed for 'newme_messages' table
+}
+
+// Helper function to format duration
+const formatDuration = (seconds: number | null) => {
+  if (seconds === null) return "N/A";
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}m ${remainingSeconds}s`;
 };
 
-// NewMe conversation type
-type NewMeConversationRow = Tables<"newme_conversations"> & {
-  user_profiles: Pick<Tables<"user_profiles">, "nickname" | "email" | "avatar_url" | "subscription_tier"> | null;
-  message_count: number;
-  duration_seconds: number;
-  emotional_tone: string | null;
-};
-
-type MessageHistoryRow = Tables<"messages">;
-type NewMeMessageRow = Tables<"newme_messages">;
-
-type AnalyticsData = {
-  totalSessions: number;
-  totalMessages: number;
-  avgDuration: number;
-  avgMessagesPerSession: number;
-  activeSessions: number;
-  completedSessions: number;
+// Helper function to format cost
+const formatCost = (cost: number | null) => {
+  if (cost === null) return "$0.00";
+  return `$${cost.toFixed(2)}`;
 };
 
 export default function SessionsHistory() {
-  const { permissions, loading: roleLoading } = useUserRole();
-
-  // Redirect if user doesn't have permission
-  useEffect(() => {
-    if (!roleLoading && !permissions?.canViewHistory) {
-      toast.error("You don't have permission to view session history");
-      window.location.href = '/admin/dashboard';
-    }
-  }, [permissions, roleLoading]);
-
-  // State for legacy sessions
-  const [sessions, setSessions] = useState<SessionHistoryRow[]>([]);
-  // State for NewMe conversations
-  const [newMeConversations, setNewMeConversations] = useState<NewMeConversationRow[]>([]);
-  // General state
   const [loading, setLoading] = useState(true);
+  const [sessions, setSessions] = useState<SessionWithUserAndAgent[]>([]);
+  const [newMeConversations, setNewMeConversations] = useState<NewMeConversationWithUserAndAgent[]>([]);
+  const [sessionStats, setSessionStats] = useState<SessionWithUserAndAgent[]>([]);
+  const [newMeConversationStats, setNewMeConversationStats] = useState<NewMeConversationWithUserAndAgent[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedSession, setSelectedSession] = useState<SessionHistoryRow | NewMeConversationRow | null>(null);
+
+  const [isViewConversationOpen, setIsViewConversationOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<SessionWithUserAndAgent | NewMeConversationWithUserAndAgent | null>(null);
+  const [conversationTranscript, setConversationTranscript] = useState("");
   const [isNewMeConversation, setIsNewMeConversation] = useState(false);
-  const [conversationMessages, setConversationMessages] = useState<MessageHistoryRow[] | NewMeMessageRow[]>([]);
-  const [viewingConversation, setViewingConversation] = useState(false);
-  const [analytics, setAnalytics] = useState<AnalyticsData>({
-    totalSessions: 0,
-    totalMessages: 0,
-    avgDuration: 0,
-    avgMessagesPerSession: 0,
-    activeSessions: 0,
-    completedSessions: 0
-  });
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(20);
-  const [totalItems, setTotalItems] = useState(0);
-  // Filter state
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
-    start: "",
-    end: ""
-  });
 
-  const fetchAllData = () => {
-    loadSessions();
-    loadNewMeConversations();
-    loadAnalytics();
-  };
-
-  useEffect(() => {
-    fetchAllData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, statusFilter, dateRange]);
-
-  const loadSessions = async () => {
+  const loadData = useCallback(async () => {
+    setLoading(true);
     try {
-      let query = supabase
-        .from("sessions")
-        .select(`
-          *,
-          user_profiles!inner(nickname, email, avatar_url, subscription_tier),
-          agents(name)
-        `, { count: 'exact' });
+      const [
+        { data: sessionsData, error: sessionsError },
+        { data: newMeConversationsData, error: newMeConversationsError },
+      ] = await Promise.all([
+        supabase.from("sessions").select(`*, user_profiles(*), agents(*)`).order("created_at", { ascending: false }),
+        supabase.from("newme_conversations").select(`*, user_profiles(*), agents(*)`).order("created_at", { ascending: false }),
+      ]);
 
-      // Apply filters
-      if (statusFilter !== "all") {
-        query = query.eq("status", statusFilter);
-      }
+      if (sessionsError) throw sessionsError;
+      if (newMeConversationsError) throw newMeConversationsError;
 
-      if (dateRange.start) {
-        query = query.gte("start_ts", dateRange.start);
-      }
+      setSessions(sessionsData as SessionWithUserAndAgent[] || []);
+      setNewMeConversations(newMeConversationsData as NewMeConversationWithUserAndAgent[] || []);
 
-      if (dateRange.end) {
-        query = query.lte("start_ts", dateRange.end + "T23:59:59");
-      }
+      // For stats, we might want to process the raw data or fetch aggregated data
+      setSessionStats(sessionsData as SessionWithUserAndAgent[] || []);
+      setNewMeConversationStats(newMeConversationsData as NewMeConversationWithUserAndAgent[] || []);
 
-      const { data, error, count } = await query
-        .order("start_ts", { ascending: false })
-        .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
-
-      if (error) throw error;
-
-      // Load message counts for each session
-      const sessionsWithMessageCounts = await Promise.all(
-        (data || []).map(async (session) => {
-          const { count: messageCount } = await supabase
-            .from("messages")
-            .select("*", { count: 'exact', head: true })
-            .eq("session_id", session.id);
-
-          return {
-            ...session,
-            message_count: messageCount || 0
-          } as any; // Bypassing type error due to relation issue
-        })
-      );
-
-      setSessions(sessionsWithMessageCounts as SessionHistoryRow[]);
-      if (!count) return; // If we have no legacy sessions, don't update totalItems
-
-      setTotalItems(count);
     } catch (error) {
-      console.error("Error loading legacy sessions:", error);
-      toast.error("Failed to load session history");
-    } finally {
-      if (newMeConversations.length === 0) {
-        setLoading(false); // Only set loading to false if we haven't loaded newMeConversations
-      }
-    }
-  };
-
-  const loadNewMeConversations = async () => {
-    try {
-      let query = supabase
-        .from("newme_conversations")
-        .select(`
-          *,
-          user_profiles!inner(nickname, email, avatar_url, subscription_tier)
-        `, { count: 'exact' });
-
-      // Apply date filters
-      if (dateRange.start) {
-        query = query.gte("started_at", dateRange.start);
-      }
-
-      if (dateRange.end) {
-        query = query.lte("started_at", dateRange.end + "T23:59:59");
-      }
-
-      // Status filter equivalent for newme_conversations
-      // For NewMe: null = active, with date = completed
-      if (statusFilter === "active") {
-        query = query.is("ended_at", null);
-      } else if (statusFilter === "completed") {
-        query = query.not("ended_at", "is", null);
-      }
-
-      const { data, error, count } = await query
-        .order("started_at", { ascending: false })
-        .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
-
-      if (error) throw error;
-
-      // Convert to NewMeConversationRow type
-      const conversationsWithDetails = data?.map(conv => ({
-        ...conv,
-        message_count: conv.message_count || 0,
-      })) as any[]; // Bypassing type error due to relation issue
-
-      setNewMeConversations(conversationsWithDetails as NewMeConversationRow[]);
-      setTotalItems((prevCount) => Math.max(prevCount || 0, count || 0));
-    } catch (error) {
-      console.error("Error loading NewMe conversations:", error);
-      toast.error("Failed to load conversation history");
+      console.error("Error loading analytics data:", error);
+      toast.error("Failed to load analytics data.");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const loadAnalytics = async () => {
-    try {
-      // Get total sessions count
-      const { count: totalSessions, error: sessionsError } = await supabase
-        .from("sessions")
-        .select("*", { count: 'exact', head: true });
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
-      if (sessionsError) throw sessionsError;
-
-      // Get total messages count
-      const { count: totalMessages, error: messagesError } = await supabase
-        .from("messages")
-        .select("*", { count: 'exact', head: true });
-
-      if (messagesError) throw messagesError;
-
-      // Get session statistics
-      const { data: sessionStats, error: statsError } = await supabase
-        .from("sessions")
-        .select("duration_seconds, status")
-        .not("duration_seconds", "is", null);
-
-      if (statsError) throw statsError;
-
-      const avgDuration = sessionStats?.length
-        ? sessionStats.reduce((acc, curr) => acc + (curr.duration_seconds || 0), 0) / sessionStats.length
-        : 0;
-
-      const activeSessions = sessionStats?.filter(s => s.status === "active").length || 0;
-      const completedSessions = sessionStats?.filter(s => s.status === "completed").length || 0;
-
-      setAnalytics({
-        totalSessions: totalSessions || 0,
-        totalMessages: totalMessages || 0,
-        avgDuration,
-        avgMessagesPerSession: totalSessions ? (totalMessages || 0) / totalSessions : 0,
-        activeSessions,
-        completedSessions
-      });
-    } catch (error) {
-      console.error("Error loading analytics:", error);
-    }
-  };
-
-  const loadConversation = async (sessionId: string, isNewMe = false) => {
-    try {
-      if (isNewMe) {
-        // Load from newme_messages
-        const { data, error } = await supabase
-          .from("newme_messages")
-          .select("*")
-          .eq("conversation_id", sessionId)
-          .order("timestamp", { ascending: true });
-
-        if (error) throw error;
-        setConversationMessages(data as NewMeMessageRow[] || []);
-      } else {
-        // Load from legacy messages
-        const { data, error } = await supabase
-          .from("messages")
-          .select("*")
-          .eq("session_id", sessionId)
-          .order("ts", { ascending: true });
-
-        if (error) throw error;
-        setConversationMessages(data as MessageHistoryRow[] || []);
-      }
-    } catch (error) {
-      console.error("Error loading conversation:", error);
-      toast.error("Failed to load conversation");
-    }
-  };
-
-  const viewConversation = async (session: SessionHistoryRow | NewMeConversationRow, isNewMe = false) => {
+  const viewConversation = async (session: SessionWithUserAndAgent | NewMeConversationWithUserAndAgent, isNewMe: boolean) => {
     setSelectedSession(session);
     setIsNewMeConversation(isNewMe);
-    setViewingConversation(true);
-    await loadConversation(session.id, isNewMe);
+    setConversationTranscript("Loading transcript...");
+    setIsViewConversationOpen(true);
+
+    try {
+      let transcript = "";
+      if (isNewMe) {
+        const { data: messagesData, error } = await supabase
+          .from('newme_messages')
+          .select('*')
+          .eq('conversation_id', session.id)
+          .order('ts', { ascending: true });
+
+        if (error) throw error;
+        const conversationMessages = messagesData as NewMeMessageRow[];
+        transcript = conversationMessages.map(msg => {
+          const timestamp = new Date(msg.ts || '').toLocaleString();
+          const role = msg.sender === 'user' ? 'User' :
+                       msg.sender === 'assistant' ? 'AI Assistant' : 'System';
+          return `[${timestamp}] ${role}: ${msg.text_content || '[Audio message]'}`;
+        }).join('\n\n');
+      } else {
+        const { data: messagesData, error } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('session_id', session.id)
+          .order('timestamp', { ascending: true });
+
+        if (error) throw error;
+        const conversationMessages = messagesData as MessageHistoryRow[];
+        transcript = conversationMessages.map(msg => {
+          const timestamp = new Date(msg.timestamp || '').toLocaleString();
+          const role = msg.role === 'user' ? 'User' :
+                       msg.role === 'assistant' ? 'AI Assistant' : 'System';
+          return `[${timestamp}] ${role}: ${msg.content}`;
+        }).join('\n\n');
+      }
+      setConversationTranscript(transcript);
+    } catch (error) {
+      console.error("Error loading conversation transcript:", error);
+      setConversationTranscript("Failed to load transcript.");
+    }
   };
 
   const downloadTranscript = () => {
-    if (!selectedSession || conversationMessages.length === 0) return;
-
-    let transcript;
-
-    if (isNewMeConversation) {
-      // Format NewMe messages
-      transcript = (conversationMessages as NewMeMessageRow[]).map(msg => {
-        const timestamp = new Date(msg.timestamp || '').toLocaleString();
-        const role = msg.role === 'user' ? 'User' :
-                    msg.role === 'assistant' ? 'AI Assistant' : 'System';
-        return `[${timestamp}] ${role}: ${msg.content}`;
-      }).join('\n\n');
-    } else {
-      // Format legacy messages
-      transcript = (conversationMessages as MessageHistoryRow[]).map(msg => {
-        const timestamp = new Date(msg.ts).toLocaleString();
-        const role = msg.sender === 'user' ? 'User' : 'AI';
-        return `[${timestamp}] ${role}: ${msg.text_content || '[Audio message]'}`;
-      }).join('\n\n');
-    }
-
-    const blob = new Blob([transcript], { type: 'text/plain' });
+    if (!selectedSession || !conversationTranscript) return;
+    const blob = new Blob([conversationTranscript], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -313,157 +155,100 @@ export default function SessionsHistory() {
     URL.revokeObjectURL(url);
   };
 
-  const formatDuration = (durationSeconds: number | null) => {
-    if (!durationSeconds) return "N/A";
-    const mins = Math.floor(durationSeconds / 60);
-    const secs = durationSeconds % 60;
-    return `${mins}m ${secs}s`;
-  };
-
-  const formatCost = (costUsd: number | null) => {
-    if (!costUsd) return "$0.00";
-    return `$${costUsd.toFixed(4)}`;
-  };
-
-  // Filter both legacy sessions and NewMe conversations
   const filteredSessions = sessions.filter((session) =>
-    session.user_profiles?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    session.user_profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     session.user_profiles?.nickname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (session.agents?.name?.toLowerCase() || "").includes(searchTerm.toLowerCase())
   );
 
   const filteredNewMeConversations = newMeConversations.filter((conv) =>
-    conv.user_profiles?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    conv.user_profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (conv.user_profiles?.nickname?.toLowerCase() || "").includes(searchTerm.toLowerCase())
   );
 
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const totalSessions = sessionStats.length;
+  const activeSessions = sessionStats.filter(s => s.status === "active").length;
+  const completedSessions = sessionStats.filter(s => s.status === "completed").length;
+  const avgSessionDuration = totalSessions > 0
+    ? sessionStats.reduce((acc, curr) => acc + (curr.duration_seconds || 0), 0) / totalSessions
+    : 0;
+  const uniqueSessionUsers = new Set(sessionStats.map(s => s.user_id)).size;
+
+  const totalNewMeConversationsCount = newMeConversationStats.length;
+  const activeNewMeConversationsCount = newMeConversationStats.filter(c => !c.ended_at).length;
+  const completedNewMeConversationsCount = newMeConversationStats.filter(c => c.ended_at).length;
+  const avgNewMeMessageCount = totalNewMeConversationsCount > 0
+    ? newMeConversationStats.reduce((acc, curr) => acc + (curr.message_count || 0), 0) / totalNewMeConversationsCount
+    : 0;
+  const uniqueNewMeUsers = new Set(newMeConversationStats.map(c => c.user_id)).size;
+
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+        <Loader2 className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Analytics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card className="glass-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Sessions</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{analytics.totalSessions}</div>
-            <p className="text-xs text-muted-foreground">
-              {analytics.activeSessions} active, {analytics.completedSessions} completed
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Messages</CardTitle>
-            <MessageCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{analytics.totalMessages}</div>
-            <p className="text-xs text-muted-foreground">
-              {analytics.avgMessagesPerSession.toFixed(1)} avg per session
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Duration</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatDuration(analytics.avgDuration)}</div>
-            <p className="text-xs text-muted-foreground">
-              Average conversation length
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle>Overall Session Analytics</CardTitle>
+          <CardDescription>High-level overview of all user sessions and conversations.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h3 className="text-lg font-semibold mb-2">Realtime Sessions</h3>
+            <div className="space-y-1">
+              <p>Total Sessions: {totalSessions}</p>
+              <p>Active Sessions: {activeSessions}</p>
+              <p>Completed Sessions: {completedSessions}</p>
+              <p>Average Duration: {avgSessionDuration.toFixed(2)} seconds</p>
+              <p>Unique Users: {uniqueSessionUsers}</p>
+            </div>
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold mb-2">NewMe Conversations</h3>
+            <div className="space-y-1">
+              <p>Total Conversations: {totalNewMeConversationsCount}</p>
+              <p>Active Conversations: {activeNewMeConversationsCount}</p>
+              <p>Completed Conversations: {completedNewMeConversationsCount}</p>
+              <p>Average Message Count: {avgNewMeMessageCount.toFixed(2)}</p>
+              <p>Unique Users: {uniqueNewMeUsers}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle className="gradient-text">Session History</CardTitle>
-          <CardDescription>
-            Review past conversations, transcripts, and analytics
-          </CardDescription>
+          <CardTitle>Recent Realtime Sessions</CardTitle>
+          <CardDescription>Detailed history of interactions with AI agents.</CardDescription>
+          <Input
+            placeholder="Search sessions by user or agent..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="mt-4 glass"
+          />
         </CardHeader>
         <CardContent>
-          {/* Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by user, email, or agent..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 glass"
-              />
-            </div>
-
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Input
-              type="date"
-              placeholder="Start date"
-              value={dateRange.start}
-              onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-              className="glass"
-            />
-
-            <Input
-              type="date"
-              placeholder="End date"
-              value={dateRange.end}
-              onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-              className="glass"
-            />
-          </div>
-
-          {filteredSessions.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              No sessions found
-            </div>
-          ) : (
-            <>
-              <ResponsiveTable>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>User</TableHead>
-                      <TableHead>Source</TableHead>
-                      <TableHead>Messages</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Details</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {/* Legacy Sessions */}
-                    {filteredSessions.map((session) => (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Agent</TableHead>
+                <TableHead>Messages</TableHead>
+                <TableHead>Duration</TableHead>
+                <TableHead>Cost/Tokens</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Started At</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredSessions.map((session) => (
                       <TableRow key={session.id}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
@@ -471,21 +256,19 @@ export default function SessionsHistory() {
                               <img
                                 src={session.user_profiles.avatar_url}
                                 alt="Avatar"
-                                className="w-6 h-6 rounded-full"
+                                className="h-6 w-6 rounded-full"
                               />
                             ) : (
-                              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
-                                <User className="w-3 h-3" />
+                              <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-xs">
+                                {session.user_profiles?.nickname?.[0]?.toUpperCase() || session.user_profiles?.email?.[0]?.toUpperCase() || 'U'}
                               </div>
                             )}
-                            <div>
-                              <div className="font-medium">
+                            <div className="font-medium">
                                 {session.user_profiles?.nickname || "Anonymous"}
                               </div>
                               <div className="text-xs text-muted-foreground">
                                 {session.user_profiles?.email}
                               </div>
-                            </div>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -504,21 +287,17 @@ export default function SessionsHistory() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {new Date(session.start_ts).toLocaleDateString()}
-                          <div className="text-xs text-muted-foreground">
-                            {new Date(session.start_ts).toLocaleTimeString()}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <div className="flex items-center gap-1">
+                          {session.cost_usd !== null && (
+                            <div className="text-xs text-muted-foreground flex items-center gap-1">
                               <DollarSign className="w-3 h-3" />
                               {formatCost(session.cost_usd)}
                             </div>
+                          )}
+                          {session.tokens_used !== null && (
                             <div className="text-xs text-muted-foreground">
                               {session.tokens_used || 0} tokens
                             </div>
-                          </div>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge variant={
@@ -529,20 +308,51 @@ export default function SessionsHistory() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => viewConversation(session, false)}
-                            disabled={session.message_count === 0}
-                          >
+                          {new Date(session.created_at).toLocaleDateString()}
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(session.created_at).toLocaleTimeString()}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => viewConversation(session, false)} disabled={session.message_count === 0}>
                             <Eye className="w-4 h-4" />
                           </Button>
                         </TableCell>
                       </TableRow>
                     ))}
+              {filteredSessions.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No sessions found.</TableCell></TableRow>}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
-                    {/* NewMe Conversations */}
-                    {filteredNewMeConversations.map((conversation) => (
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle>Recent NewMe Conversations</CardTitle>
+          <CardDescription>Latest conversations with the NewMe AI.</CardDescription>
+          <Input
+            placeholder="Search conversations by user..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="mt-4 glass"
+          />
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead>Messages</TableHead>
+                <TableHead>Started At</TableHead>
+                <TableHead>Emotional Tone</TableHead>
+                <TableHead>Topics Discussed</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredNewMeConversations.map((conversation) => (
                       <TableRow key={conversation.id}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
@@ -550,26 +360,22 @@ export default function SessionsHistory() {
                               <img
                                 src={conversation.user_profiles.avatar_url}
                                 alt="Avatar"
-                                className="w-6 h-6 rounded-full"
+                                className="h-6 w-6 rounded-full"
                               />
                             ) : (
-                              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
-                                <User className="w-3 h-3" />
+                              <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-xs">
+                                {conversation.user_profiles?.nickname?.[0]?.toUpperCase() || conversation.user_profiles?.email?.[0]?.toUpperCase() || 'U'}
                               </div>
                             )}
-                            <div>
-                              <div className="font-medium">
+                            <div className="font-medium">
                                 {conversation.user_profiles?.nickname || "Anonymous"}
                               </div>
                               <div className="text-xs text-muted-foreground">
                                 {conversation.user_profiles?.email}
                               </div>
-                            </div>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <Badge variant="default" className="rounded-sm">NewMe</Badge>
-                        </TableCell>
+                        <TableCell>{conversation.title || "Untitled"}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <MessageCircle className="w-3 h-3" />
@@ -577,15 +383,9 @@ export default function SessionsHistory() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {formatDuration(conversation.duration_seconds)}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {new Date(conversation.started_at || '').toLocaleDateString()}
+                          {new Date(conversation.created_at).toLocaleDateString()}
                           <div className="text-xs text-muted-foreground">
-                            {new Date(conversation.started_at || '').toLocaleTimeString()}
+                            {new Date(conversation.created_at).toLocaleTimeString()}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -595,10 +395,20 @@ export default function SessionsHistory() {
                                 {conversation.emotional_tone}
                               </Badge>
                             )}
-                            {conversation.topics_discussed && conversation.topics_discussed.length > 0 && (
+                            {conversation.topics_discussed && Array.isArray(conversation.topics_discussed) && conversation.topics_discussed.length > 0 && (
                               <div className="text-xs text-muted-foreground">
-                                {conversation.topics_discussed.slice(0, 2).join(', ')}
-                                {conversation.topics_discussed.length > 2 && '...'}
+                                {(conversation.topics_discussed as string[]).slice(0, 2).join(', ')}
+                                {(conversation.topics_discussed as string[]).length > 2 && '...'}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            {conversation.topics_discussed && Array.isArray(conversation.topics_discussed) && conversation.topics_discussed.length > 0 && (
+                              <div className="text-xs text-muted-foreground">
+                                {(conversation.topics_discussed as string[]).slice(0, 2).join(', ')}
+                                {(conversation.topics_discussed as string[]).length > 2 && '...'}
                               </div>
                             )}
                           </div>
@@ -608,155 +418,140 @@ export default function SessionsHistory() {
                             {conversation.ended_at ? "Completed" : "Active"}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => viewConversation(conversation, true)}
-                            disabled={conversation.message_count === 0}
-                          >
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => viewConversation(conversation, true)} disabled={conversation.message_count === 0}>
                             <Eye className="w-4 h-4" />
                           </Button>
                         </TableCell>
                       </TableRow>
                     ))}
-                  </TableBody>
-                </Table>
-              </ResponsiveTable>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="mt-6 flex justify-center">
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            if (currentPage > 1) setCurrentPage(currentPage - 1);
-                          }}
-                        />
-                      </PaginationItem>
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
-                        return (
-                          <PaginationItem key={pageNum}>
-                            <PaginationLink
-                              href="#"
-                              isActive={pageNum === currentPage}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                setCurrentPage(pageNum);
-                              }}
-                            >
-                              {pageNum}
-                            </PaginationLink>
-                          </PaginationItem>
-                        );
-                      })}
-                      <PaginationItem>
-                        <PaginationNext
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-                          }}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                </div>
-              )}
-            </>
-          )}
+              {filteredNewMeConversations.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No NewMe conversations found.</TableCell></TableRow>}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
-      {/* Conversation Viewer Dialog */}
-      <Dialog open={viewingConversation} onOpenChange={setViewingConversation}>
-        <DialogContent className="max-w-4xl max-h-[80vh] glass-card">
+      <Dialog open={isViewConversationOpen} onOpenChange={setIsViewConversationOpen}>
+        <DialogContent className="sm:max-w-[800px] h-[90vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 gradient-text">
-              <MessageSquare className="w-5 h-5" />
-              Conversation Transcript
-            </DialogTitle>
+            <DialogTitle>Conversation Transcript</DialogTitle>
             <DialogDescription>
-              Complete conversation with {selectedSession?.user_profiles?.nickname || "User"}
+              Complete conversation with {selectedSession?.user_profiles?.nickname || "User"} ({selectedSession?.user_profiles?.email})
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-              <div className="flex items-center gap-4">
+          <div className="flex-1 overflow-y-auto p-4 border rounded-md bg-muted/20">
+            {selectedSession && (
+              <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  {selectedSession?.user_profiles?.avatar_url ? (
+                  {selectedSession.user_profiles?.avatar_url ? (
                     <img
                       src={selectedSession.user_profiles.avatar_url}
                       alt="Avatar"
-                      className="w-8 h-8 rounded-full"
+                      className="h-8 w-8 rounded-full"
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <User className="w-4 h-4" />
+                    <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-sm">
+                      {selectedSession.user_profiles?.nickname?.[0]?.toUpperCase() || selectedSession.user_profiles?.email?.[0]?.toUpperCase() || 'U'}
                     </div>
                   )}
                   <div>
-                    <div className="font-medium">{selectedSession?.user_profiles?.nickname || "Anonymous"}</div>
-                    <div className="text-sm text-muted-foreground">{selectedSession?.user_profiles?.email}</div>
+                    <div className="font-medium">{selectedSession.user_profiles?.nickname || "Anonymous"}</div>
+                    <div className="text-sm text-muted-foreground">{selectedSession.user_profiles?.email}</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <MessageCircle className="w-4 h-4" />
-                    {conversationMessages.length} messages
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    {selectedSession ? formatDuration(selectedSession.duration_seconds) : "N/A"}
-                  </div>
-                  {!isNewMeConversation && (
-                    <div className="flex items-center gap-1">
-                      <DollarSign className="w-4 h-4" />
-                      {selectedSession && 'cost_usd' in selectedSession ? formatCost(selectedSession.cost_usd) : "$0.00"}
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Session ID: <span className="font-mono text-xs">{selectedSession.id}</span></p>
+                    <p className="text-muted-foreground">Agent: {selectedSession.agents?.name || "Default"}</p>
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Clock className="w-3 h-3" />
+                      {selectedSession ? formatDuration(selectedSession.duration_seconds || null) : "N/A"}
                     </div>
-                  )}
-                  {isNewMeConversation && (selectedSession as NewMeConversationRow).emotional_tone && (
-                    <div className="flex items-center gap-1">
-                      <Badge variant="outline">
-                        {(selectedSession as NewMeConversationRow).emotional_tone}
-                      </Badge>
-                    </div>
-                  )}
-                  <Badge variant="outline">
-                    {selectedSession?.user_profiles?.subscription_tier || "discovery"}
-                  </Badge>
+                    {selectedSession && 'cost_usd' in selectedSession && (
+                      <div className="text-xs text-muted-foreground flex items-center gap-1">
+                        <DollarSign className="w-3 h-3" />
+                        {formatCost(selectedSession.cost_usd || null)}
+                      </div>
+                    )}
+                    {selectedSession && 'tokens_used' in selectedSession && (
+                      <div className="text-xs text-muted-foreground">
+                        {selectedSession.tokens_used || 0} tokens
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Status: <Badge variant={selectedSession.status === "completed" || selectedSession.ended_at ? "default" : "secondary"}>{selectedSession.status || (selectedSession.ended_at ? "Completed" : "Active")}</Badge></p>
+                    <p className="text-muted-foreground">Started: {new Date(selectedSession.created_at).toLocaleString()}</p>
+                    {selectedSession.ended_at && <p className="text-muted-foreground">Ended: {new Date(selectedSession.ended_at).toLocaleString()}</p>}
+                    <Badge variant="outline">
+                      {selectedSession.user_profiles?.subscription_tier || "discovery"}
+                    </Badge>
+                  </div>
                 </div>
+                {isNewMeConversation && (selectedSession as NewMeConversationWithUserAndAgent).emotional_tone && (
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    Emotional Tone: <Badge variant="outline">{(selectedSession as NewMeConversationWithUserAndAgent).emotional_tone}</Badge>
+                  </div>
+                )}
+                {isNewMeConversation && (selectedSession as NewMeConversationWithUserAndAgent).topics_discussed && Array.isArray((selectedSession as NewMeConversationWithUserAndAgent).topics_discussed) && (
+                  <div className="text-sm text-muted-foreground">
+                    Topics: {((selectedSession as NewMeConversationWithUserAndAgent).topics_discussed as string[]).join(', ')}
+                  </div>
+                )}
               </div>
-              <Button onClick={downloadTranscript} variant="outline" size="sm">
-                <Download className="w-4 h-4 mr-2" />
-                Download
-              </Button>
-            </div>
-
-            <ScrollArea className="h-[400px] border rounded-lg p-4">
-              {conversationMessages.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  {isNewMeConversation
-                    ? "No messages found in this NewMe conversation."
-                    : "No messages found in this conversation."}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {isNewMeConversation ? (
-                    // NewMe messages format
-                    (conversationMessages as NewMeMessageRow[]).map((message, index) => (
+            )}
+            <h3 className="text-lg font-semibold mt-4 mb-2">Conversation Log:</h3>
+            {isNewMeConversation ? (
+              <div className="space-y-4">
+                {(conversationMessages as NewMeMessageRow[]).map((message, index) => (
+                      <div key={index} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[80%] p-3 rounded-lg ${
+                          message.sender === 'user'
+                            ? 'bg-primary text-primary-foreground'
+                            : message.sender === 'system'
+                            ? 'bg-muted/50 border border-border'
+                            : 'bg-muted text-muted-foreground'
+                        }`}>
+                          <div className="text-sm font-medium mb-1">
+                            {message.sender === 'user' ? 'User' :
+                             message.sender === 'assistant' ? 'AI Assistant' : 'System'}
+                          </div>
+                          <div className="text-sm whitespace-pre-wrap">
+                            {message.text_content || "Audio message"}
+                          </div>
+                          {message.audio_url && (
+                            <div className="mt-2">
+                              <audio controls className="w-full">
+                                <source src={message.audio_url} type="audio/mpeg" />
+                                Your browser does not support the audio element.
+                              </audio>
+                            </div>
+                          )}
+                          <div className="text-xs opacity-70 mt-1">
+                            {new Date(message.ts).toLocaleString()}
+                          </div>
+                          {message.emotion_detected && (
+                            <div className="mt-2">
+                              <Badge variant="outline" className="text-xs">
+                                {message.emotion_detected}
+                                {message.sentiment_score !== null && ` (${message.sentiment_score?.toFixed(2)})`}
+                              </Badge>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {(conversationMessages as MessageHistoryRow[]).map((message, index) => (
                       <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[80%] p-3 rounded-lg ${
                           message.role === 'user'
                             ? 'bg-primary text-primary-foreground'
                             : message.role === 'system'
                             ? 'bg-muted/50 border border-border'
-                            : 'bg-muted'
+                            : 'bg-muted text-muted-foreground'
                         }`}>
                           <div className="text-sm font-medium mb-1">
                             {message.role === 'user' ? 'User' :
@@ -778,40 +573,16 @@ export default function SessionsHistory() {
                           )}
                         </div>
                       </div>
-                    ))
-                  ) : (
-                    // Legacy messages format
-                    (conversationMessages as MessageHistoryRow[]).map((message, index) => (
-                      <div key={index} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[80%] p-3 rounded-lg ${
-                          message.sender === 'user'
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted'
-                        }`}>
-                          <div className="text-sm font-medium mb-1">
-                            {message.sender === 'user' ? 'User' : 'AI Assistant'}
-                          </div>
-                          <div className="text-sm">
-                            {message.text_content || "Audio message"}
-                          </div>
-                          {message.audio_url && (
-                            <div className="mt-2">
-                              <audio controls className="w-full">
-                                <source src={message.audio_url} type="audio/mpeg" />
-                                Your browser does not support the audio element.
-                              </audio>
-                            </div>
-                          )}
-                          <div className="text-xs opacity-70 mt-1">
-                            {new Date(message.ts).toLocaleString()}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </ScrollArea>
+                    ))}
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button onClick={downloadTranscript} variant="outline">
+              <Download className="w-4 h-4 mr-2" />
+              Download Transcript
+            </Button>
+            <Button onClick={() => setIsViewConversationOpen(false)}>Close</Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -15,11 +15,16 @@ import { CouplesChallenges } from "@/integrations/supabase/tables/couples_challe
 import { ChallengeTemplates } from "@/integrations/supabase/tables/challenge_templates";
 import { UserProfiles } from "@/integrations/supabase/tables/user_profiles"; // Import UserProfiles
 
-interface ChallengeTemplate extends ChallengeTemplates['Row'] {
-  questions: Json; // Assuming questions is JSON
+interface Question {
+  id: string;
+  text: string;
 }
 
-interface Challenge extends CouplesChallenges['Row'] {
+interface ChallengeTemplate extends Omit<ChallengeTemplates['Row'], 'questions'> {
+  questions: Question[]; // Assuming questions is JSON
+}
+
+interface Challenge extends Omit<CouplesChallenges['Row'], 'responses'> {
   responses: Json;
 }
 
@@ -185,7 +190,7 @@ export default function CouplesChallenge() {
               <CardDescription>{template.title}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-8">
-              {questionsArray.map((question: any, index) => {
+              {questionsArray.map((question: Question, index) => {
                 const questionResponses = (responses[String(index)] as { initiator_response?: string; partner_response?: string }) || {};
                 const initiatorResponse = questionResponses.initiator_response;
                 const partnerResponse = questionResponses.partner_response;
@@ -193,7 +198,7 @@ export default function CouplesChallenge() {
                 return (
                   <div key={index}>
                     <h3 className="font-semibold text-lg mb-4">
-                      {index + 1}. {question.text || question}
+                      {index + 1}. {question.text}
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Card className="bg-muted/50">
@@ -255,7 +260,7 @@ export default function CouplesChallenge() {
             </div>
           </CardHeader>
           <CardContent className="space-y-8">
-            {questionsArray.map((question: any, index) => {
+            {questionsArray.map((question: Question, index) => {
               const questionResponses = (responses[String(index)] as { initiator_response?: string; partner_response?: string }) || {};
               const initiatorResponse = questionResponses.initiator_response;
               const partnerResponse = questionResponses.partner_response;
@@ -265,7 +270,7 @@ export default function CouplesChallenge() {
               return (
                 <div key={index}>
                   <h3 className="font-semibold text-lg mb-2">
-                    {index + 1}. {question.text || question}
+                    {index + 1}. {question.text}
                   </h3>
                   <Textarea
                     value={myResponse || ""}

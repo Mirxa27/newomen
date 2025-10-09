@@ -12,7 +12,7 @@ import { Json } from '@/integrations/supabase/types';
 export interface Message { // Exported Message interface
   id: string;
   content: string;
-  sender: 'user' | 'assistant';
+  sender: 'user' | 'assistant' | 'system'; // Added 'system' to sender type
   timestamp: string;
 }
 
@@ -90,7 +90,7 @@ export function useChat(initialConversationId?: string): ChatState {
       setMessages(msgs.map(m => ({
         id: m.id,
         content: m.text_content || '',
-        sender: m.sender as 'user' | 'assistant',
+        sender: m.sender as 'user' | 'assistant' | 'system',
         timestamp: m.ts || '',
       })));
       setIsConnected(true); // Set connected status

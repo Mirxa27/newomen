@@ -26,9 +26,9 @@ interface UserMemory {
   id: string;
   user_id: string;
   memory_value: string;
-  context?: string | null;
-  importance_score?: number | null;
-  last_referenced_at?: string | null;
+  context: string | null;
+  importance_score: number | null;
+  last_referenced_at: string | null;
   reference_count: number;
   is_active: boolean;
   created_at: string;
@@ -39,7 +39,7 @@ interface AssessmentTracking {
   id: string;
   user_id: string;
   assessment_name: string;
-  suggested_in_conversation_id?: string | null;
+  suggested_in_conversation_id: string | null;
   suggested_at: string;
   completion_status: 'suggested' | 'started' | 'completed' | 'dismissed';
   follow_up_discussed: boolean;

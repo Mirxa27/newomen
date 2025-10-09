@@ -5,12 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Edit, Save, Camera, Award, Zap, User } from "lucide-react"; // Import User icon
+import { Loader2, Edit, Save, Camera, Award, Zap, User, Heart } from "lucide-react";
 import { toast } from "sonner";
 import { useUserProfile, UserProfile, UserAchievement } from "@/hooks/useUserProfile";
 import type { Database, TablesUpdate } from "@/integrations/supabase/types";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 
-type LevelThreshold = Database["public"]["Tables"]["level_thresholds"]['Row'];
+type LevelThreshold = Database["public"]["Tables"]["level_thresholds"];
 
 export default function Profile() {
   const {

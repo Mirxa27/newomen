@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2 } from "lucide-react";
+import { Loader2, MessageCircle, Clock, DollarSign, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Sessions } from "@/integrations/supabase/tables/sessions";
@@ -9,17 +9,19 @@ import { NewmeConversations } from "@/integrations/supabase/tables/newme_convers
 import { UserProfiles } from "@/integrations/supabase/tables/user_profiles";
 import { Agents } from "@/integrations/supabase/tables/agents"; // Import Agents table
 import { Badge } from "@/components/ui/badge"; // Import Badge
-import { Clock, MessageCircle, DollarSign } from "lucide-react"; // Import icons
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
-interface SessionWithUser extends Sessions['Row'] {
+type SessionWithUser = Sessions['Row'] & {
   user_profiles: UserProfiles['Row'] | null;
-  agents: Agents['Row'] | null; // Add agents relationship
-}
+  agents: Agents['Row'] | null;
+  message_count: number;
+};
 
-interface NewMeConversationWithUser extends NewmeConversations['Row'] {
+type NewMeConversationWithUser = NewmeConversations['Row'] & {
   user_profiles: UserProfiles['Row'] | null;
-  agents: Agents['Row'] | null; // Add agents relationship
-}
+  agents: Agents['Row'] | null;
+};
 
 // Helper function to format duration
 const formatDuration = (seconds: number | null) => {

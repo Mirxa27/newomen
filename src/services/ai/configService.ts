@@ -119,7 +119,7 @@ export class AIConfigService {
         return null;
       }
 
-      const configData = Array.isArray(data) ? data[0] : data;
+      const configData = data; // RPC returns a single row or null, not an array
       if (!configData) return this.getDefaultConfiguration();
 
       return {

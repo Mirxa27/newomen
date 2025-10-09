@@ -6,23 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Loader2, Edit, Trash2, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 import { Prompts } from "@/integrations/supabase/tables/prompts";
-import { Json } from "@/integrations/supabase/types";
+import { Json, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
-type Prompt = Prompts;
+type Prompt = Prompts['Row'];
 
 interface PromptFormState {
   id?: string;
   name: string;
-  content: string; // JSON string
+  content: string;
   status: 'draft' | 'published' | 'archived';
-  version: number;
+  version?: number;
   hosted_prompt_id?: string;
 }
 
@@ -32,7 +30,7 @@ export default function AIPrompting() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formState, setFormState] = useState<PromptFormState>({
     name: "",
-    content: "{}",
+    content: "",
     status: "draft",
     version: 1,
   });
@@ -42,11 +40,7 @@ export default function AIPrompting() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("prompts")
-        .select("*")
-        .order("created_at", { ascending: false });
-
+      const { data, error } = await supabase.from("prompts").select("*").order("created_at", { ascending: false });
       if (error) throw error;
       setPrompts(data || []);
     } catch (error) {
@@ -69,28 +63,27 @@ export default function AIPrompting() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const payload: Prompts['Insert'] = {
+      const isNew = !editingPrompt;
+      const payload: TablesInsert<'prompts'> = {
         name: formState.name,
         content: JSON.parse(formState.content) as Json,
         status: formState.status,
         version: formState.version,
-        hosted_prompt_id: formState.hosted_prompt_id || null,
+        hosted_prompt_id: formState.hosted_prompt_id,
       };
-
-      const isNew = !editingPrompt;
 
       if (isNew) {
         const { error } = await supabase.from("prompts").insert(payload);
         if (error) throw error;
         toast.success("Prompt created successfully!");
       } else {
-        const { error } = await supabase.from("prompts").update(payload).eq("id", editingPrompt.id);
+        const { error } = await supabase.from("prompts").update(payload as TablesUpdate<'prompts'>).eq("id", editingPrompt.id);
         if (error) throw error;
         toast.success("Prompt updated successfully!");
       }
       setFormState({
         name: "",
-        content: "{}",
+        content: "",
         status: "draft",
         version: 1,
       });
@@ -143,8 +136,8 @@ export default function AIPrompting() {
     <div className="space-y-6">
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle>{editingPrompt ? "Edit Prompt" : "Create New Prompt"}</CardTitle>
-          <CardDescription>Design and manage AI prompt templates.</CardDescription>
+          <CardTitle>{editingPrompt ? "Edit AI Prompt" : "Create New AI Prompt"}</CardTitle>
+          <CardDescription>Define and manage AI prompt templates.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -163,23 +156,10 @@ export default function AIPrompting() {
               className="glass"
               rows={10}
             />
-            <Input
-              type="number"
-              placeholder="Version"
-              value={formState.version}
-              onChange={(e) => handleFormChange("version", parseInt(e.target.value))}
-              required
-              className="glass"
-            />
-            <Input
-              placeholder="Hosted Prompt ID (Optional)"
-              value={formState.hosted_prompt_id || ""}
-              onChange={(e) => handleFormChange("hosted_prompt_id", e.target.value)}
-              className="glass"
-            />
             <Select
               value={formState.status}
               onValueChange={(value) => handleFormChange("status", value)}
+              required
             >
               <SelectTrigger className="glass">
                 <SelectValue placeholder="Select Status" />
@@ -190,12 +170,25 @@ export default function AIPrompting() {
                 <SelectItem value="archived">Archived</SelectItem>
               </SelectContent>
             </Select>
+            <Input
+              type="number"
+              placeholder="Version"
+              value={formState.version || ""}
+              onChange={(e) => handleFormChange("version", parseInt(e.target.value))}
+              className="glass"
+            />
+            <Input
+              placeholder="Hosted Prompt ID (optional)"
+              value={formState.hosted_prompt_id || ""}
+              onChange={(e) => handleFormChange("hosted_prompt_id", e.target.value)}
+              className="glass"
+            />
             <Button type="submit" disabled={isSubmitting} className="clay-button">
               {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               {editingPrompt ? "Update Prompt" : "Create Prompt"}
             </Button>
             {editingPrompt && (
-              <Button variant="outline" onClick={() => { setEditingPrompt(null); setFormState({ name: "", content: "{}", status: "draft", version: 1 }); }} className="ml-2">
+              <Button variant="outline" onClick={() => { setEditingPrompt(null); setFormState({ name: "", content: "", status: "draft", version: 1 }); }} className="ml-2">
                 Cancel Edit
               </Button>
             )}
@@ -205,7 +198,7 @@ export default function AIPrompting() {
 
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle>Existing Prompts</CardTitle>
+          <CardTitle>Existing AI Prompts</CardTitle>
           <CardDescription>Manage your AI prompt templates.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -217,6 +210,7 @@ export default function AIPrompting() {
                   <TableHead>Version</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Hosted ID</TableHead>
+                  <TableHead>Created At</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -227,6 +221,7 @@ export default function AIPrompting() {
                     <TableCell>{prompt.version}</TableCell>
                     <TableCell>{prompt.status}</TableCell>
                     <TableCell>{prompt.hosted_prompt_id || "N/A"}</TableCell>
+                    <TableCell>{new Date(prompt.created_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button variant="ghost" size="sm" onClick={() => handleEdit(prompt)}>
@@ -241,7 +236,7 @@ export default function AIPrompting() {
                 ))}
                 {prompts.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
                       No prompts found.
                     </TableCell>
                   </TableRow>

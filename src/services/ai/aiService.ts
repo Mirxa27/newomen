@@ -26,7 +26,7 @@ export interface AIServiceConfig extends AIConfiguration {
 
 export class AIService {
   private static instance: AIService;
-  private configService: AIConfigService;
+  public configService: AIConfigService;
   private configurations: Map<string, AIServiceConfig> = new Map();
   private defaultConfiguration: AIServiceConfig | null = null;
 

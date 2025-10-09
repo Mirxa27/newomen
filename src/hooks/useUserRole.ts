@@ -1,39 +1,48 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { UserRole, UserPermissions, RolePermissions } from '@/lib/types/roles';
+import { UserProfiles } from '@/integrations/supabase/tables/user_profiles';
+
+type UserRole = UserProfiles['Row']['role'];
 
 export function useUserRole() {
-  const [role, setRole] = useState<UserRole>();
-  const [permissions, setPermissions] = useState<UserPermissions>();
+  const [role, setRole] = useState<UserRole>('user'); // Default to 'user'
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchUserRole() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setLoading(false);
-          return;
-        }
-
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-        const userRole = (profile?.role as UserRole) || 'MODERATOR';
-        setRole(userRole);
-        setPermissions(RolePermissions[userRole]);
-      } catch (error) {
-        console.error('Error fetching user role:', error);
-      } finally {
+  const fetchUserRole = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!user) {
+        setRole('user');
         setLoading(false);
+        return;
       }
-    }
 
-    fetchUserRole();
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError) throw profileError;
+
+      const userRole = (profile?.role as UserRole) || 'user'; // Explicitly cast and default to 'user'
+      setRole(userRole);
+
+    } catch (e) {
+      console.error('Error fetching user role:', e);
+      setError(e instanceof Error ? e.message : 'An unexpected error occurred');
+      setRole('user');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  return { role, permissions, loading };
+  useEffect(() => {
+    fetchUserRole();
+  }, [fetchUserRole]);
+
+  return { role, loading, error };
 }

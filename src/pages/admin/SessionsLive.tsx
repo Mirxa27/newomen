@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Activity, Mic, MicOff, PhoneOff, Eye, MessageSquare, User, Clock } from "lucide-react";
+import { Activity, MicOff, PhoneOff, Eye, MessageSquare, User, Clock } from "lucide-react";
+import { Tables, TablesUpdate } from "@/integrations/supabase/types";
 
 interface UserProfile {
   nickname: string | null;
@@ -20,30 +21,13 @@ interface Agent {
   name: string;
 }
 
-interface SessionRow {
-  id: string;
-  agent_id: string | null;
-  start_ts: string;
-  status: string;
+interface SessionRow extends Tables<'sessions'> {
   user_profiles: UserProfile | null;
   agents: Agent | null;
 }
 
-interface SessionResponse {
-  id: string;
-  agent_id: string | null;
-  start_ts: string;
-  status: string;
-  user_profiles: UserProfile | null;
-  agents: Agent | null;
-}
-
-interface MessageRow {
-  id: string;
-  sender: string;
-  text_content: string | null;
-  audio_url: string | null;
-  ts: string;
+interface MessageRow extends Tables<'messages'> {
+  // No extra fields needed for now
 }
 
 export default function SessionsLive() {
@@ -54,40 +38,31 @@ export default function SessionsLive() {
   const [viewingConversation, setViewingConversation] = useState(false);
 
   useEffect(() => {
+    const loadSessions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("sessions")
+          .select(
+            `id, agent_id, start_ts, status, user_profiles!inner(nickname, email, avatar_url, subscription_tier), agents(name)`
+          )
+          .eq("status", "active")
+          .order("start_ts", { ascending: false });
+        
+        if (error) throw error;
+        
+        setSessions((data as any[]) || []);
+      } catch (error) {
+        console.error("Error loading sessions:", error);
+        toast.error("Failed to load sessions");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadSessions();
     const interval = setInterval(loadSessions, 5000);
     return () => clearInterval(interval);
   }, []);
-
-  const loadSessions = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("sessions")
-        .select(
-          `id, agent_id, start_ts, status, user_profiles!inner(nickname, email, avatar_url, subscription_tier), agents(name)`
-        )
-        .eq("status", "active")
-        .order("start_ts", { ascending: false });
-      
-      if (error) throw error;
-      
-      const typedData: SessionRow[] = ((data as any[]) || []).map((item) => ({
-        id: item.id,
-        agent_id: item.agent_id,
-        start_ts: item.start_ts,
-        status: item.status,
-        user_profiles: item.user_profiles,
-        agents: item.agents,
-      }));
-      
-      setSessions(typedData);
-    } catch (error) {
-      console.error("Error loading sessions:", error);
-      toast.error("Failed to load sessions");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const loadConversation = async (sessionId: string) => {
     const { data, error } = await supabase
@@ -112,7 +87,6 @@ export default function SessionsLive() {
   };
 
   const toggleMuteSession = async (session: SessionRow) => {
-    // Note: Mute functionality requires database schema update
     toast.info("Mute functionality not yet implemented");
   };
 
@@ -120,12 +94,12 @@ export default function SessionsLive() {
     try {
       const { error } = await supabase
         .from("sessions")
-        .update({ status: "ended", end_ts: new Date().toISOString() })
+        .update({ status: "ended", end_ts: new Date().toISOString() } as TablesUpdate<'sessions'>)
         .eq("id", sessionId);
 
       if (error) throw error;
       toast.success("Session ended");
-      loadSessions();
+      // The interval will refresh the list
     } catch (error) {
       console.error("Error ending session:", error);
       toast.error("Failed to end session");
@@ -181,7 +155,6 @@ export default function SessionsLive() {
                     <TableHead>Duration</TableHead>
                     <TableHead>Started</TableHead>
                     <TableHead>Subscription</TableHead>
-                    <TableHead>Mute</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -216,20 +189,15 @@ export default function SessionsLive() {
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {getDuration(session.start_ts)}
+                          {getDuration(session.start_ts || '')}
                         </div>
                       </TableCell>
                       <TableCell>
-                        {new Date(session.start_ts).toLocaleTimeString()}
+                        {new Date(session.start_ts || '').toLocaleTimeString()}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
                           {session.user_profiles?.subscription_tier || "discovery"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="default">
-                          Live
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -305,7 +273,7 @@ export default function SessionsLive() {
               <div className="ml-auto flex items-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Clock className="w-4 h-4" />
-                  {selectedSession ? getDuration(selectedSession.start_ts) : "0:00"}
+                  {selectedSession ? getDuration(selectedSession.start_ts || '') : "0:00"}
                 </div>
                 <Badge variant="outline">
                   {selectedSession?.user_profiles?.subscription_tier || "discovery"}
@@ -346,7 +314,7 @@ export default function SessionsLive() {
                           </div>
                         )}
                         <div className="text-xs opacity-70 mt-1">
-                          {new Date(message.ts).toLocaleTimeString()}
+                          {new Date(message.ts || '').toLocaleTimeString()}
                         </div>
                       </div>
                     </div>

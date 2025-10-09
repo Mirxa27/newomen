@@ -1,39 +1,34 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import ResponsiveTable from "@/components/ui/ResponsiveTable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
-import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Loader2, Edit, Trash2, Plus, Youtube, Music, Clock, Tag } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
+import { WellnessResources } from "@/integrations/supabase/tables/wellness_resources";
+import { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
-interface WellnessResource {
-  id: string;
+type WellnessResource = WellnessResources['Row'];
+
+interface ResourceFormState {
+  id?: string;
   title: string;
-  category: string;
-  duration: number;
-  audio_url: string;
-  youtube_url?: string;
-  audio_type: 'file' | 'youtube';
-  youtube_audio_extracted: boolean;
   description: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface ResourceForm {
-  title: string;
   category: string;
   duration: number;
   audio_url: string;
+  audio_type: "file" | "youtube";
   youtube_url: string;
-  description: string;
+  youtube_audio_extracted: boolean;
+  is_public: boolean;
+  is_active: boolean;
 }
 
 const CATEGORIES = [
@@ -55,13 +50,17 @@ export default function WellnessLibraryManagement() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [resourceToDelete, setResourceToDelete] = useState<WellnessResource | null>(null);
 
-  const [formData, setFormData] = useState<ResourceForm>({
+  const [formData, setFormData] = useState<ResourceFormState>({
     title: '',
     category: 'meditation',
     duration: 300,
     audio_url: '',
     youtube_url: '',
-    description: ''
+    description: '',
+    audio_type: 'file',
+    youtube_audio_extracted: false,
+    is_public: true,
+    is_active: true,
   });
 
   const loadResources = useCallback(async () => {
@@ -91,10 +90,14 @@ export default function WellnessLibraryManagement() {
     setFormData({
       title: resource.title,
       category: resource.category,
-      duration: resource.duration,
+      duration: resource.duration || 0,
       audio_url: resource.audio_url || '',
       youtube_url: resource.youtube_url || '',
-      description: resource.description
+      description: resource.description || '',
+      audio_type: resource.audio_type,
+      youtube_audio_extracted: resource.youtube_audio_extracted,
+      is_public: resource.is_public,
+      is_active: resource.is_active,
     });
     setDialogOpen(true);
   };
@@ -107,7 +110,11 @@ export default function WellnessLibraryManagement() {
       duration: 300,
       audio_url: '',
       youtube_url: '',
-      description: ''
+      description: '',
+      audio_type: 'file',
+      youtube_audio_extracted: false,
+      is_public: true,
+      is_active: true,
     });
     setDialogOpen(true);
   };
@@ -124,7 +131,7 @@ export default function WellnessLibraryManagement() {
         youtube_url: formData.youtube_url || null,
         audio_url: formData.audio_url || (formData.youtube_url ? '' : ''),
         youtube_audio_extracted: false
-      };
+      } as any;
 
       if (selectedResource) {
         // Update existing resource
@@ -423,10 +430,7 @@ export default function WellnessLibraryManagement() {
         onOpenChange={setDeleteDialogOpen}
         title="Delete Resource"
         description={`Are you sure you want to delete "${resourceToDelete?.title}"? This action cannot be undone.`}
-        confirmText="Delete"
-        cancelText="Cancel"
         onConfirm={handleDelete}
-        variant="destructive"
       />
     </div>
   );

@@ -314,7 +314,7 @@ export default function AgentsPage() {
                         <Button variant="ghost" size="sm" onClick={() => handleEdit(agent)}>
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setDialogState({ open: true, type: 'assessment', agentId: agent.id })}>
+                        <Button variant="ghost" size="sm" onClick={() => setDialogState({ open: true, agentId: agent.id })}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>

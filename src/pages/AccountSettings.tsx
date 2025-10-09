@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { Subscriptions } from "@/integrations/supabase/tables/subscriptions";
 import { Badge } from "@/components/ui/badge"; // Import Badge component
+import { TablesUpdate } from "@/integrations/supabase/types";
 
 export default function AccountSettings() {
   const { profile, loading: profileLoading, error: profileError, updateProfile } = useUserProfile();
@@ -63,7 +64,7 @@ export default function AccountSettings() {
     try {
       const { error } = await supabase
         .from("subscriptions")
-        .update({ status: "cancelled" } as Partial<Subscriptions['Update']>)
+        .update({ status: "cancelled" } as Partial<TablesUpdate<'subscriptions'>>)
         .eq("id", subscription.id);
 
       if (error) throw error;

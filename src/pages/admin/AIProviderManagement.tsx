@@ -14,10 +14,11 @@ import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 import { Providers } from "@/integrations/supabase/tables/providers";
 import { Models } from "@/integrations/supabase/tables/models";
 import { Voices } from "@/integrations/supabase/tables/voices";
+import { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
-type Provider = Providers;
-type Model = Models;
-type Voice = Voices;
+type Provider = Providers['Row'];
+type Model = Models['Row'];
+type Voice = Voices['Row'];
 
 interface ProviderFormState {
   id?: string;
@@ -28,25 +29,25 @@ interface ProviderFormState {
 
 interface ModelFormState {
   id?: string;
-  provider_id: string;
+  provider_id: string | null;
   model_id: string;
   display_name: string;
-  modality: string;
-  context_limit: number;
-  latency_hint_ms: number;
-  is_realtime: boolean;
-  enabled: boolean;
+  modality: string | null;
+  context_limit: number | null;
+  latency_hint_ms: number | null;
+  is_realtime: boolean | null;
+  enabled: boolean | null;
 }
 
 interface VoiceFormState {
   id?: string;
-  provider_id: string;
+  provider_id: string | null;
   voice_id: string;
   name: string;
-  locale: string;
-  gender: string;
-  latency_hint_ms: number;
-  enabled: boolean;
+  locale: string | null;
+  gender: string | null;
+  latency_hint_ms: number | null;
+  enabled: boolean | null;
 }
 
 export default function AIProviderManagement() {
@@ -58,10 +59,10 @@ export default function AIProviderManagement() {
 
   const [providerForm, setProviderForm] = useState<ProviderFormState>({ name: "", type: "llm", apiKey: "" });
   const [modelForm, setModelForm] = useState<ModelFormState>({
-    provider_id: "", model_id: "", display_name: "", modality: "text", context_limit: 4096, latency_hint_ms: 500, is_realtime: false, enabled: true
+    provider_id: null, model_id: "", display_name: "", modality: "text", context_limit: 4096, latency_hint_ms: 500, is_realtime: false, enabled: true
   });
   const [voiceForm, setVoiceForm] = useState<VoiceFormState>({
-    provider_id: "", voice_id: "", name: "", locale: "en-US", gender: "female", latency_hint_ms: 200, enabled: true
+    provider_id: null, voice_id: "", name: "", locale: "en-US", gender: "female", latency_hint_ms: 200, enabled: true
   });
 
   const [dialogState, setDialogState] = useState<{ open: boolean; type: 'provider' | 'model' | 'voice'; id: string | null }>({ open: false, type: 'provider', id: null });
@@ -102,7 +103,7 @@ export default function AIProviderManagement() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const providerPayload: Providers['Insert'] = {
+      const providerPayload: TablesInsert<'providers'> = {
         id: providerForm.id,
         name: providerForm.name,
         type: providerForm.type,
@@ -139,7 +140,7 @@ export default function AIProviderManagement() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const modelPayload: Models['Insert'] = {
+      const modelPayload: TablesInsert<'models'> = {
         id: modelForm.id,
         provider_id: modelForm.provider_id,
         model_id: modelForm.model_id,
@@ -155,7 +156,7 @@ export default function AIProviderManagement() {
       if (error) throw error;
       toast.success("AI Model saved!");
       setModelForm({
-        provider_id: "", model_id: "", display_name: "", modality: "text", context_limit: 4096, latency_hint_ms: 500, is_realtime: false, enabled: true
+        provider_id: null, model_id: "", display_name: "", modality: "text", context_limit: 4096, latency_hint_ms: 500, is_realtime: false, enabled: true
       });
       await loadData();
     } catch (error) {
@@ -170,7 +171,7 @@ export default function AIProviderManagement() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const voicePayload: Voices['Insert'] = {
+      const voicePayload: TablesInsert<'voices'> = {
         id: voiceForm.id,
         provider_id: voiceForm.provider_id,
         voice_id: voiceForm.voice_id,
@@ -185,7 +186,7 @@ export default function AIProviderManagement() {
       if (error) throw error;
       toast.success("AI Voice saved!");
       setVoiceForm({
-        provider_id: "", voice_id: "", name: "", locale: "en-US", gender: "female", latency_hint_ms: 200, enabled: true
+        provider_id: null, voice_id: "", name: "", locale: "en-US", gender: "female", latency_hint_ms: 200, enabled: true
       });
       await loadData();
     } catch (error) {
@@ -193,28 +194,6 @@ export default function AIProviderManagement() {
       toast.error("Failed to save AI voice.");
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!dialogState.id) return;
-    try {
-      let error;
-      if (dialogState.type === 'provider') {
-        ({ error } = await supabase.from("providers").delete().eq("id", dialogState.id));
-      } else if (dialogState.type === 'model') {
-        ({ error } = await supabase.from("models").delete().eq("id", dialogState.id));
-      } else if (dialogState.type === 'voice') {
-        ({ error } = await supabase.from("voices").delete().eq("id", dialogState.id));
-      }
-      if (error) throw error;
-      toast.success(`${dialogState.type.charAt(0).toUpperCase() + dialogState.type.slice(1)} deleted!`);
-      await loadData();
-    } catch (error) {
-      console.error(`Error deleting ${dialogState.type}:`, error);
-      toast.error(`Failed to delete ${dialogState.type}.`);
-    } finally {
-      setDialogState({ open: false, type: 'provider', id: null });
     }
   };
 
@@ -230,13 +209,13 @@ export default function AIProviderManagement() {
     <div className="space-y-6">
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle>Manage AI Providers</CardTitle>
-          <CardDescription>Add, edit, and remove AI service providers.</CardDescription>
+          <CardTitle>{providerForm.id ? "Edit AI Provider" : "Create New AI Provider"}</CardTitle>
+          <CardDescription>Manage your AI service providers (e.g., OpenAI, Anthropic).</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleProviderSubmit} className="space-y-4">
             <Input
-              placeholder="Provider Name (e.g., OpenAI, Anthropic)"
+              placeholder="Provider Name"
               value={providerForm.name}
               onChange={(e) => setProviderForm((prev) => ({ ...prev, name: e.target.value }))}
               required
@@ -245,6 +224,7 @@ export default function AIProviderManagement() {
             <Select
               value={providerForm.type}
               onValueChange={(value) => setProviderForm((prev) => ({ ...prev, type: value }))}
+              required
             >
               <SelectTrigger className="glass">
                 <SelectValue placeholder="Select Type" />
@@ -253,7 +233,6 @@ export default function AIProviderManagement() {
                 <SelectItem value="llm">LLM</SelectItem>
                 <SelectItem value="tts">TTS</SelectItem>
                 <SelectItem value="stt">STT</SelectItem>
-                <SelectItem value="embedding">Embedding</SelectItem>
               </SelectContent>
             </Select>
             <Input
@@ -265,16 +244,31 @@ export default function AIProviderManagement() {
             />
             <Button type="submit" disabled={isSubmitting} className="clay-button">
               {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              Save Provider
+              {providerForm.id ? "Update Provider" : "Create Provider"}
             </Button>
+            {providerForm.id && (
+              <Button variant="outline" onClick={() => setProviderForm({ name: "", type: "llm", apiKey: "" })} className="ml-2">
+                Cancel Edit
+              </Button>
+            )}
           </form>
-          <ResponsiveTable className="mt-6">
+        </CardContent>
+      </Card>
+
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle>Existing AI Providers</CardTitle>
+          <CardDescription>Overview of configured AI providers.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveTable>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead>Created At</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -282,14 +276,26 @@ export default function AIProviderManagement() {
                   <TableRow key={provider.id}>
                     <TableCell className="font-medium">{provider.name}</TableCell>
                     <TableCell>{provider.type}</TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => setDialogState({ open: true, type: 'provider', id: provider.id })}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                    <TableCell>{new Date(provider.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => setProviderForm({ id: provider.id, name: provider.name, type: provider.type, apiKey: "" })}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setDialogState({ open: true, type: 'provider', id: provider.id })}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
-                {providers.length === 0 && <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">No providers found.</TableCell></TableRow>}
+                {providers.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                      No AI providers found.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </ResponsiveTable>
@@ -298,13 +304,13 @@ export default function AIProviderManagement() {
 
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle>Manage AI Models</CardTitle>
-          <CardDescription>Configure models available from your providers.</CardDescription>
+          <CardTitle>{modelForm.id ? "Edit AI Model" : "Add New AI Model"}</CardTitle>
+          <CardDescription>Register new AI models available through your providers.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleModelSubmit} className="space-y-4">
             <Select
-              value={modelForm.provider_id}
+              value={modelForm.provider_id || ""}
               onValueChange={(value) => setModelForm((prev) => ({ ...prev, provider_id: value }))}
               required
             >
@@ -320,21 +326,21 @@ export default function AIProviderManagement() {
               </SelectContent>
             </Select>
             <Input
-              placeholder="Model ID (e.g., gpt-4o, claude-3-opus-20240229)"
+              placeholder="Model ID (e.g., gpt-4o)"
               value={modelForm.model_id}
               onChange={(e) => setModelForm((prev) => ({ ...prev, model_id: e.target.value }))}
               required
               className="glass"
             />
             <Input
-              placeholder="Display Name"
+              placeholder="Display Name (e.g., GPT-4o)"
               value={modelForm.display_name}
               onChange={(e) => setModelForm((prev) => ({ ...prev, display_name: e.target.value }))}
               required
               className="glass"
             />
             <Select
-              value={modelForm.modality}
+              value={modelForm.modality || ""}
               onValueChange={(value) => setModelForm((prev) => ({ ...prev, modality: value }))}
             >
               <SelectTrigger className="glass">
@@ -343,45 +349,38 @@ export default function AIProviderManagement() {
               <SelectContent>
                 <SelectItem value="text">Text</SelectItem>
                 <SelectItem value="audio">Audio</SelectItem>
-                <SelectItem value="vision">Vision</SelectItem>
+                <SelectItem value="image">Image</SelectItem>
+                <SelectItem value="multimodal">Multimodal</SelectItem>
               </SelectContent>
             </Select>
-            <Input
-              type="number"
-              placeholder="Context Limit"
-              value={modelForm.context_limit}
-              onChange={(e) => setModelForm((prev) => ({ ...prev, context_limit: Number(e.target.value) }))}
-              className="glass"
-            />
-            <Input
-              type="number"
-              placeholder="Latency Hint (ms)"
-              value={modelForm.latency_hint_ms}
-              onChange={(e) => setModelForm((prev) => ({ ...prev, latency_hint_ms: Number(e.target.value) }))}
-              className="glass"
-            />
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="model-realtime"
-                checked={modelForm.is_realtime}
-                onCheckedChange={(checked) => setModelForm((prev) => ({ ...prev, is_realtime: checked }))}
-              />
-              <Label htmlFor="model-realtime">Realtime</Label>
-            </div>
             <div className="flex items-center space-x-2">
               <Switch
                 id="model-enabled"
-                checked={modelForm.enabled}
+                checked={modelForm.enabled || false}
                 onCheckedChange={(checked) => setModelForm((prev) => ({ ...prev, enabled: checked }))}
               />
               <Label htmlFor="model-enabled">Enabled</Label>
             </div>
             <Button type="submit" disabled={isSubmitting} className="clay-button">
               {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              Save Model
+              {modelForm.id ? "Update Model" : "Add Model"}
             </Button>
+            {modelForm.id && (
+              <Button variant="outline" onClick={() => setModelForm({ provider_id: null, model_id: "", display_name: "", modality: "text", context_limit: 4096, latency_hint_ms: 500, is_realtime: false, enabled: true })} className="ml-2">
+                Cancel Edit
+              </Button>
+            )}
           </form>
-          <ResponsiveTable className="mt-6">
+        </CardContent>
+      </Card>
+
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle>Existing AI Models</CardTitle>
+          <CardDescription>Overview of registered AI models.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveTable>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -390,7 +389,7 @@ export default function AIProviderManagement() {
                   <TableHead>Provider</TableHead>
                   <TableHead>Modality</TableHead>
                   <TableHead>Enabled</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -401,14 +400,25 @@ export default function AIProviderManagement() {
                     <TableCell>{providers.find(p => p.id === model.provider_id)?.name || "N/A"}</TableCell>
                     <TableCell>{model.modality}</TableCell>
                     <TableCell>{model.enabled ? "Yes" : "No"}</TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => setDialogState({ open: true, type: 'model', id: model.id })}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => setModelForm({ id: model.id, provider_id: model.provider_id, model_id: model.model_id, display_name: model.display_name, modality: model.modality, context_limit: model.context_limit, latency_hint_ms: model.latency_hint_ms, is_realtime: model.is_realtime, enabled: model.enabled })}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setDialogState({ open: true, type: 'model', id: model.id })}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
-                {models.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No models found.</TableCell></TableRow>}
+                {models.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                      No AI models found.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </ResponsiveTable>
@@ -417,13 +427,13 @@ export default function AIProviderManagement() {
 
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle>Manage AI Voices</CardTitle>
-          <CardDescription>Configure voices available from your providers.</CardDescription>
+          <CardTitle>{voiceForm.id ? "Edit AI Voice" : "Add New AI Voice"}</CardTitle>
+          <CardDescription>Register new AI voices available through your providers.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleVoiceSubmit} className="space-y-4">
             <Select
-              value={voiceForm.provider_id}
+              value={voiceForm.provider_id || ""}
               onValueChange={(value) => setVoiceForm((prev) => ({ ...prev, provider_id: value }))}
               required
             >
@@ -439,14 +449,14 @@ export default function AIProviderManagement() {
               </SelectContent>
             </Select>
             <Input
-              placeholder="Voice ID (e.g., 'alloy', 'echo')"
+              placeholder="Voice ID (e.g., en-US-Wavenet-A)"
               value={voiceForm.voice_id}
               onChange={(e) => setVoiceForm((prev) => ({ ...prev, voice_id: e.target.value }))}
               required
               className="glass"
             />
             <Input
-              placeholder="Voice Name (e.g., 'Standard Female 1')"
+              placeholder="Voice Name (e.g., Wavenet-A)"
               value={voiceForm.name}
               onChange={(e) => setVoiceForm((prev) => ({ ...prev, name: e.target.value }))}
               required
@@ -454,44 +464,44 @@ export default function AIProviderManagement() {
             />
             <Input
               placeholder="Locale (e.g., en-US)"
-              value={voiceForm.locale}
+              value={voiceForm.locale || ""}
               onChange={(e) => setVoiceForm((prev) => ({ ...prev, locale: e.target.value }))}
               className="glass"
             />
-            <Select
-              value={voiceForm.gender}
-              onValueChange={(value) => setVoiceForm((prev) => ({ ...prev, gender: value }))}
-            >
-              <SelectTrigger className="glass">
-                <SelectValue placeholder="Select Gender" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="male">Male</SelectItem>
-                <SelectItem value="female">Female</SelectItem>
-                <SelectItem value="neutral">Neutral</SelectItem>
-              </SelectContent>
-            </Select>
             <Input
-              type="number"
-              placeholder="Latency Hint (ms)"
-              value={voiceForm.latency_hint_ms}
-              onChange={(e) => setVoiceForm((prev) => ({ ...prev, latency_hint_ms: Number(e.target.value) }))}
+              placeholder="Gender (e.g., female)"
+              value={voiceForm.gender || ""}
+              onChange={(e) => setVoiceForm((prev) => ({ ...prev, gender: e.target.value }))}
               className="glass"
             />
             <div className="flex items-center space-x-2">
               <Switch
                 id="voice-enabled"
-                checked={voiceForm.enabled}
+                checked={voiceForm.enabled || false}
                 onCheckedChange={(checked) => setVoiceForm((prev) => ({ ...prev, enabled: checked }))}
               />
               <Label htmlFor="voice-enabled">Enabled</Label>
             </div>
             <Button type="submit" disabled={isSubmitting} className="clay-button">
               {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              Save Voice
+              {voiceForm.id ? "Update Voice" : "Add Voice"}
             </Button>
+            {voiceForm.id && (
+              <Button variant="outline" onClick={() => setVoiceForm({ provider_id: null, voice_id: "", name: "", locale: "en-US", gender: "female", latency_hint_ms: 200, enabled: true })} className="ml-2">
+                Cancel Edit
+              </Button>
+            )}
           </form>
-          <ResponsiveTable className="mt-6">
+        </CardContent>
+      </Card>
+
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle>Existing AI Voices</CardTitle>
+          <CardDescription>Overview of registered AI voices.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveTable>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -500,7 +510,7 @@ export default function AIProviderManagement() {
                   <TableHead>Provider</TableHead>
                   <TableHead>Locale</TableHead>
                   <TableHead>Enabled</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -511,14 +521,25 @@ export default function AIProviderManagement() {
                     <TableCell>{providers.find(p => p.id === voice.provider_id)?.name || "N/A"}</TableCell>
                     <TableCell>{voice.locale}</TableCell>
                     <TableCell>{voice.enabled ? "Yes" : "No"}</TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => setDialogState({ open: true, type: 'voice', id: voice.id })}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => setVoiceForm({ id: voice.id, provider_id: voice.provider_id, voice_id: voice.voice_id, name: voice.name, locale: voice.locale, gender: voice.gender, latency_hint_ms: voice.latency_hint_ms, enabled: voice.enabled })}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setDialogState({ open: true, type: 'voice', id: voice.id })}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
-                {voices.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No voices found.</TableCell></TableRow>}
+                {voices.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                      No AI voices found.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </ResponsiveTable>
@@ -529,9 +550,31 @@ export default function AIProviderManagement() {
         open={dialogState.open}
         onOpenChange={(open) => setDialogState({ ...dialogState, open })}
         onConfirm={handleDelete}
-        title={`Delete ${dialogState.type.charAt(0).toUpperCase() + dialogState.type.slice(1)}?`}
-        description="This action cannot be undone."
+        title={`Delete ${dialogState.type === 'provider' ? 'Provider' : dialogState.type === 'model' ? 'Model' : 'Voice'}?`}
+        description="This action cannot be undone. The item will be permanently removed."
       />
     </div>
   );
+
+  async function handleDelete() {
+    if (!dialogState.id || !dialogState.type) return;
+    try {
+      let error;
+      if (dialogState.type === 'provider') {
+        ({ error } = await supabase.from("providers").delete().eq("id", dialogState.id));
+      } else if (dialogState.type === 'model') {
+        ({ error } = await supabase.from("models").delete().eq("id", dialogState.id));
+      } else if (dialogState.type === 'voice') {
+        ({ error } = await supabase.from("voices").delete().eq("id", dialogState.id));
+      }
+      if (error) throw error;
+      toast.success(`${dialogState.type === 'provider' ? 'Provider' : dialogState.type === 'model' ? 'Model' : 'Voice'} deleted successfully!`);
+      await loadData();
+    } catch (error) {
+      console.error(`Error deleting ${dialogState.type}:`, error);
+      toast.error(`Failed to delete ${dialogState.type}.`);
+    } finally {
+      setDialogState({ open: false, type: 'provider', id: null });
+    }
+  }
 }

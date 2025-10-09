@@ -7,17 +7,20 @@ import { Achievements } from '@/integrations/supabase/tables/achievements';
 import { TablesUpdate } from '@/integrations/supabase/types';
 
 export type UserProfile = UserProfiles['Row'];
-export type UserAchievement = UserAchievements['Row'] & { achievements: Achievements['Row'] };
+export type UserAchievement = UserAchievements['Row'] & {
+  achievements: Achievements['Row'];
+};
 
 export function useUserProfile() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [achievements, setAchievements] = useState<UserAchievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false); // Added missing state
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
-  const getDisplayName = useCallback(() => { // Added missing function
-    return profile?.nickname || profile?.email || 'User';
+  const getDisplayName = useCallback(() => {
+    if (!profile) return 'User';
+    return profile.nickname || profile.email || 'User';
   }, [profile]);
 
   const fetchUserProfile = useCallback(async () => {
@@ -39,15 +42,16 @@ export function useUserProfile() {
         .single();
 
       if (profileError) throw profileError;
-      if (!profileData) { // Explicit null check
+      if (!profileData) {
         throw new Error('User profile not found.');
       }
-      setProfile(profileData);
+      const typedProfile = profileData as UserProfile;
+      setProfile(typedProfile);
 
       const { data: userAchievements, error: achievementsError } = await supabase
         .from('user_achievements')
         .select(`*, achievements:achievement_id (*)`)
-        .eq('user_id', profileData.id);
+        .eq('user_id', typedProfile.user_id);
 
       if (achievementsError) throw achievementsError;
       setAchievements(userAchievements as UserAchievement[]);
@@ -63,14 +67,13 @@ export function useUserProfile() {
   }, []);
 
   useEffect(() => {
-    // Removed profileLoading from dependency array as it's not a direct dependency for initial fetch
     void fetchUserProfile();
   }, [fetchUserProfile]);
 
-  const updateProfile = useCallback(async (updates: Partial<TablesUpdate<'user_profiles'>>) => {
+  const updateProfile = useCallback(async (updates: Partial<TablesUpdate<'user_profiles'>>): Promise<boolean> => {
     if (!profile) {
       toast.error('No profile to update.');
-      return false; // Indicate failure
+      return false;
     }
     try {
       const { data, error } = await supabase
@@ -83,19 +86,20 @@ export function useUserProfile() {
       if (error) throw error;
       setProfile(data);
       toast.success('Profile updated successfully!');
-      return true; // Indicate success
+      return true;
     } catch (e) {
       console.error('Error updating profile:', e);
       toast.error(e instanceof Error ? e.message : 'Failed to update profile.');
-      return false; // Indicate failure
+      return false;
     }
   }, [profile]);
 
-  const uploadAvatar = useCallback(async (file: File) => { // Added missing function
+  const uploadAvatar = useCallback(async (file: File) => {
     if (!profile) {
-      toast.error('No profile to update avatar.');
+      toast.error('No profile found.');
       return;
     }
+
     setUploadingAvatar(true);
     try {
       const fileExt = file.name.split('.').pop();

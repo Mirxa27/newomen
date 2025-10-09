@@ -28,12 +28,8 @@ export interface LogEntry {
 export interface LoggerConfig {
   level?: LogLevel;
   enableConsole?: boolean;
-  enableFile?: boolean;
   enableRemote?: boolean;
-  filePath?: string;
   remoteEndpoint?: string;
-  maxFileSize?: number;
-  maxFiles?: number;
   enableColors?: boolean;
   enableTimestamps?: boolean;
   enableRequestId?: boolean;
@@ -56,12 +52,8 @@ export class StructuredLogger {
     this.config = {
       level: config.level ?? LogLevel.INFO,
       enableConsole: config.enableConsole ?? true,
-      enableFile: config.enableFile ?? false,
       enableRemote: config.enableRemote ?? false,
-      filePath: config.filePath ?? './logs/app.log',
       remoteEndpoint: config.remoteEndpoint ?? '',
-      maxFileSize: config.maxFileSize ?? 10 * 1024 * 1024, // 10MB
-      maxFiles: config.maxFiles ?? 5,
       enableColors: config.enableColors ?? true,
       enableTimestamps: config.enableTimestamps ?? true,
       enableRequestId: config.enableRequestId ?? true,
@@ -86,11 +78,6 @@ export class StructuredLogger {
     if (this.config.enableConsole) {
       this.transports.push(new ConsoleTransport(this.config));
     }
-
-    if (this.config.enableFile) {
-      this.transports.push(new FileTransport(this.config));
-    }
-
     if (this.config.enableRemote) {
       this.transports.push(new RemoteTransport(this.config));
     }
@@ -144,15 +131,15 @@ export class StructuredLogger {
     };
 
     if (this.config.enableRequestId && typeof window !== 'undefined') {
-      entry.requestId = (window as any).__requestId || uuidv4();
+      entry.requestId = (window as { __requestId?: string }).__requestId || uuidv4();
     }
 
     if (this.config.enableUserId && typeof window !== 'undefined') {
-      entry.userId = (window as any).__userId;
+      entry.userId = (window as { __userId?: string }).__userId;
     }
 
     if (this.config.enableSessionId && typeof window !== 'undefined') {
-      entry.sessionId = (window as any).__sessionId;
+      entry.sessionId = (window as { __sessionId?: string }).__sessionId;
     }
 
     return entry;
@@ -283,56 +270,6 @@ export class ConsoleTransport implements LogTransport {
   }
 }
 
-// File transport (Node.js only)
-export class FileTransport implements LogTransport {
-  private writeStream: any;
-
-  constructor(private config: Required<LoggerConfig>) {
-    if (typeof window === 'undefined') {
-      // Node.js environment
-      const fs = require('fs');
-      const path = require('path');
-      
-      const logDir = path.dirname(this.config.filePath);
-      if (!fs.existsSync(logDir)) {
-        fs.mkdirSync(logDir, { recursive: true });
-      }
-
-      this.writeStream = fs.createWriteStream(this.config.filePath, { flags: 'a' });
-    }
-  }
-
-  write(entry: LogEntry): void {
-    if (!this.writeStream) return;
-
-    const logLine = JSON.stringify({
-      timestamp: entry.timestamp,
-      level: entry.levelName,
-      message: entry.message,
-      context: entry.context,
-      error: entry.error ? {
-        name: entry.error.name,
-        message: entry.error.message,
-        stack: entry.error.stack,
-      } : undefined,
-      requestId: entry.requestId,
-      userId: entry.userId,
-      sessionId: entry.sessionId,
-      metadata: entry.metadata,
-    }) + '\n';
-
-    this.writeStream.write(logLine);
-  }
-
-  async close(): Promise<void> {
-    if (this.writeStream) {
-      return new Promise((resolve) => {
-        this.writeStream.end(resolve);
-      });
-    }
-  }
-}
-
 // Remote transport for centralized logging
 export class RemoteTransport implements LogTransport {
   private queue: LogEntry[] = [];
@@ -400,113 +337,6 @@ export class RemoteTransport implements LogTransport {
   }
 }
 
-// Request logger middleware
-export class RequestLogger {
-  static middleware() {
-    return (req: any, res: any, next: any) => {
-      const startTime = Date.now();
-      const requestId = uuidv4();
-      
-      // Add request ID to request object
-      req.id = requestId;
-      (req as any).__requestId = requestId;
-
-      // Log request
-      logger.info('Incoming request', {
-        method: req.method,
-        url: req.url,
-        userAgent: req.headers['user-agent'],
-        ip: req.ip || req.connection?.remoteAddress,
-      });
-
-      // Override res.end to log response
-      const originalEnd = res.end;
-      res.end = function(chunk: any, encoding?: any) {
-        const duration = Date.now() - startTime;
-        
-        logger.info('Request completed', {
-          method: req.method,
-          url: req.url,
-          statusCode: res.statusCode,
-          duration: `${duration}ms`,
-        });
-
-        res.end = originalEnd;
-        res.end(chunk, encoding);
-      };
-
-      next();
-    };
-  }
-}
-
-// Performance logger
-export class PerformanceLogger {
-  private static metrics = new Map<string, number[]>();
-
-  static recordMetric(name: string, value: number): void {
-    if (!this.metrics.has(name)) {
-      this.metrics.set(name, []);
-    }
-    this.metrics.get(name)!.push(value);
-  }
-
-  static getMetrics(name: string): number[] {
-    return this.metrics.get(name) || [];
-  }
-
-  static getAverage(name: string): number {
-    const values = this.getMetrics(name);
-    if (values.length === 0) return 0;
-    return values.reduce((sum, val) => sum + val, 0) / values.length;
-  }
-
-  static getPercentile(name: string, percentile: number): number {
-    const values = this.getMetrics(name).sort((a, b) => a - b);
-    if (values.length === 0) return 0;
-    
-    const index = Math.ceil((percentile / 100) * values.length) - 1;
-    return values[Math.max(0, index)];
-  }
-
-  static clearMetrics(name?: string): void {
-    if (name) {
-      this.metrics.delete(name);
-    } else {
-      this.metrics.clear();
-    }
-  }
-
-  static getSummary(): Record<string, {
-    count: number;
-    average: number;
-    min: number;
-    max: number;
-    p50: number;
-    p95: number;
-    p99: number;
-  }> {
-    const summary: Record<string, any> = {};
-    
-    for (const [name, values] of this.metrics) {
-      if (values.length === 0) continue;
-      
-      const sorted = values.sort((a, b) => a - b);
-      summary[name] = {
-        count: values.length,
-        average: this.getAverage(name),
-        min: sorted[0],
-        max: sorted[sorted.length - 1],
-        p50: this.getPercentile(name, 50),
-        p95: this.getPercentile(name, 95),
-        p99: this.getPercentile(name, 99),
-      };
-    }
-    
-    return summary;
-  }
-}
-
 // Export singleton logger instance
 export const logger = StructuredLogger.getInstance({
   level: LogLevel.INFO,
@@ -519,7 +349,3 @@ export const logger = StructuredLogger.getInstance({
   enableErrorStack: true,
   enablePerformanceTracking: true,
 });
-
-// Export utilities
-export const requestLogger = RequestLogger;
-export const performanceLogger = PerformanceLogger;

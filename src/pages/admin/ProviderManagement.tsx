@@ -5,12 +5,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, RefreshCw, Database, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Providers } from "@/integrations/supabase/tables/providers";
+
+type ProviderWithCounts = Providers['Row'] & {
+  models?: { count: number }[];
+  voices?: { count: number }[];
+};
+
+interface DiscoveryResult {
+  status: string;
+  providers: number;
+  models: number;
+  voices: number;
+  errors?: string[];
+  message?: string;
+}
 
 export default function ProviderManagement() {
   const { toast } = useToast();
   const [isDiscovering, setIsDiscovering] = useState(false);
-  const [discoveryResults, setDiscoveryResults] = useState<any>(null);
-  const [providers, setProviders] = useState<any[]>([]);
+  const [discoveryResults, setDiscoveryResults] = useState<DiscoveryResult | null>(null);
+  const [providers, setProviders] = useState<ProviderWithCounts[]>([]);
   const [isLoadingProviders, setIsLoadingProviders] = useState(false);
 
   const handleDiscoverProviders = async () => {
@@ -153,7 +168,7 @@ export default function ProviderManagement() {
                     <div>
                       <CardTitle>{provider.name}</CardTitle>
                       <CardDescription>
-                        Type: {provider.type.toUpperCase()} • 
+                        Type: {provider.type.toUpperCase()} •
                         Last synced: {provider.last_synced_at ? new Date(provider.last_synced_at).toLocaleDateString() : 'Never'}
                       </CardDescription>
                     </div>
