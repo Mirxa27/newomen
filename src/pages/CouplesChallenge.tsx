@@ -10,25 +10,22 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, ArrowLeft, Send, Heart, Users, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { trackCouplesChallengeCompletion } from "@/lib/gamification-events";
-import type { Json, Tables, TablesUpdate, TablesInsert } from "@/integrations/supabase/types";
-import { CouplesChallenges } from "@/integrations/supabase/tables/couples_challenges";
-import { ChallengeTemplates } from "@/integrations/supabase/tables/challenge_templates";
-import { UserProfiles } from "@/integrations/supabase/tables/user_profiles"; // Import UserProfiles
+import type { Json, Tables, TablesUpdate } from "@/integrations/supabase/types";
 
 interface Question {
   id: string;
   text: string;
 }
 
-interface ChallengeTemplate extends Omit<Tables<'challenge_templates'>['Row'], 'questions'> {
-  questions: Question[]; // Assuming questions is JSON
-}
+type ChallengeTemplate = Omit<Tables<'challenge_templates'>, 'questions'> & {
+  questions: Question[];
+};
 
-interface Challenge extends Omit<Tables<'couples_challenges'>['Row'], 'responses' | 'question_set'> {
+type Challenge = Omit<Tables<'couples_challenges'>, 'responses' | 'question_set'> & {
   responses: Json;
   question_set: { questions: Question[] };
   challenge_templates: ChallengeTemplate;
-}
+};
 
 export default function CouplesChallenge() {
   const { id } = useParams<{ id: string }>();
@@ -79,7 +76,7 @@ export default function CouplesChallenge() {
   }, [id, navigate]);
 
   useEffect(() => {
-    loadChallenge();
+    void loadChallenge();
   }, [loadChallenge]);
 
   const handleResponseChange = (questionIndex: string, value: string) => {
@@ -101,12 +98,11 @@ export default function CouplesChallenge() {
     try {
       const { error: updateError } = await supabase
         .from("couples_challenges")
-        .update({ responses: responses as Json } as TablesUpdate<'couples_challenges'>)
+        .update({ responses: responses as Json })
         .eq("id", challenge.id);
 
       if (updateError) throw updateError;
 
-      // Check if both partners have responded to all questions
       const allAnswered = template?.questions && Array.isArray(template.questions) && template.questions.every((_q, index) => {
         const res = responses[String(index)] as Record<string, string> | undefined;
         return res?.initiator_response && res?.partner_response;
@@ -115,24 +111,22 @@ export default function CouplesChallenge() {
       if (allAnswered && challenge.status !== 'completed') {
         const { error: completeError } = await supabase
           .from("couples_challenges")
-          .update({ status: 'completed', completed_at: new Date().toISOString() } as TablesUpdate<'couples_challenges'>)
+          .update({ status: 'completed', completed_at: new Date().toISOString() })
           .eq("id", challenge.id);
         if (completeError) throw completeError;
         
-        // Track completion for gamification
         if (challenge.initiator_id) {
-          trackCouplesChallengeCompletion(challenge.initiator_id, challenge.id); // Removed extra argument
+          trackCouplesChallengeCompletion(challenge.initiator_id, challenge.id);
         }
         if (challenge.partner_id) {
-          trackCouplesChallengeCompletion(challenge.partner_id, challenge.id); // Removed extra argument
+          trackCouplesChallengeCompletion(challenge.partner_id, challenge.id);
         }
 
         toast({
           title: "Challenge Complete!",
           description: "You've both answered all questions. Time to see the results!",
         });
-        // Refresh data to show completion screen
-        loadChallenge();
+        await loadChallenge();
       } else {
         toast({
           title: "Responses Saved!",

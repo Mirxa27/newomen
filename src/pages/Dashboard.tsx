@@ -9,9 +9,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { trackDailyLogin } from "@/lib/gamification-events";
 import { Loader2, Brain, Heart, Users, Award, TrendingUp, BookOpen, MessageCircle, Zap } from "lucide-react";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database, Tables } from "@/integrations/supabase/types";
 
-type LevelThreshold = Database["public"]["Tables"]["level_thresholds"]['Row'];
+type LevelThreshold = Tables<'level_thresholds'>;
 
 export default function Dashboard() {
   const { toast } = useToast();
@@ -51,8 +51,7 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    if (profile?.user_id) { // Use optional chaining for profile
-      // Track daily login after profile is loaded
+    if (profile?.user_id) {
       void trackDailyLogin(profile.user_id);
     }
     void fetchLevelThresholds();
@@ -99,7 +98,6 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        {/* Daily Affirmation */}
         <Card className="glass-card">
           <CardHeader>
             <CardTitle className="text-2xl">Daily Affirmation</CardTitle>
@@ -109,7 +107,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Gamification Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="glass-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -148,7 +145,6 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Quick Access */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Link to="/assessments">
             <Card className="glass-card hover:shadow-lg transition-all">
@@ -185,7 +181,6 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        {/* Recent Activity / Recommendations (Placeholder) */}
         <Card className="glass-card">
           <CardHeader>
             <CardTitle>Your Journey</CardTitle>

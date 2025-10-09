@@ -1,8 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logging';
-import { AIConfigurations } from '@/integrations/supabase/tables/ai_configurations';
 import { Json, Tables } from '@/integrations/supabase/types';
-import { PostgrestError } from '@supabase/supabase-js'; // Import PostgrestError
+import { PostgrestError } from '@supabase/supabase-js';
 
 export interface AIConfiguration {
   id: string;
@@ -55,7 +54,7 @@ export class AIConfigService {
 
       if (error) throw error;
 
-      const configs = data as Tables<'ai_configurations'>['Row'][];
+      const configs = data as Tables<'ai_configurations'>[];
 
       this.configurations.clear();
       configs?.forEach(config => {
@@ -121,7 +120,7 @@ export class AIConfigService {
         return null;
       }
 
-      const configData = data as any; // RPC returns a single row or null, not an array
+      const configData = data as Tables<'ai_configurations'> | null;
       if (!configData) return this.getDefaultConfiguration();
 
       return {

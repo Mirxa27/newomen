@@ -1,11 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logging';
-import { NewmeConversations } from '@/integrations/supabase/tables/newme_conversations';
-import { NewmeUserMemories } from '@/integrations/supabase/tables/newme_user_memories';
-import { NewmeAssessmentTracking } from '@/integrations/supabase/tables/newme_assessment_tracking';
-import { NewmeMessages } from '@/integrations/supabase/tables/newme_messages';
 import { Json, Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
-import { PostgrestError } from '@supabase/supabase-js'; // Import PostgrestError
+import { PostgrestError } from '@supabase/supabase-js';
 
 interface NewMeMessage {
   role: 'user' | 'assistant';
@@ -48,9 +44,7 @@ interface AssessmentTracking {
 export class NewMeMemoryService {
   private static instance: NewMeMemoryService;
 
-  private constructor() {
-    // Private constructor to prevent direct instantiation
-  }
+  private constructor() {}
 
   public static getInstance(): NewMeMemoryService {
     if (!NewMeMemoryService.instance) {
@@ -76,7 +70,7 @@ export class NewMeMemoryService {
     }
   }
 
-  async updateConversation(conversationId: string, updates: Partial<TablesUpdate<'newme_conversations'>>): Promise<Tables<'newme_conversations'>['Row'] | null> {
+  async updateConversation(conversationId: string, updates: TablesUpdate<'newme_conversations'>): Promise<Tables<'newme_conversations'> | null> {
     try {
       const { data, error } = await supabase
         .from('newme_conversations')
@@ -98,7 +92,7 @@ export class NewMeMemoryService {
 
   async logNewMessage(input: {
     conversation_id: string;
-    sender: 'user' | 'assistant';
+    sender: 'user' | 'assistant' | 'system';
     text_content: string;
     emotion_data?: Json | null;
   }): Promise<void> {
@@ -108,10 +102,9 @@ export class NewMeMemoryService {
         sender: input.sender,
         text_content: input.text_content,
         emotion_data: input.emotion_data || null,
-        ts: new Date().toISOString(), // Add timestamp as it's a non-nullable column
-      } as TablesInsert<'newme_messages'>); // Cast to Insert type
+        ts: new Date().toISOString(),
+      });
 
-      // Update message count in conversation
       await supabase.rpc('increment_message_count', { conv_id: input.conversation_id });
 
     } catch (e) {
@@ -133,7 +126,7 @@ export class NewMeMemoryService {
         .eq('memory_value', input.memory_value)
         .single();
       
-      const existingMemory = existingMemoryData as Tables<'newme_user_memories'>['Row'] | null;
+      const existingMemory = existingMemoryData as Tables<'newme_user_memories'> | null;
 
       if (existingMemory) {
         const { data, error } = await supabase
@@ -144,11 +137,13 @@ export class NewMeMemoryService {
             importance_score: input.importance_score ?? existingMemory.importance_score,
             last_referenced_at: new Date().toISOString(),
             reference_count: Number(existingMemory.reference_count) + 1,
-          } as TablesUpdate<'newme_user_memories'>) // Cast to Update type
-          .eq('id', existingMemory.id);
+          })
+          .eq('id', existingMemory.id)
+          .select()
+          .single();
 
         if (error) throw error;
-        return data;
+        return data as UserMemory;
       } else {
         const { data, error } = await supabase
           .from('newme_user_memories')
@@ -160,12 +155,12 @@ export class NewMeMemoryService {
             last_referenced_at: new Date().toISOString(),
             reference_count: 1,
             is_active: true,
-          } as TablesInsert<'newme_user_memories'>) // Cast to Insert type
+          })
           .select()
           .single();
 
         if (error) throw error;
-        return data;
+        return data as UserMemory;
       }
     } catch (e) {
       logger.error('Error upserting user memory:', e);
@@ -177,7 +172,7 @@ export class NewMeMemoryService {
     try {
       const { error } = await supabase
         .from('newme_user_memories')
-        .update({ is_active: false } as TablesUpdate<'newme_user_memories'>) // Cast to Update type
+        .update({ is_active: false })
         .eq('id', memoryId);
 
       if (error) throw error;
@@ -197,19 +192,19 @@ export class NewMeMemoryService {
           suggested_at: new Date().toISOString(),
           completion_status: 'suggested',
           follow_up_discussed: false,
-        } as TablesInsert<'newme_assessment_tracking'>) // Cast to Insert type
+        })
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      return data as AssessmentTracking;
     } catch (e) {
       logger.error('Error tracking assessment suggestion:', e);
       return null;
     }
   }
 
-  async updateAssessmentTracking(trackingId: string, updates: Partial<TablesUpdate<'newme_assessment_tracking'>>): Promise<AssessmentTracking | null> {
+  async updateAssessmentTracking(trackingId: string, updates: TablesUpdate<'newme_assessment_tracking'>): Promise<AssessmentTracking | null> {
     try {
       const { data, error } = await supabase
         .from('newme_assessment_tracking')
@@ -219,7 +214,7 @@ export class NewMeMemoryService {
         .single();
 
       if (error) throw error;
-      return data;
+      return data as AssessmentTracking;
     } catch (e) {
       logger.error('Error updating assessment tracking:', e);
       return null;

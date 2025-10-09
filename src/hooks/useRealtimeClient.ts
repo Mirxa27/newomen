@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createWebRTCClient, getAudioDevices } from '@/realtime/client/webrtc';
 import { createWsFallbackClient } from '@/realtime/client/ws-fallback';
+import { NEWME_SYSTEM_PROMPT } from '@/config/newme-system-prompt';
 
 type Transcript = {
   id: string;
@@ -78,7 +79,12 @@ export const useRealtimeClient = () => {
   }, [clientListeners]);
 
   const start = useCallback(() => {
-    client.startSession({ audioDeviceId: selectedDevice });
+    const memoryContext = ''; // TODO: Implement memory context
+    client.startSession({
+      audioDeviceId: selectedDevice,
+      systemPrompt: NEWME_SYSTEM_PROMPT,
+      memoryContext,
+    });
   }, [client, selectedDevice]);
 
   const stop = useCallback(() => {

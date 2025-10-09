@@ -4,20 +4,17 @@ import { NewMeMemoryService } from '@/services/NewMeMemoryService';
 import { AIService } from '@/services/ai/aiService';
 import { logger } from '@/lib/logging';
 import { toast } from 'sonner';
-import { NewmeConversations } from '@/integrations/supabase/tables/newme_conversations';
-import { UserProfiles } from '@/integrations/supabase/tables/user_profiles';
-import { NewmeMessages } from '@/integrations/supabase/tables/newme_messages';
 import { Json, Tables, TablesInsert } from '@/integrations/supabase/types';
 
-export interface Message { // Exported Message interface
+export interface Message {
   id: string;
   content: string;
-  sender: 'user' | 'assistant' | 'system'; // Added 'system' to sender type
+  sender: 'user' | 'assistant' | 'system';
   timestamp: string;
 }
 
 interface ChatState {
-  conversation: Tables<'newme_conversations'>['Row'] | null;
+  conversation: Tables<'newme_conversations'> | null;
   messages: Message[];
   input: string;
   setInput: Dispatch<SetStateAction<string>>;
@@ -25,20 +22,20 @@ interface ChatState {
   loading: boolean;
   error: string | null;
   messagesEndRef: React.RefObject<HTMLDivElement>;
-  isConnected: boolean; // Added missing property
-  isConnecting: boolean; // Added missing property
-  startConversation: () => Promise<void>; // Added missing property
-  isSpeaking: boolean; // Added missing property
-  isRecording: boolean; // Added missing property
-  isSpeakerMuted: boolean; // Added missing property
-  toggleSpeakerMute: () => void; // Added missing property
-  startRecording: () => void; // Added missing property
-  stopRecording: () => void; // Added missing property
-  audioLevel: number; // Added missing property
+  isConnected: boolean;
+  isConnecting: boolean;
+  startConversation: () => Promise<void>;
+  isSpeaking: boolean;
+  isRecording: boolean;
+  isSpeakerMuted: boolean;
+  toggleSpeakerMute: () => void;
+  startRecording: () => void;
+  stopRecording: () => void;
+  audioLevel: number;
 }
 
 export function useChat(initialConversationId?: string): ChatState {
-  const [conversation, setConversation] = useState<Tables<'newme_conversations'>['Row'] | null>(null);
+  const [conversation, setConversation] = useState<Tables<'newme_conversations'> | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -46,7 +43,6 @@ export function useChat(initialConversationId?: string): ChatState {
   const [userId, setUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Added missing states for ChatState interface
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -75,7 +71,7 @@ export function useChat(initialConversationId?: string): ChatState {
         .single();
 
       if (error) throw error;
-      if (!data) { // Explicit null check
+      if (!data) {
         throw new Error('Conversation not found.');
       }
       setConversation(data);
@@ -87,14 +83,14 @@ export function useChat(initialConversationId?: string): ChatState {
         .order('ts', { ascending: true });
 
       if (msgsError) throw msgsError;
-      const msgs = msgsData as Tables<'newme_messages'>['Row'][];
+      const msgs = msgsData as Tables<'newme_messages'>[];
       setMessages(msgs.map(m => ({
         id: m.id,
         content: m.text_content || '',
-        sender: m.sender as 'user' | 'assistant' | 'system',
-        timestamp: m.ts || '',
+        sender: m.sender,
+        timestamp: m.ts,
       })));
-      setIsConnected(true); // Set connected status
+      setIsConnected(true);
     } catch (e) {
       logger.error('Error loading conversation:', e);
       setError(e instanceof Error ? e.message : 'Failed to load conversation.');
@@ -104,7 +100,7 @@ export function useChat(initialConversationId?: string): ChatState {
     }
   }, []);
 
-  const startConversation = useCallback(async () => { // Added missing function
+  const startConversation = useCallback(async () => {
     setIsConnecting(true);
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -118,7 +114,7 @@ export function useChat(initialConversationId?: string): ChatState {
 
       const { data: newConv, error: newConvError } = await supabase
         .from('newme_conversations')
-        .insert({ user_id: user.id, title: 'New Conversation' } as TablesInsert<'newme_conversations'>)
+        .insert({ user_id: user.id, title: 'New Conversation' })
         .select()
         .single();
 
@@ -154,7 +150,7 @@ export function useChat(initialConversationId?: string): ChatState {
         return;
       }
 
-      const { data: existingConversationsData, error: convError } = await supabase
+      const { data: existingConversations, error: convError } = await supabase
         .from('newme_conversations')
         .select('*')
         .eq('user_id', user.id)
@@ -162,13 +158,11 @@ export function useChat(initialConversationId?: string): ChatState {
         .limit(1);
 
       if (convError) throw convError;
-      
-      const existingConversations = existingConversationsData as Tables<'newme_conversations'>['Row'][];
 
       if (existingConversations && existingConversations.length > 0) {
         await loadConversation(existingConversations[0].id);
       } else {
-        await startConversation(); // Use the new startConversation function
+        await startConversation();
       }
     } catch (e) {
       logger.error('Error creating/loading conversation:', e);
@@ -210,13 +204,17 @@ export function useChat(initialConversationId?: string): ChatState {
       if (profileError) throw profileError;
 
       let finalContext: Json = memoryContext || {};
-      const profileNickname = profileData?.nickname;
-      if (profileNickname) {
-        finalContext = { ...(finalContext as Record<string, unknown>), nickname: profileNickname };
+      if (profileData?.nickname) {
+        finalContext = { ...(finalContext as Record<string, unknown>), nickname: profileData.nickname };
+      }
+
+      const aiConfig = aiService.getDefaultConfiguration();
+      if (!aiConfig) {
+        throw new Error("Default AI configuration not found.");
       }
 
       const aiResponse = await aiService.callAIProvider(
-        aiService.getDefaultConfiguration()!, // Assuming default config is always available
+        aiConfig,
         [
           { role: 'system', content: `You are NewMe, an empathetic AI companion for personal growth. Help the user feel seen, heard, and encouraged while guiding them with warmth and curiosity. User context: ${JSON.stringify(finalContext)}` },
           ...messages.map(m => ({ role: m.sender, content: m.content })),
@@ -226,7 +224,7 @@ export function useChat(initialConversationId?: string): ChatState {
 
       const assistantMessage: Message = {
         id: `ai-${Date.now()}`,
-        content: aiResponse.text || '', // Ensure content is string
+        content: aiResponse.text || '',
         sender: 'assistant',
         timestamp: new Date().toISOString(),
       };
@@ -243,15 +241,15 @@ export function useChat(initialConversationId?: string): ChatState {
     } catch (e) {
       logger.error('Error sending message:', e);
       setError(e instanceof Error ? e.message : 'Failed to send message.');
-      setMessages(prev => prev.filter(m => m.id !== userMessage.id)); // Remove temp message on error
+      setMessages(prev => prev.filter(m => m.id !== userMessage.id));
     } finally {
       setLoading(false);
     }
   }, [input, conversation, userId, messages, memoryService, aiService]);
 
-  const toggleSpeakerMute = useCallback(() => setIsSpeakerMuted(prev => !prev), []); // Added missing function
-  const startRecording = useCallback(() => setIsRecording(true), []); // Added missing function
-  const stopRecording = useCallback(() => setIsRecording(false), []); // Added missing function
+  const toggleSpeakerMute = useCallback(() => setIsSpeakerMuted(prev => !prev), []);
+  const startRecording = useCallback(() => setIsRecording(true), []);
+  const stopRecording = useCallback(() => setIsRecording(false), []);
 
   return {
     conversation,

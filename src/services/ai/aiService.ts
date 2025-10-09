@@ -1,13 +1,10 @@
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logging';
 import { AIConfigService, AIConfiguration } from './configService';
-import { AIConfigurations } from '@/integrations/supabase/tables/ai_configurations';
-import { AssessmentsEnhanced } from '@/integrations/supabase/tables/assessments_enhanced';
-import { ChallengeTemplates } from '@/integrations/supabase/tables/challenge_templates';
 import { Json, Tables } from '@/integrations/supabase/types';
 
 export interface AIResponse {
-  text?: string; // Made optional
+  text?: string;
   json?: Json;
   error?: string;
   tokensUsed?: number;
@@ -20,9 +17,7 @@ export interface AIMessage {
   content: string;
 }
 
-export interface AIServiceConfig extends AIConfiguration {
-  // Add any AI-Service specific configurations here if needed
-}
+export interface AIServiceConfig extends AIConfiguration {}
 
 export class AIService {
   private static instance: AIService;
@@ -50,7 +45,7 @@ export class AIService {
 
       if (error) throw error;
 
-      const configs = data as Tables<'ai_configurations'>['Row'][];
+      const configs = data as Tables<'ai_configurations'>[];
 
       this.configurations.clear();
       configs?.forEach(config => {
@@ -82,7 +77,6 @@ export class AIService {
         });
       });
 
-      // Also load the NewMe configuration with the system prompt
       const newMeConfig = configs?.find(c => c.name === 'NewMe Voice Agent');
       if (newMeConfig) {
         const baseConfig = this.configurations.get(newMeConfig.id);
@@ -108,9 +102,7 @@ export class AIService {
   public async callAIProvider(config: AIServiceConfig, messages: AIMessage[], options?: { stream?: boolean; response_format?: 'json_object' | 'text' }): Promise<AIResponse> {
     logger.debug('Calling AI provider', { configId: config.id, model: config.model, provider: config.provider, stream: options?.stream });
 
-    // This is a placeholder. In a real application, you would integrate with various AI providers.
-    // For now, we'll simulate a response.
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     const lastMessage = messages[messages.length - 1];
     let simulatedResponse = "I'm sorry, I don't have a real AI integration set up yet.";
@@ -137,13 +129,12 @@ export class AIService {
   }
 
   public async checkRateLimit(userId: string, providerName: string): Promise<boolean> {
-    // Placeholder for rate limiting logic
     logger.debug('Checking AI rate limit', { userId, providerName });
-    return true; // Always allow for now
+    return true;
   }
 
   public async generateAssessmentAnalysis(
-    assessment: AssessmentsEnhanced['Row'],
+    assessment: Tables<'assessments_enhanced'>,
     submission: { answers: Record<string, string>; userId: string },
     aiConfigId?: string
   ): Promise<AIResponse> {
@@ -182,7 +173,7 @@ export class AIService {
   }
 
   public async generateQuizFeedback(
-    quiz: AssessmentsEnhanced['Row'],
+    quiz: Tables<'assessments_enhanced'>,
     submission: { answers: Record<string, string>; userId: string },
     aiConfigId?: string
   ): Promise<AIResponse> {
@@ -218,7 +209,7 @@ export class AIService {
   }
 
   public async generateChallengeInsights(
-    challengeRecord: ChallengeTemplates['Row'],
+    challengeRecord: Tables<'challenge_templates'>,
     responses: Record<string, { initiator_response?: string; partner_response?: string }>,
     aiConfigId?: string
   ): Promise<AIResponse> {

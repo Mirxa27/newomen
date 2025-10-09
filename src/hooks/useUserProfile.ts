@@ -70,7 +70,7 @@ export function useUserProfile() {
     void fetchUserProfile();
   }, [fetchUserProfile]);
 
-  const updateProfile = useCallback(async (updates: Partial<TablesUpdate<'user_profiles'>>): Promise<boolean> => {
+  const updateProfile = useCallback(async (updates: TablesUpdate<'user_profiles'>): Promise<boolean> => {
     if (!profile) {
       toast.error('No profile to update.');
       return false;

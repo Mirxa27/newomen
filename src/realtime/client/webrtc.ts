@@ -17,6 +17,8 @@ interface RealtimeClientListeners {
 interface SessionConfig {
   audioDeviceId?: string;
   videoDeviceId?: string; // Reserved for future use
+  systemPrompt?: string;
+  memoryContext?: string;
 }
 
 export const createWebRTCClient = (listeners: Partial<RealtimeClientListeners>) => {
@@ -96,7 +98,12 @@ export const createWebRTCClient = (listeners: Partial<RealtimeClientListeners>) 
       };
 
       // 6. Fetch token and create offer
-      const { data } = await supabase.functions.invoke('realtime-token');
+      const { data } = await supabase.functions.invoke('realtime-token', {
+        body: {
+          systemPrompt: config.systemPrompt,
+          memoryContext: config.memoryContext,
+        },
+      });
       const { token, apiUrl } = data;
 
       const offer = await peerConnection.createOffer();

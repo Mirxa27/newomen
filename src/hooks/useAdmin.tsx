@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfiles } from '@/integrations/supabase/tables/user_profiles';
 
-type UserRole = UserProfiles['Row']['role']; // Access 'role' from 'Row' type
+type UserRole = UserProfiles['Row']['role'];
 
 export function useAdmin() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -25,17 +25,17 @@ export function useAdmin() {
         .eq('user_id', user.id)
         .single();
 
-      if (error) {
+      if (error || !data) {
         console.error('Error fetching user profile:', error);
-        setError(error.message);
+        setError(error?.message || 'User profile not found.');
         setIsAdmin(false);
         setLoading(false);
         return;
       }
 
       // Check both role column and email for admin access
-      const isAdminByRole = (data?.role ?? "user") === "admin";
-      const isAdminByEmail = (data?.email === import.meta.env.VITE_ADMIN_EMAIL);
+      const isAdminByRole = (data.role ?? "user") === "admin";
+      const isAdminByEmail = (data.email === import.meta.env.VITE_ADMIN_EMAIL);
       setIsAdmin(isAdminByRole || isAdminByEmail);
 
     } catch (e) {
@@ -48,7 +48,7 @@ export function useAdmin() {
   }, []);
 
   useEffect(() => {
-    checkAdminStatus();
+    void checkAdminStatus();
   }, [checkAdminStatus]);
 
   return { isAdmin, loading, error };
