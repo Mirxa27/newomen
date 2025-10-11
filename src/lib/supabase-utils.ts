@@ -1,88 +1,14 @@
-/**
- * Utility functions for handling Supabase type issues
- * These functions provide type-safe wrappers around Supabase operations
- */
-
-import { supabase } from '@/integrations/supabase/client';
-
-/**
- * Type-safe update operation for Supabase tables
- * This handles the type casting issues with Supabase client
- */
-export async function safeUpdate<T = any>(
-  tableName: string,
+// Fix generic function to use string literal for table
+export async function updateTableRow<T extends keyof Database['public']['Tables']>(
+  table: T,
   id: string,
-  data: Partial<T>
-): Promise<{ data: T | null; error: Error | null }> {
-  try {
-    const { data: result, error } = await supabase
-      .from(tableName)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-      .update(data as any)
-      .eq('id', id)
-      .select()
-      .single();
-
-    return { data: result as T | null, error };
-  } catch (error) {
-    return { data: null, error: error as Error };
-  }
-}
-
-/**
- * Type-safe insert operation for Supabase tables
- * This handles the type casting issues with Supabase client
- */
-export async function safeInsert<T = any>(
-  tableName: string,
-  data: Partial<T>
-): Promise<{ data: T | null; error: Error | null }> {
-  try {
-    const { data: result, error } = await supabase
-      .from(tableName)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-      .insert(data as any)
-      .select()
-      .single();
-
-    return { data: result as T | null, error };
-  } catch (error) {
-    return { data: null, error: error as Error };
-  }
-}
-
-/**
- * Type-safe select operation for Supabase tables
- */
-export async function safeSelect<T = any>(
-  tableName: string,
-  id: string
-): Promise<{ data: T | null; error: Error | null }> {
-  try {
-    const { data: result, error } = await supabase
-      .from(tableName)
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    return { data: result as T | null, error };
-  } catch (error) {
-    return { data: null, error: error as Error };
-  }
-}
-
-/**
- * Type-safe select with custom query for Supabase tables
- */
-export async function safeSelectQuery<T = any>(
-  tableName: string,
-  query: any
-): Promise<{ data: T | null; error: Error | null }> {
-  try {
-    const { data: result, error } = await query;
-
-    return { data: result as T | null, error };
-  } catch (error) {
-    return { data: null, error: error as Error };
-  }
+  data: TablesUpdate<T>
+) {
+  const { data: updatedData, error } = await supabase
+    .from(table as string) // Fixed: Cast table to string
+    .update(data as any) // Fixed: Cast data to any for dynamic
+    .eq('id', id)
+    .single();
+  if (error) throw error;
+  return updatedData;
 }
