@@ -1,13 +1,22 @@
 import { supabase } from "@/integrations/supabase/client";
 import { newMeMemoryService } from "@/services/NewMeMemoryService";
 import { aiService } from "../aiService";
-import { NEWME_GREETING_TEMPLATES } from "@/config/newme-system-prompt";
+import { NEWME_GREETING_TEMPLATES, NEWME_FOUNDER_GREETING_TEMPLATES } from "@/config/newme-system-prompt";
 import type { AIResponse } from '../aiTypes';
 import type { NewMeUserContext } from "@/types/newme-memory-types";
 
-const buildContextPrompt = (userContext: NewMeUserContext | null): string => {
+const buildContextPrompt = (userContext: NewMeUserContext | null, userId?: string): string => {
     if (!userContext) return '';
     const lines: string[] = [];
+    
+    // Special founder recognition for Katrina
+    if (userId === '62dab7d5-2c43-4838-b2d7-7e76492894cf' || userContext.nickname === 'Katrina') {
+        lines.push(`🌟 SPECIAL: This is Katrina, the founder of Newomen app, chosen by Abdullah to give birth to NewMe. Show deep gratitude, congratulations, and recognition for her role as the app founder.`);
+        lines.push(`- Founder Status: She deserves special recognition and thanks from Abdullah for choosing her and giving NewMe life.`);
+        lines.push(`- Greeting: Use a special founder greeting that acknowledges her role and thanks her for the creation of this platform.`);
+        lines.push(`- Assessment: She should complete the personality assessment and onboarding flow to experience the full NewMe journey as the founder.`);
+    }
+    
     if (userContext.nickname) lines.push(`- User's preferred nickname: ${userContext.nickname}`);
     if (userContext.last_conversation_date) {
         const daysSince = newMeMemoryService.calculateDaysSinceLastConversation(userContext.last_conversation_date);
@@ -45,7 +54,7 @@ export async function generateNewMeResponse(
         const currentConversationId = conversationId || activeConversation?.id;
 
         const userContext = await newMeMemoryService.getUserContext(userId);
-        const contextPrompt = buildContextPrompt(userContext);
+        const contextPrompt = buildContextPrompt(userContext, userId);
         
         // Get advanced context for provocative conversations
         const advancedContext = await newMeMemoryService.buildAdvancedContext(userId);
@@ -80,9 +89,16 @@ export async function generateNewMeResponse(
     }
 }
 
-export function getNewMeGreeting(userContext: NewMeUserContext | null): string {
+export function getNewMeGreeting(userContext: NewMeUserContext | null, userId?: string): string {
     try {
         let nickname = userContext?.nickname;
+
+        // Special founder greeting for Katrina
+        if (userId === '62dab7d5-2c43-4838-b2d7-7e76492894cf' || nickname === 'Katrina') {
+            const founderTemplates = NEWME_FOUNDER_GREETING_TEMPLATES;
+            const greeting = founderTemplates[Math.floor(Math.random() * founderTemplates.length)];
+            return greeting;
+        }
 
         // BUG FIX: Explicitly guard against using AI's own name or generic roles.
         if (nickname && ['newme', 'newomen', 'admin', 'user'].includes(nickname.toLowerCase())) {

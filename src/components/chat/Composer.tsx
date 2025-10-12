@@ -1,8 +1,8 @@
-// src/components/chat/Composer.tsx
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Mic, MicOff, Send, PhoneOff, Volume2, VolumeX } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ComposerProps {
   onSendText: (text: string) => void;
@@ -14,7 +14,7 @@ interface ComposerProps {
   onToggleSpeakerMute: () => void;
 }
 
-const Composer: React.FC<ComposerProps> = ({
+export const Composer = ({
   onSendText,
   onEndSession,
   isConnected,
@@ -22,95 +22,107 @@ const Composer: React.FC<ComposerProps> = ({
   onToggleRecording,
   isSpeakerMuted,
   onToggleSpeakerMute,
-}) => {
+}: ComposerProps) => {
   const [text, setText] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleSendClick = () => {
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 150)}px`;
+    }
+  }, [text]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     if (text.trim()) {
-      onSendText(text);
+      onSendText(text.trim());
       setText('');
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSendClick();
+      handleSubmit(e);
     }
   };
 
   return (
-    <div className="space-y-3">
-      {/* Text Input */}
-      <div className="flex items-end gap-2">
+    <div className="space-y-4">
+      <form onSubmit={handleSubmit} className="flex gap-2">
         <Textarea
+          ref={textareaRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
-          className="flex-1 min-h-[44px] max-h-32 resize-none text-sm sm:text-base"
-          rows={1}
+          onKeyDown={handleKeyDown}
+          placeholder="Type a message or press the mic to speak..."
+          className="min-h-[44px] max-h-[150px] glass bg-white/5"
           disabled={!isConnected}
+          rows={1}
         />
-        <Button 
-          onClick={handleSendClick} 
-          size="icon"
-          disabled={!isConnected || !text.trim()}
-          className="h-11 w-11 flex-shrink-0 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-          aria-label="Send message"
-        >
-          <Send className="h-5 w-5" />
-        </Button>
-      </div>
-
-      {/* Controls */}
-      <div className="flex items-center justify-between gap-2 sm:gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-            <Button
-                onClick={onToggleSpeakerMute}
-                variant="secondary"
-                size="icon"
-                disabled={!isConnected}
-                aria-label={isSpeakerMuted ? 'Unmute speaker' : 'Mute speaker'}
-                className="h-11 w-11"
-            >
-                {isSpeakerMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-            </Button>
-            <Button
-                onClick={onEndSession}
-                variant="destructive"
-                size="default"
-                disabled={!isConnected}
-                className="gap-2 min-h-[44px]"
-                aria-label="End conversation"
-            >
-                <PhoneOff className="h-5 w-5" />
-                <span className="hidden sm:inline">End Call</span>
-            </Button>
-        </div>
-        
-        <Button
-            onClick={onToggleRecording}
-            size="lg"
-            disabled={!isConnected}
-            className={`gap-2 min-h-[44px] rounded-full px-6 transition-all duration-300 ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-primary hover:bg-primary/90'}`}
-            aria-label={isRecording ? 'Stop recording' : 'Start recording'}
-        >
-            {isRecording ? (
-                <>
-                    <MicOff className="h-5 w-5" />
-                    <span>Stop</span>
-                </>
-            ) : (
-                <>
-                    <Mic className="h-5 w-5" />
-                    <span>Speak</span>
-                </>
+        <div className="flex flex-col gap-2">
+          <Button
+            type="button"
+            size="icon"
+            variant={isRecording ? "destructive" : "secondary"}
+            className={cn(
+              "h-11 w-11 shrink-0",
+              isRecording && "animate-pulse"
             )}
+            onClick={onToggleRecording}
+            disabled={!isConnected}
+          >
+            {isRecording ? (
+              <MicOff className="h-5 w-5" />
+            ) : (
+              <Mic className="h-5 w-5" />
+            )}
+          </Button>
+          <Button
+            type="submit"
+            size="icon"
+            variant="secondary"
+            className="h-11 w-11 shrink-0"
+            disabled={!isConnected || !text.trim()}
+          >
+            <Send className="h-5 w-5" />
+          </Button>
+        </div>
+      </form>
+
+      <div className="flex items-center justify-between">
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-9"
+            onClick={onToggleSpeakerMute}
+            disabled={!isConnected}
+          >
+            {isSpeakerMuted ? (
+              <VolumeX className="h-4 w-4 mr-2" />
+            ) : (
+              <Volume2 className="h-4 w-4 mr-2" />
+            )}
+            <span className="hidden sm:inline">
+              {isSpeakerMuted ? 'Unmute' : 'Mute'}
+            </span>
+          </Button>
+        </div>
+
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="h-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+          onClick={onEndSession}
+        >
+          <PhoneOff className="h-4 w-4 mr-2" />
+          <span className="hidden sm:inline">End Call</span>
         </Button>
       </div>
     </div>
   );
 };
-
-export { Composer };
