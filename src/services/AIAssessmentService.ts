@@ -151,10 +151,26 @@ export class AIAssessmentService {
       return data as AIProcessingResult;
     } catch (error) {
       console.error("Error processing assessment with AI:", error);
+      
+      // Provide more helpful error information
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error("Detailed error:", errorMessage);
+      
+      // Check if it's a network/function error
+      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('FunctionsHttpError')) {
+        return {
+          score: 0,
+          feedback: "Unable to connect to AI processing service. Your answers have been saved. Please check your internet connection and try again, or contact support if the issue persists.",
+          is_passing: false,
+          error: 'CONNECTION_ERROR'
+        };
+      }
+      
       return {
         score: 0,
-        feedback: "An error occurred while processing your assessment. Please try again later.",
+        feedback: "An error occurred while processing your assessment. Your responses have been saved. Please try again later or contact support if the issue persists.",
         is_passing: false,
+        error: errorMessage
       };
     }
   }
