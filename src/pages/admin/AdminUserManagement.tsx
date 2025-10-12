@@ -125,11 +125,12 @@ export default function AdminUserManagement() {
 
   const getRoleIcon = (role: string) => {
     switch (role) {
-      case 'admin':
       case 'superadmin':
+        return <Crown className="w-4 h-4 text-purple-600" />;
+      case 'admin':
         return <Shield className="w-4 h-4 text-red-500" />;
-      case 'premium':
-        return <Crown className="w-4 h-4 text-yellow-500" />;
+      case 'moderator':
+        return <Users className="w-4 h-4 text-orange-500" />;
       default:
         return <Users className="w-4 h-4 text-blue-500" />;
     }
@@ -305,8 +306,8 @@ export default function AdminUserManagement() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="member">Member</SelectItem>
-                  <SelectItem value="premium">Premium</SelectItem>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="moderator">Moderator</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="superadmin">Super Admin</SelectItem>
                 </SelectContent>
