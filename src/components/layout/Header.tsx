@@ -195,13 +195,13 @@ export default function Header() {
               <Button
                 variant="ghost"
                 className="glass-card"
-                onClick={() => navigate("/")}
+                onClick={() => navigate("/auth")}
               >
                 Sign In
               </Button>
               <Button
                 className="clay-button bg-gradient-to-r from-primary to-accent"
-                onClick={() => navigate("/")}
+                onClick={() => navigate("/auth")}
               >
                 Get Started
               </Button>
@@ -298,7 +298,7 @@ export default function Header() {
                   variant="outline"
                   className="glass-card w-full"
                   onClick={() => {
-                    navigate("/");
+                    navigate("/auth");
                     setMobileMenuOpen(false);
                   }}
                 >
@@ -307,7 +307,7 @@ export default function Header() {
                 <Button
                   className="clay-button bg-gradient-to-r from-primary to-accent w-full"
                   onClick={() => {
-                    navigate("/");
+                    navigate("/auth");
                     setMobileMenuOpen(false);
                   }}
                 >
