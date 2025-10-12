@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
-import { Heart, MessageCircle, Share2, Pin, Clock, Tag, Trophy, Sparkles } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Pin, Clock, Tag, Trophy, Sparkles, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
 import type { CommunityPost } from '@/hooks/useCommunityPosts';
 
 interface PostCardProps {
   post: CommunityPost;
   onLike?: (postId: string) => void;
   onUnlike?: (postId: string) => void;
-  onComment?: (postId: string) => void;
+  onComment?: (postId: string, content: string) => Promise<any>;
   onShare?: (postId: string) => void;
   onClick?: (postId: string) => void;
 }
@@ -25,6 +28,10 @@ export const PostCard: React.FC<PostCardProps> = ({
 }) => {
   const [isLiked, setIsLiked] = useState(post.is_liked_by_user || false);
   const [likesCount, setLikesCount] = useState(post.likes_count || 0);
+  const [commentsCount, setCommentsCount] = useState(post.comments_count || 0);
+  const [showCommentDialog, setShowCommentDialog] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
   const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -42,12 +49,35 @@ export const PostCard: React.FC<PostCardProps> = ({
 
   const handleComment = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onComment?.(post.id);
+    setShowCommentDialog(true);
   };
 
-  const handleShare = (e: React.MouseEvent) => {
+  const handleSubmitComment = async () => {
+    if (!commentText.trim() || !onComment) return;
+    
+    setIsSubmittingComment(true);
+    try {
+      await onComment(post.id, commentText.trim());
+      setCommentText('');
+      setShowCommentDialog(false);
+      setCommentsCount(prev => prev + 1);
+      toast.success('Comment added! +3 crystals 💎');
+    } catch (error) {
+      toast.error('Failed to add comment');
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  const handleShare = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    onShare?.(post.id);
+    const url = `${window.location.origin}/community?post=${post.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Link copied to clipboard! 📋');
+    } catch (error) {
+      toast.error('Failed to copy link');
+    }
   };
 
   const handleClick = () => {
@@ -166,7 +196,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           onClick={handleComment}
         >
           <MessageCircle className="w-4 h-4" />
-          <span className="text-sm">{post.comments_count || 0}</span>
+          <span className="text-sm">{commentsCount}</span>
         </Button>
 
         <Button
@@ -179,6 +209,50 @@ export const PostCard: React.FC<PostCardProps> = ({
           <span className="text-sm">{post.shares_count || 0}</span>
         </Button>
       </div>
+
+      {/* Comment Dialog */}
+      <Dialog open={showCommentDialog} onOpenChange={setShowCommentDialog}>
+        <DialogContent className="glass border-white/10 max-w-2xl" onClick={(e) => e.stopPropagation()}>
+          <DialogHeader>
+            <DialogTitle className="text-white">Add Comment</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="glass rounded-2xl border border-white/10 p-4">
+              <p className="text-sm text-white/80 mb-2 font-semibold">{post.title}</p>
+              <p className="text-xs text-white/50 line-clamp-2">{post.content}</p>
+            </div>
+            
+            <Textarea
+              placeholder="Share your thoughts..."
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              className="bg-white/5 border-white/10 text-white placeholder:text-white/40 min-h-[100px]"
+              maxLength={1000}
+            />
+            
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-white/40">{commentText.length}/1000</span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCommentDialog(false)}
+                  disabled={isSubmittingComment}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSubmitComment}
+                  disabled={!commentText.trim() || isSubmittingComment}
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 gap-2"
+                >
+                  <Send className="w-4 h-4" />
+                  {isSubmittingComment ? 'Posting...' : 'Post Comment (+3 crystals)'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
