@@ -37,7 +37,7 @@ export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdmin();
-  const { profile, loading: profileLoading, getDisplayName } = useUserProfile();
+  const { profile, loading: profileLoading, getDisplayName } = useUserProfile({ redirectToAuth: false });
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -56,7 +56,6 @@ export default function Header() {
 
   const publicLinks = useMemo(
     () => [
-      { to: "/", label: "Home", icon: Home },
       { to: "/about", label: "About", icon: BookOpen },
       { to: "/assessments", label: "Free Assessments", icon: Sparkles },
     ],
@@ -196,13 +195,13 @@ export default function Header() {
               <Button
                 variant="ghost"
                 className="glass-card"
-                onClick={() => navigate("/auth")}
+                onClick={() => navigate("/")}
               >
                 Sign In
               </Button>
               <Button
                 className="clay-button bg-gradient-to-r from-primary to-accent"
-                onClick={() => navigate("/auth")}
+                onClick={() => navigate("/")}
               >
                 Get Started
               </Button>
@@ -299,7 +298,7 @@ export default function Header() {
                   variant="outline"
                   className="glass-card w-full"
                   onClick={() => {
-                    navigate("/auth");
+                    navigate("/");
                     setMobileMenuOpen(false);
                   }}
                 >
@@ -308,7 +307,7 @@ export default function Header() {
                 <Button
                   className="clay-button bg-gradient-to-r from-primary to-accent w-full"
                   onClick={() => {
-                    navigate("/auth");
+                    navigate("/");
                     setMobileMenuOpen(false);
                   }}
                 >

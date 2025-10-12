@@ -49,7 +49,7 @@ const PricingPage = () => {
                 ))}
               </ul>
 
-              <Link to="/auth" className="w-full">
+              <Link to="/" className="w-full">
                 <Button
                   className={`w-full ${
                     tier.featured

@@ -69,8 +69,9 @@ const App = () => (
           </div>
         }>
           <Routes>
-          <Route path="/" element={<MainLayout><Landing /></MainLayout>} />
-          <Route path="/auth" element={<MainLayout><Auth /></MainLayout>} />
+          <Route path="/" element={<MainLayout><Auth /></MainLayout>} />
+          <Route path="/landing" element={<MainLayout><Landing /></MainLayout>} />
+          <Route path="/auth" element={<Navigate to="/" replace />} />
           <Route path="/about" element={<MainLayout><AboutUs /></MainLayout>} />
           <Route path="/about-us" element={<Navigate to="/about" replace />} />
           <Route path="/pricing" element={<MainLayout><Pricing /></MainLayout>} />

@@ -26,7 +26,7 @@ export default function AssessmentsOptimized() {
   const loadData = useCallback(async () => {
     if (!user) {
       toast.error("You must be logged in to view assessments.");
-      navigate("/auth");
+      navigate("/");
       return;
     }
 

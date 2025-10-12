@@ -43,7 +43,7 @@ export default function AIAssessments() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        navigate("/auth");
+        navigate("/");
         return;
       }
 

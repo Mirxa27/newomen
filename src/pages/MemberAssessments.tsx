@@ -28,7 +28,7 @@ export default function MemberAssessments() {
   const loadData = useCallback(async () => {
     if (!user) {
       toast.error("You must be logged in to view member assessments.");
-      navigate("/auth");
+      navigate("/");
       return;
     }
 

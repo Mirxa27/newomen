@@ -37,7 +37,7 @@ export default function CouplesChallenge() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        navigate("/auth");
+        navigate("/");
         return;
       }
       setUserId(user.id);

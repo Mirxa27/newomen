@@ -66,7 +66,7 @@ const OnboardingPage = () => {
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      navigate('/auth');
+      navigate('/');
       return;
     }
     setUserId(user.id);
@@ -124,7 +124,7 @@ const OnboardingPage = () => {
   const handleComplete = async () => {
     if (!userId) {
       toast.error('User not found. Please sign in again.');
-      navigate('/auth');
+      navigate('/');
       return;
     }
 

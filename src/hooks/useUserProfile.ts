@@ -29,7 +29,7 @@ export function useUserProfile(options: UseUserProfileOptions = {}) {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
         if (redirectToAuth) {
-          navigate('/auth');
+          navigate('/');
         } else {
           setProfile(null);
           setAchievements([]);

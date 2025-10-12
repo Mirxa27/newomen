@@ -23,7 +23,7 @@ const Landing = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
-            <Link to="/auth">
+            <Link to="/">
               <Button
                 size="lg"
                 className="clay-button text-lg px-12 py-6 animate-pulse-glow bg-gradient-to-r from-primary to-accent hover:opacity-90"
@@ -101,7 +101,7 @@ const Landing = () => {
                   ))}
                 </ul>
 
-                <Link to="/auth" className="w-full">
+                <Link to="/" className="w-full">
                   <Button
                     className={`w-full ${tier.featured ? 'clay-button bg-gradient-to-r from-primary to-accent' : 'glass'}`}
                     size="lg"
@@ -124,7 +124,7 @@ const Landing = () => {
           <p className="text-xl text-muted-foreground">
             Join thousands of people who are already on their journey to personal growth
           </p>
-          <Link to="/auth">
+          <Link to="/">
             <Button
               size="lg"
               className="clay-button text-lg px-12 py-6 animate-pulse-glow bg-gradient-to-r from-primary to-accent"
@@ -150,7 +150,7 @@ const Landing = () => {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link to="/assessments" className="hover:text-primary">Free Assessments</Link></li>
                 <li><Link to="/about" className="hover:text-primary">About Us</Link></li>
-                <li><Link to="/auth" className="hover:text-primary">Get Started</Link></li>
+                <li><Link to="/" className="hover:text-primary">Get Started</Link></li>
               </ul>
             </div>
             <div>
