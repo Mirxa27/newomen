@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { sanitizeInput } from '@/lib/security/sanitization';
+import sanitizeInput from '@/lib/security/sanitization';
 
 export interface ErrorReportDialogProps {
   error: Error;

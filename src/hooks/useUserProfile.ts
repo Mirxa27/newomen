@@ -10,8 +10,13 @@ type UserAchievement = Tables<'user_achievements'> & {
   achievements: Pick<Tables<'achievements'>, 'title' | 'description' | 'badge_url' | 'crystal_reward'> | null;
 };
 
-export function useUserProfile() {
+type UseUserProfileOptions = {
+  redirectToAuth?: boolean;
+};
+
+export function useUserProfile(options: UseUserProfileOptions = {}) {
   const navigate = useNavigate();
+  const { redirectToAuth = true } = options;
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfileRow | null>(null);
   const [achievements, setAchievements] = useState<UserAchievement[]>([]);
@@ -23,7 +28,13 @@ export function useUserProfile() {
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
-        navigate('/auth');
+        if (redirectToAuth) {
+          navigate('/auth');
+        } else {
+          setProfile(null);
+          setAchievements([]);
+          setLevelThresholds([]);
+        }
         return;
       }
 
@@ -61,7 +72,7 @@ export function useUserProfile() {
     } finally {
       setLoading(false);
     }
-  }, [navigate]);
+  }, [navigate, redirectToAuth]);
 
   useEffect(() => {
     void loadProfile();
