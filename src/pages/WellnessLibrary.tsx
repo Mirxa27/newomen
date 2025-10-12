@@ -84,14 +84,42 @@ export default function WellnessLibrary() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const extractYouTubeId = (url: string): string | null => {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/,
+      /youtube\.com\/embed\/([^&\n?#]+)/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) return match[1];
+    }
+    return null;
+  };
+
   const handlePlay = async (resource: Resource) => {
+    // Handle YouTube resources - open in new tab for now
     if (resource.audio_type === 'youtube' && resource.youtube_url) {
-      // For YouTube audio, we'll use a different approach
-      // This is a placeholder - in a real implementation, you'd use a YouTube audio extraction service
-      toast.info("YouTube audio playback coming soon!");
-      return;
+      const youtubeId = extractYouTubeId(resource.youtube_url);
+      if (youtubeId) {
+        window.open(`https://www.youtube.com/watch?v=${youtubeId}`, '_blank');
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            await trackWellnessResourceCompletion(user.id, resource.id);
+          }
+        } catch (error) {
+          console.error("Error tracking completion:", error);
+        }
+        toast.success("Playing in YouTube. Returning here when finished!");
+        return;
+      } else {
+        toast.error("Invalid YouTube URL");
+        return;
+      }
     }
 
+    // Handle regular audio playback
     if (currentlyPlaying === resource.id && isPlaying) {
       audioRef.current?.pause();
       setIsPlaying(false);
