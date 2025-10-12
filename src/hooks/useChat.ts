@@ -128,7 +128,7 @@ export function useChat() {
           remaining_minutes: 10
         };
 
-        const { data: upserted, error: upsertError } = await supabase.from('user_profiles').upsert(insertPayload, { onConflict: 'user_id' }).select().single();
+        const { data: upserted, error: upsertError } = await supabase.from('user_profiles').upsert(insertPayload as any, { onConflict: 'user_id' }).select().single();
         if (upsertError) {
           console.warn('Failed to upsert user_profiles for user, continuing without it', upsertError);
         } else {
@@ -141,7 +141,7 @@ export function useChat() {
     }
 
     let finalContext = memoryContext;
-    const profileNickname = profileRes.data?.nickname;
+    const profileNickname = (profileRes as any).data ? (profileRes as any).data.nickname : null;
 
     if (profileNickname && profileNickname !== memoryContext?.nickname) {
         await newMeMemoryService.saveMemory({
