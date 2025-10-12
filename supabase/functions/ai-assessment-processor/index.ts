@@ -17,11 +17,16 @@ interface ProcessAssessmentPayload {
 
 // Z.AI API Integration (GLM-4.6) - Coding Subscription
 async function analyzeWithZAI(assessmentContext: any, aiConfig: any, supabase: any) {
-  // Retrieve API key from Supabase Vault
-  const { data: apiKeyData, error: keyError } = await supabase.rpc('get_provider_api_key', { provider_type: 'zai' });
+  // Retrieve API key from Supabase using the by_type function
+  const { data: apiKeyData, error: keyError } = await supabase.rpc('get_provider_api_key_by_type', { p_provider_type: 'zai' });
   
-  if (keyError || !apiKeyData) {
-    throw new Error('Z.AI API key not configured in vault');
+  if (keyError) {
+    console.error('Error retrieving Z.AI API key:', keyError);
+    throw new Error(`Z.AI API key retrieval failed: ${keyError.message}`);
+  }
+  
+  if (!apiKeyData) {
+    throw new Error('Z.AI API key not configured. Please add your Z.ai API key in the admin panel.');
   }
 
   const zaiApiKey = apiKeyData;
