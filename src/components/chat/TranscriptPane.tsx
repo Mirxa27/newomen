@@ -3,12 +3,7 @@ import React, { useEffect, useRef } from 'react';
 import { User, Bot } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
+import type { Message } from '@/hooks/useChat';
 
 interface TranscriptPaneProps {
   messages?: Message[];
@@ -61,9 +56,24 @@ export const TranscriptPane = ({ messages = [], partialTranscript }: TranscriptP
                   : "bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20"
               )}
             >
-              <p className="text-sm sm:text-base whitespace-pre-wrap break-words">
-                {message.content}
-              </p>
+              {message.type === 'image' && message.imageUrl ? (
+                <div className="space-y-2">
+                  <img
+                    src={message.imageUrl}
+                    alt="Shared image"
+                    className="max-w-full rounded-lg"
+                  />
+                  {message.content && (
+                    <p className="text-sm sm:text-base whitespace-pre-wrap break-words">
+                      {message.content}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm sm:text-base whitespace-pre-wrap break-words">
+                  {message.content}
+                </p>
+              )}
               <p className="text-xs text-muted-foreground mt-1">
                 {message.timestamp.toLocaleTimeString()}
               </p>

@@ -19,6 +19,7 @@ interface ChatInterfaceProps {
   audioLevel: number;
   endConversation: () => void;
   handleSendText: (text: string) => void;
+  handleSendImage?: (file: File) => void;
   toggleRecording: () => void;
   toggleSpeakerMute: () => void;
 }
@@ -34,6 +35,22 @@ export const ChatInterface = ({
   audioLevel,
   endConversation,
   handleSendText,
+  handleSendImage = async (file: File) => {
+    // Default implementation if not provided
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const message: Message = {
+        role: 'user',
+        content: '',
+        timestamp: new Date(),
+        type: 'image',
+        imageUrl: reader.result as string
+      };
+      // Add message to state
+      messages.push(message);
+    };
+    reader.readAsDataURL(file);
+  },
   toggleRecording,
   toggleSpeakerMute,
 }: ChatInterfaceProps) => {
@@ -79,6 +96,7 @@ export const ChatInterface = ({
           <div className="flex-shrink-0 glass rounded-2xl sm:rounded-3xl border border-white/10 p-3 sm:p-4 shadow-lg backdrop-blur-xl">
             <Composer
               onSendText={handleSendText}
+              onSendImage={handleSendImage}
               onEndSession={endConversation}
               isConnected={isConnected}
               isRecording={isRecording}

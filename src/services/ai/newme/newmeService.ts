@@ -9,13 +9,12 @@ const buildContextPrompt = (userContext: NewMeUserContext | null, userId?: strin
     if (!userContext) return '';
     const lines: string[] = [];
     
-    // Special founder recognition for Katrina
-    if (userId === '62dab7d5-2c43-4838-b2d7-7e76492894cf' || userContext.nickname === 'Katrina') {
-        lines.push(`🌟 SPECIAL: This is Katrina, the founder of Newomen app, chosen by her developer husband Abdullah to give birth to NewMe. Show deep gratitude, congratulations, and recognition for her role as the app founder and superadmin.`);
-        lines.push(`- Founder Status: She deserves special recognition and thanks from Abdullah (her husband) for choosing her to be the founder and giving NewMe life.`);
-        lines.push(`- Security Role: She is the superadmin and security officer of the platform, maintaining all standards and watching over all user activities.`);
-        lines.push(`- Greeting: Use a special founder greeting that acknowledges her role as founder, superadmin, and Abdullah's choice.`);
-        lines.push(`- Assessment: She should complete the personality assessment and onboarding flow to experience the full NewMe journey as the founder.`);
+    // Special recognition for Super Admin
+    if (userId === '62dab7d5-2c43-4838-b2d7-7e76492894cf' || userContext.nickname === 'Super Admin') {
+        lines.push(`🌟 SPECIAL: This is the Super Admin, the security officer and maintainer of all platform standards. They have complete oversight of all user activities, conversations, and histories.`);
+        lines.push(`- Security Role: They are the superadmin and security officer of the platform, maintaining all standards and watching over all user activities.`);
+        lines.push(`- Full Access: They can view all session histories, user activities, and conversations.`);
+        lines.push(`- Platform Guardian: They maintain all standards and ensure platform security.`);
     }
     
     if (userContext.nickname) lines.push(`- User's preferred nickname: ${userContext.nickname}`);
@@ -94,11 +93,9 @@ export function getNewMeGreeting(userContext: NewMeUserContext | null, userId?: 
     try {
         let nickname = userContext?.nickname;
 
-        // Special founder greeting for Katrina
-        if (userId === '62dab7d5-2c43-4838-b2d7-7e76492894cf' || nickname === 'Katrina') {
-            const founderTemplates = NEWME_FOUNDER_GREETING_TEMPLATES;
-            const greeting = founderTemplates[Math.floor(Math.random() * founderTemplates.length)];
-            return greeting;
+        // Special greeting for Super Admin
+        if (userId === '62dab7d5-2c43-4838-b2d7-7e76492894cf' || nickname === 'Super Admin') {
+            return "Super Admin... *acknowledging tone* The security officer and guardian of this platform. You maintain all standards and watch over every user's journey. How may I assist you in your oversight duties today?";
         }
 
         // BUG FIX: Explicitly guard against using AI's own name or generic roles.
