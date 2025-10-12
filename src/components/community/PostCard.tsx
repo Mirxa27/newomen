@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Heart, MessageCircle, Share2, Pin, Clock, Tag } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Pin, Clock, Tag, Trophy, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -86,6 +86,11 @@ export const PostCard: React.FC<PostCardProps> = ({
               <h3 className="font-semibold text-white group-hover:text-purple-300 transition-colors">
                 {authorName}
               </h3>
+              {authorName === 'Katrina' && (
+                <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs px-2 py-0.5">
+                  ✨ Leader
+                </Badge>
+              )}
               <Badge variant="outline" className={postTypeColors[post.post_type]}>
                 {post.post_type}
               </Badge>
@@ -93,9 +98,19 @@ export const PostCard: React.FC<PostCardProps> = ({
                 <Pin className="w-3 h-3 text-amber-400" />
               )}
             </div>
-            <div className="flex items-center gap-2 text-xs text-white/50 mt-1">
-              <Clock className="w-3 h-3" />
-              <span>{formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}</span>
+            <div className="flex items-center gap-3 text-xs mt-1">
+              <span className="flex items-center gap-1 text-white/50">
+                <Clock className="w-3 h-3" />
+                {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+              </span>
+              <span className="flex items-center gap-1 text-purple-300 font-medium">
+                <Trophy className="w-3 h-3" />
+                Lvl {post.author_level || 1}
+              </span>
+              <span className="flex items-center gap-1 text-emerald-300 font-medium">
+                <Sparkles className="w-3 h-3" />
+                {post.author_crystals || 0} ✨
+              </span>
             </div>
           </div>
         </div>
