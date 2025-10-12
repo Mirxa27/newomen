@@ -1,13 +1,17 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useCommunity } from '@/hooks/useCommunity';
+import { useCommunityPosts } from '@/hooks/useCommunityPosts';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserPlus, Users, Search, Check, X, Mail, Send } from 'lucide-react';
+import { UserPlus, Users, Search, Check, X, Mail, Send, Plus, Sparkles, TrendingUp, MessageSquare } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 import { Badge } from '@/components/ui/badge';
+import { PostCard } from '@/components/community/PostCard';
+import { PostComposer } from '@/components/community/PostComposer';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 export default function Community() {
   const {
@@ -23,6 +27,19 @@ export default function Community() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery] = useDebounce(searchQuery, 500);
+  const [activeTab, setActiveTab] = useState<'feed' | 'connections'>('feed');
+  const [postFilter, setPostFilter] = useState<string>('all');
+  const [showComposer, setShowComposer] = useState(false);
+
+  const { 
+    posts, 
+    loading: postsLoading,
+    createPost,
+    likePost,
+    unlikePost,
+    commentOnPost,
+    refreshPosts
+  } = useCommunityPosts(postFilter);
 
   useEffect(() => {
     if (debouncedSearchQuery) {
@@ -52,12 +69,174 @@ export default function Community() {
   };
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <h1 className="text-4xl font-bold gradient-text">Community</h1>
+    <div className="app-page-shell">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Header */}
+        <div className="glass rounded-3xl border border-white/10 p-6 shadow-lg">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                Community
+              </h1>
+              <p className="text-white/60 mt-1">Connect, share, and grow together</p>
+            </div>
+            
+            <Dialog open={showComposer} onOpenChange={setShowComposer}>
+              <DialogTrigger asChild>
+                <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 gap-2">
+                  <Plus className="w-4 h-4" />
+                  Create Post
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="glass border-white/10 max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle className="text-white">Create a New Post</DialogTitle>
+                </DialogHeader>
+                <PostComposer 
+                  onPostCreated={async (postData) => {
+                    await createPost(postData);
+                    setShowComposer(false);
+                  }}
+                  onCancel={() => setShowComposer(false)}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 space-y-6">
+        {/* Main Tabs */}
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'feed' | 'connections')} className="space-y-6">
+          <TabsList className="glass border border-white/10 w-full sm:w-auto">
+            <TabsTrigger value="feed" className="gap-2">
+              <MessageSquare className="w-4 h-4" />
+              Community Feed
+            </TabsTrigger>
+            <TabsTrigger value="connections" className="gap-2">
+              <Users className="w-4 h-4" />
+              Connections
+              {pendingRequests.length > 0 && (
+                <Badge className="ml-2 bg-pink-500 text-white">{pendingRequests.length}</Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Feed Tab */}
+          <TabsContent value="feed" className="space-y-6">
+            <div className="grid md:grid-cols-[1fr_300px] gap-6">
+              {/* Posts Feed */}
+              <div className="space-y-4">
+                {/* Filter */}
+                <div className="glass rounded-2xl border border-white/10 p-4">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    <span className="text-sm text-white/80 font-medium">Filter:</span>
+                    {['all', 'story', 'question', 'achievement', 'resource'].map(filter => (
+                      <Button
+                        key={filter}
+                        size="sm"
+                        variant={postFilter === filter ? 'default' : 'ghost'}
+                        onClick={() => setPostFilter(filter)}
+                        className={postFilter === filter 
+                          ? 'bg-gradient-to-r from-purple-500 to-pink-500' 
+                          : 'text-white/60 hover:text-white'}
+                      >
+                        {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Posts */}
+                {postsLoading ? (
+                  <div className="glass rounded-3xl border border-white/10 p-12 text-center">
+                    <div className="animate-pulse">
+                      <Sparkles className="w-8 h-8 text-purple-400 mx-auto mb-3" />
+                      <p className="text-white/60">Loading posts...</p>
+                    </div>
+                  </div>
+                ) : posts.length === 0 ? (
+                  <div className="glass rounded-3xl border border-white/10 p-12 text-center">
+                    <MessageSquare className="w-12 h-12 text-white/30 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-white mb-2">No Posts Yet</h3>
+                    <p className="text-white/60 mb-6">Be the first to share your journey!</p>
+                    <Button 
+                      onClick={() => setShowComposer(true)}
+                      className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Create First Post
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {posts.map(post => (
+                      <PostCard
+                        key={post.id}
+                        post={post}
+                        onLike={likePost}
+                        onUnlike={unlikePost}
+                        onComment={commentOnPost}
+                        onClick={(postId) => {
+                          // Navigate to post detail page
+                          console.log('Open post:', postId);
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Sidebar */}
+              <div className="space-y-4">
+                {/* Trending Topics */}
+                <div className="glass rounded-2xl border border-white/10 p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <TrendingUp className="w-4 h-4 text-emerald-400" />
+                    <h3 className="font-semibold text-white">Trending Topics</h3>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {['growth', 'mindfulness', 'self-love', 'breakthrough', 'journey'].map(tag => (
+                      <Badge 
+                        key={tag}
+                        variant="secondary"
+                        className="bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 cursor-pointer"
+                        onClick={() => {
+                          // Filter by tag
+                          console.log('Filter by tag:', tag);
+                        }}
+                      >
+                        #{tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Community Stats */}
+                <div className="glass rounded-2xl border border-white/10 p-4">
+                  <h3 className="font-semibold text-white mb-3">Community Stats</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between text-white/70">
+                      <span>Total Posts:</span>
+                      <span className="font-semibold text-white">{posts.length}</span>
+                    </div>
+                    <div className="flex justify-between text-white/70">
+                      <span>Your Connections:</span>
+                      <span className="font-semibold text-white">{acceptedConnections.length}</span>
+                    </div>
+                    <div className="flex justify-between text-white/70">
+                      <span>Pending Requests:</span>
+                      <span className="font-semibold text-white">{pendingRequests.length}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Connections Tab */}
+          <TabsContent value="connections" className="space-y-6">
+            <div className="grid md:grid-cols-3 gap-6">
+              <div className="md:col-span-2 space-y-6">
             <Card className="glass-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -193,8 +372,10 @@ export default function Community() {
                 </Tabs>
               </CardContent>
             </Card>
-          </div>
-        </div>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

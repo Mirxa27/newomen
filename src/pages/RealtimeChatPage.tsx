@@ -4,7 +4,7 @@ import { AlertCircle, Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import DevicePicker from '@/components/chat/DevicePicker';
 import { SessionHUD } from '@/components/chat/SessionHUD';
-import { TranscriptPane } from '@/components/chat/TranscriptPane';
+import { Transcriber } from '@/components/chat/Transcriber';
 import { Waveform } from '@/components/chat/Waveform';
 import { useRealtimeClient } from '@/hooks/useRealtimeClient';
 
@@ -96,8 +96,15 @@ const RealtimeChatPage = () => {
                 <SessionHUD duration={duration} isConnected={isConnected} isSpeaking={isSpeaking} />
               </div>
 
-              <div className="glass flex min-h-[320px] flex-1 flex-col overflow-hidden rounded-3xl border border-white/10 shadow-lg">
-                <TranscriptPane messages={messages} partialTranscript={partialTranscript} />
+              <div className="glass flex min-h-[500px] flex-1 flex-col overflow-hidden rounded-3xl border border-white/10 shadow-lg">
+                <Transcriber conversation={messages} />
+                {partialTranscript && (
+                  <div className="px-6 py-2 border-t border-white/10 bg-purple-500/10">
+                    <p className="text-sm text-white/70 italic">
+                      Transcribing: {partialTranscript}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="glass rounded-3xl border border-white/10 p-4 shadow-lg">

@@ -48,6 +48,23 @@ serve(async (req) => {
         if (!payload.userId) {
           throw new Error('Missing userId');
         }
+        // Check if already awarded today
+        const today = new Date().toISOString().split('T')[0];
+        const { data: existingLogin } = await supabase
+          .from('crystal_transactions')
+          .select('id')
+          .eq('user_id', payload.userId)
+          .eq('source', 'daily_login')
+          .gte('created_at', today)
+          .limit(1);
+        
+        if (existingLogin && existingLogin.length > 0) {
+          return new Response(JSON.stringify({ success: false, message: 'Daily login bonus already claimed today' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        
         reward = settings?.crystal_reward_daily_login || 5;
         source = 'daily_login';
         description = 'Daily login bonus';
@@ -106,6 +123,39 @@ serve(async (req) => {
         description = `Made a new connection ${payload.connectionId}`;
         relatedEntityId = payload.connectionId;
         relatedEntityType = 'connection';
+        break;
+
+      case 'create_community_post':
+        if (!payload.userId || !payload.postId) {
+          throw new Error('Missing userId or postId');
+        }
+        reward = 15;
+        source = 'community_post';
+        description = `Created community post ${payload.postId}`;
+        relatedEntityId = payload.postId;
+        relatedEntityType = 'community_post';
+        break;
+
+      case 'receive_post_like':
+        if (!payload.userId || !payload.postId) {
+          throw new Error('Missing userId or postId');
+        }
+        reward = 2;
+        source = 'post_like_received';
+        description = `Received like on post ${payload.postId}`;
+        relatedEntityId = payload.postId;
+        relatedEntityType = 'community_post';
+        break;
+
+      case 'receive_comment':
+        if (!payload.userId || !payload.commentId) {
+          throw new Error('Missing userId or commentId');
+        }
+        reward = 3;
+        source = 'comment_received';
+        description = `Received comment ${payload.commentId}`;
+        relatedEntityId = payload.commentId;
+        relatedEntityType = 'comment';
         break;
 
       default:
