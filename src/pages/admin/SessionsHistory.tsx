@@ -49,7 +49,7 @@ export default function SessionsHistory() {
   useEffect(() => {
     if (!roleLoading && !permissions?.canViewHistory) {
       toast.error("You don't have permission to view session history");
-      window.location.href = '/admin/dashboard';
+      window.location.href = '/admin/analytics';
     }
   }, [permissions, roleLoading]);
 
