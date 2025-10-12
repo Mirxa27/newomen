@@ -93,13 +93,27 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   componentDidUpdate(prevProps: ErrorBoundaryProps): void {
     // Reset on props change if enabled
     if (this.props.resetOnPropsChange && prevProps.children !== this.props.children) {
-      this.reset();
+      this.setState({
+        hasError: false,
+        error: null,
+        errorInfo: null,
+        retryCount: 0,
+        isRetrying: false,
+        showReportDialog: false
+      });
     }
 
     // Reset on location change if enabled
     if (this.props.resetOnLocationChange && this.location !== window.location.href) {
       this.location = window.location.href;
-      this.reset();
+      this.setState({
+        hasError: false,
+        error: null,
+        errorInfo: null,
+        retryCount: 0,
+        isRetrying: false,
+        showReportDialog: false
+      });
     }
   }
 
