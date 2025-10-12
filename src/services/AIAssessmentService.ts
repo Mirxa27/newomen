@@ -113,11 +113,40 @@ export class AIAssessmentService {
     try {
       console.log(`Processing assessment ${assessmentId} with AI. Answers:`, answers);
       
-      const { data, error } = await supabase.functions.invoke('process-assessment', {
-        body: { assessmentId, answers },
+      const payload = {
+        attemptId: (answers as any).attempt_id ?? (answers as any).attemptId,
+        assessmentId,
+        userId: (answers as any).user_id ?? (answers as any).userId,
+        responses: (answers as any).responses ?? answers,
+        timeSpentMinutes: (answers as any).time_spent_minutes ?? (answers as any).timeSpentMinutes ?? 0,
+      };
+
+      const { data, error } = await supabase.functions.invoke('ai-assessment-processor', {
+        body: payload,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Edge Function error:', error);
+        throw error;
+      }
+
+      console.log('AI processing response:', data);
+
+      // Handle the response structure from the Edge Function
+      if (data && data.success && data.analysis) {
+        return {
+          score: data.analysis.score || 0,
+          feedback: data.analysis.feedback || '',
+          explanation: data.analysis.explanation || '',
+          insights: data.analysis.insights || [],
+          recommendations: data.analysis.recommendations || [],
+          strengths: data.analysis.strengths || [],
+          areas_for_improvement: data.analysis.areas_for_improvement || [],
+          is_passing: (data.analysis.score || 0) >= 70,
+          tokensUsed: data.tokensUsed,
+          cost: data.cost,
+        } as AIProcessingResult;
+      }
 
       return data as AIProcessingResult;
     } catch (error) {

@@ -16,14 +16,17 @@ interface ProcessAssessmentPayload {
 }
 
 // Z.AI API Integration (GLM-4.6) - Coding Subscription
-async function analyzeWithZAI(assessmentContext: any, aiConfig: any) {
-  const zaiApiKey = Deno.env.get('ZAI_API_KEY');
-  const zaiBaseUrl = Deno.env.get('ZAI_BASE_URL') || 'https://api.z.ai/api/coding/paas/v4';
-  const zaiModel = Deno.env.get('ZAI_MODEL') || 'glm-4.6';
-
-  if (!zaiApiKey) {
-    throw new Error('Z.AI API key not configured');
+async function analyzeWithZAI(assessmentContext: any, aiConfig: any, supabase: any) {
+  // Retrieve API key from Supabase Vault
+  const { data: apiKeyData, error: keyError } = await supabase.rpc('get_provider_api_key', { provider_type: 'zai' });
+  
+  if (keyError || !apiKeyData) {
+    throw new Error('Z.AI API key not configured in vault');
   }
+
+  const zaiApiKey = apiKeyData;
+  const zaiBaseUrl = aiConfig.api_base_url || 'https://api.z.ai/api/coding/paas/v4';
+  const zaiModel = aiConfig.model_name || 'GLM-4.6';
 
   const systemPrompt = aiConfig.system_prompt || `You are an expert psychologist and personal growth coach. Analyze user responses to assessment questions and provide detailed, personalized feedback.
 
@@ -154,7 +157,7 @@ serve(async (req) => {
     const startTime = Date.now();
 
     // Call Z.AI for analysis
-    const aiResult = await analyzeWithZAI(assessmentContext, aiConfig);
+    const aiResult = await analyzeWithZAI(assessmentContext, aiConfig, supabase);
     const processingTime = Date.now() - startTime;
 
     // Parse AI response
@@ -210,7 +213,7 @@ serve(async (req) => {
         attempt_id: attemptId,
         ai_config_id: aiConfig.id,
         provider_name: 'zai',
-        model_name: Deno.env.get('ZAI_MODEL') || 'glm-4.6',
+        model_name: aiConfig.ai_model || 'GLM-4.6',
         tokens_used: tokensUsed,
         cost_usd: cost,
         processing_time_ms: processingTime,

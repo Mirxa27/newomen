@@ -19,10 +19,14 @@ import {
   Loader2,
   ArrowLeft,
   ArrowRight,
-  Send
+  Send,
+  Sparkles,
+  Lightbulb,
+  TrendingUp
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { processAssessmentWithAI, createAssessmentAttempt, submitAssessmentResponses } from "@/lib/ai-assessment-utils";
+import { createAssessmentAttempt, submitAssessmentResponses } from "@/lib/ai-assessment-utils";
+import { aiAssessmentService } from "@/services/AIAssessmentService";
 import { trackAssessmentCompletion } from "@/lib/gamification-events";
 import type { Tables } from "@/integrations/supabase/types";
 import type { AssessmentAnswers } from "@/types/ai-types";
@@ -142,26 +146,49 @@ export default function Assessment() {
       // Process with AI if configured
       if (assessment.ai_config_id) {
         setAiProcessing(true);
-        const aiResult = await processAssessmentWithAI(assessment.id, {
-          assessment_id: assessment.id,
-          user_id: attempt.user_id,
-          responses,
-          time_spent_minutes: Math.floor(timeSpent / 60),
-          attempt_id: attempt.id,
-          attempt_number: attempt.attempt_number,
-        });
-
-        if (aiResult) {
-          completedScore = aiResult.score ?? 0;
-          setAiResults(aiResult as AIAnalysisResult);
-          toast({
-            title: "Assessment completed!",
-            description: "AI analysis has been generated for your responses.",
+        try {
+          const aiResult = await aiAssessmentService.processAssessmentWithAI(assessment.id, {
+            assessment_id: assessment.id,
+            user_id: attempt.user_id,
+            attempt_id: attempt.id,
+            userId: attempt.user_id,
+            attemptId: attempt.id,
+            responses,
+            time_spent_minutes: Math.floor(timeSpent / 60),
+            timeSpentMinutes: Math.floor(timeSpent / 60),
+            attempt_number: attempt.attempt_number,
           });
-        } else {
+
+          console.log('AI Result received:', aiResult);
+
+          if (aiResult && aiResult.score !== undefined) {
+            completedScore = aiResult.score ?? 0;
+            setAiResults({
+              score: aiResult.score,
+              feedback: aiResult.feedback,
+              explanation: aiResult.explanation,
+              insights: aiResult.insights,
+              recommendations: aiResult.recommendations,
+              strengths: aiResult.strengths,
+              areas_for_improvement: aiResult.areas_for_improvement,
+              is_passing: aiResult.is_passing,
+            } as AIAnalysisResult);
+            toast({
+              title: "Assessment completed!",
+              description: "AI analysis has been generated for your responses.",
+            });
+          } else {
+            toast({
+              title: "Assessment completed",
+              description: "Your responses have been saved. AI analysis is being processed.",
+              variant: "destructive",
+            });
+          }
+        } catch (aiError) {
+          console.error('AI processing error:', aiError);
           toast({
             title: "Assessment completed",
-            description: "Your responses have been saved. AI analysis is being processed.",
+            description: "Your responses have been saved. AI analysis encountered an error.",
             variant: "destructive",
           });
         }
@@ -326,79 +353,177 @@ export default function Assessment() {
   if (aiResults) {
     return (
       <div className="min-h-screen bg-background py-12 px-4">
-        <div className="max-w-4xl mx-auto">
-          <Card>
+        <div className="max-w-4xl mx-auto space-y-6">
+          {/* Header Card with Affirmation */}
+          <Card className="bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/20">
             <CardHeader>
               <CardTitle className="text-3xl flex items-center gap-2">
                 <CheckCircle className="w-8 h-8 text-green-500" />
-                Assessment Complete!
+                Assessment Complete! 🎉
               </CardTitle>
-              <CardDescription>
-                Your AI-powered analysis is ready
+              <CardDescription className="text-lg">
+                You've taken a meaningful step in your journey of self-discovery
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="text-center p-6 bg-primary/5 rounded-lg">
-                <div className="text-4xl font-bold text-primary mb-2">{aiResults.score}%</div>
-                <div className="text-lg text-muted-foreground">Overall Score</div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">AI Feedback</h3>
-                  <p className="text-muted-foreground">{aiResults.feedback}</p>
-                </div>
-
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">Explanation</h3>
-                  <p className="text-muted-foreground">{aiResults.explanation}</p>
-                </div>
-
-                {aiResults.strengths && aiResults.strengths.length > 0 && (
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">Your Strengths</h3>
-                    <ul className="list-disc list-inside space-y-1">
-                      {aiResults.strengths.map((strength: string, index: number) => (
-                        <li key={index} className="text-muted-foreground">{strength}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {aiResults.areas_for_improvement && aiResults.areas_for_improvement.length > 0 && (
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">Areas for Improvement</h3>
-                    <ul className="list-disc list-inside space-y-1">
-                      {aiResults.areas_for_improvement.map((area: string, index: number) => (
-                        <li key={index} className="text-muted-foreground">{area}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {aiResults.recommendations && aiResults.recommendations.length > 0 && (
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">Recommendations</h3>
-                    <ul className="list-disc list-inside space-y-1">
-                      {aiResults.recommendations.map((recommendation: string, index: number) => (
-                        <li key={index} className="text-muted-foreground">{recommendation}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex justify-center gap-4">
-                <Button onClick={() => navigate('/assessments')} variant="outline">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Assessments
-                </Button>
-                <Button onClick={() => navigate('/dashboard')}>
-                  Go to Dashboard
-                </Button>
+            <CardContent>
+              <div className="text-center p-6 bg-primary/10 rounded-lg border border-primary/20">
+                <div className="text-5xl font-bold text-primary mb-3">{aiResults.score}%</div>
+                <div className="text-xl font-semibold mb-2">Overall Score</div>
+                <p className="text-muted-foreground italic">
+                  {aiResults.is_passing 
+                    ? "✨ Congratulations! You've shown deep insight and self-awareness." 
+                    : "🌱 Every step forward is progress. You're on a meaningful path of growth."}
+                </p>
               </div>
             </CardContent>
           </Card>
+
+          {/* AI Feedback Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="w-5 h-5 text-primary" />
+                Personalized Feedback from NewMe
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-primary/5 p-4 rounded-lg border border-primary/10">
+                <p className="text-lg leading-relaxed">{aiResults.feedback}</p>
+              </div>
+              {aiResults.explanation && (
+                <div className="bg-muted/30 p-4 rounded-lg">
+                  <h4 className="font-semibold mb-2">Detailed Analysis</h4>
+                  <p className="text-muted-foreground leading-relaxed">{aiResults.explanation}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Insights Card */}
+          {aiResults.insights && aiResults.insights.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-yellow-500" />
+                  Key Insights
+                </CardTitle>
+                <CardDescription>
+                  Deeper patterns and observations from your responses
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3">
+                  {aiResults.insights.map((insight: string, index: number) => (
+                    <li key={index} className="flex gap-3 p-3 bg-yellow-500/5 rounded-lg border border-yellow-500/20">
+                      <span className="text-yellow-500 font-bold">💡</span>
+                      <span className="text-foreground leading-relaxed">{insight}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Strengths & Growth Areas Grid */}
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Strengths Card */}
+            {aiResults.strengths && aiResults.strengths.length > 0 && (
+              <Card className="border-green-500/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <CheckCircle className="w-5 h-5" />
+                    Your Strengths
+                  </CardTitle>
+                  <CardDescription>
+                    Celebrate these positive qualities you demonstrated
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3">
+                    {aiResults.strengths.map((strength: string, index: number) => (
+                      <li key={index} className="flex gap-3 p-3 bg-green-500/5 rounded-lg">
+                        <span className="text-green-500">✓</span>
+                        <span className="text-foreground leading-relaxed">{strength}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Areas for Growth Card */}
+            {aiResults.areas_for_improvement && aiResults.areas_for_improvement.length > 0 && (
+              <Card className="border-blue-500/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                    <TrendingUp className="w-5 h-5" />
+                    Opportunities for Growth
+                  </CardTitle>
+                  <CardDescription>
+                    Areas where you can continue to evolve
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3">
+                    {aiResults.areas_for_improvement.map((area: string, index: number) => (
+                      <li key={index} className="flex gap-3 p-3 bg-blue-500/5 rounded-lg">
+                        <span className="text-blue-500">→</span>
+                        <span className="text-foreground leading-relaxed">{area}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Recommendations Card */}
+          {aiResults.recommendations && aiResults.recommendations.length > 0 && (
+            <Card className="border-purple-500/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
+                  <Lightbulb className="w-5 h-5" />
+                  Personalized Recommendations
+                </CardTitle>
+                <CardDescription>
+                  Actionable steps to support your continued growth
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3">
+                  {aiResults.recommendations.map((recommendation: string, index: number) => (
+                    <li key={index} className="flex gap-3 p-4 bg-purple-500/5 rounded-lg border border-purple-500/20">
+                      <span className="text-purple-500 font-bold">{index + 1}.</span>
+                      <span className="text-foreground leading-relaxed">{recommendation}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Affirmation Card */}
+          <Card className="bg-gradient-to-br from-pink-500/10 via-purple-500/10 to-primary/10 border-pink-500/20">
+            <CardContent className="py-6 px-6 text-center">
+              <p className="text-xl font-medium mb-2">Remember...</p>
+              <p className="text-lg text-muted-foreground italic leading-relaxed">
+                "Self-discovery is not about perfection—it's about presence, awareness, and the courage 
+                to see yourself clearly. Every reflection brings you closer to living authentically. 
+                You're exactly where you need to be. 🌟"
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Action Buttons */}
+          <div className="flex justify-center gap-4 pb-8">
+            <Button onClick={() => navigate('/assessments')} variant="outline" size="lg">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Assessments
+            </Button>
+            <Button onClick={() => navigate('/dashboard')} size="lg">
+              Go to Dashboard
+            </Button>
+          </div>
         </div>
       </div>
     );

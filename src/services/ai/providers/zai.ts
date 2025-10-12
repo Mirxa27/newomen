@@ -1,6 +1,6 @@
 import type { AIConfiguration, AIResponse } from '../aiTypes';
 
-const DEFAULT_BASE_URL = 'https://api.zai.ai/v1';
+const DEFAULT_BASE_URL = 'https://api.z.ai/api/coding/paas/v4';
 
 interface ZaiResponse {
   output?: {
@@ -74,26 +74,24 @@ export async function callZAI(config: AIConfiguration, prompt: string, startTime
   }
 
   const baseUrl = (config.api_base_url || DEFAULT_BASE_URL).replace(/\/+$/, '');
-  const endpoint = `${baseUrl}/generate`;
+  const endpoint = `${baseUrl}/chat/completions`;
 
   const body = {
-    model: config.model,
-    input: [
+    model: config.model || 'GLM-4.6',
+    messages: [
       {
         role: 'system',
         content:
           config.systemPrompt ??
-          'You are Z.ai, an expert in psychological assessments and quiz analytics. Provide structured, evidence-based insights.',
+          'You are NewMe, a wise, warm, and deeply perceptive AI companion. Guide the user through profound self-discovery with empathy and structure.',
       },
       { role: 'user', content: prompt },
     ],
-    parameters: {
-      temperature: config.temperature,
-      max_tokens: config.maxTokens,
-      top_p: config.topP,
-      frequency_penalty: config.frequencyPenalty,
-      presence_penalty: config.presencePenalty,
-    },
+    temperature: config.temperature,
+    max_tokens: config.maxTokens,
+    top_p: config.topP,
+    frequency_penalty: config.frequencyPenalty,
+    presence_penalty: config.presencePenalty,
   };
 
   const response = await fetch(endpoint, {

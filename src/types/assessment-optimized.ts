@@ -98,7 +98,14 @@ export interface AssessmentFilters {
 export interface AIProcessingResult {
   score: number;
   feedback: string;
+  explanation?: string;
+  insights?: string[];
+  recommendations?: string[];
+  strengths?: string[];
+  areas_for_improvement?: string[];
   is_passing: boolean;
+  tokensUsed?: number;
+  cost?: number;
   details?: Record<string, unknown>;
 }
 
