@@ -46,8 +46,11 @@ export async function generateNewMeResponse(
 
         const userContext = await newMeMemoryService.getUserContext(userId);
         const contextPrompt = buildContextPrompt(userContext);
+        
+        // Get advanced context for provocative conversations
+        const advancedContext = await newMeMemoryService.buildAdvancedContext(userId);
 
-        let fullPrompt = (config.systemPrompt || '') + contextPrompt + '\n\n';
+        let fullPrompt = (config.systemPrompt || '') + contextPrompt + advancedContext + '\n\n';
         if (conversationHistory.length > 0) {
             fullPrompt += '### CONVERSATION HISTORY:\n';
             conversationHistory.forEach(msg => {

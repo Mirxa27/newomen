@@ -432,6 +432,249 @@ export class NewMeMemoryService {
 
     return insights.slice(0, 5);
   }
+
+  // ===== ADVANCED AGENT FEATURES =====
+
+  /**
+   * Save micro-assessment data (scent quiz, truth game, etc.)
+   */
+  async saveMicroAssessment(
+    userId: string,
+    assessmentType: 'olfactory_quiz' | 'truth_game' | 'authenticity_check',
+    trigger: string,
+    response: string,
+    traitJudged?: string,
+    userConfirmation?: boolean
+  ): Promise<NewMeUserMemory | null> {
+    const memoryKey = `${assessmentType}_${Date.now()}`;
+    const metadata = {
+      trigger,
+      trait_judged: traitJudged,
+      user_confirmation: userConfirmation,
+      assessment_type: assessmentType,
+    };
+
+    return this.saveMemory({
+      user_id: userId,
+      memory_type: 'micro_assessment',
+      memory_key: memoryKey,
+      memory_value: response,
+      context: `Micro-assessment: ${assessmentType}`,
+      importance_score: 3,
+      metadata,
+    });
+  }
+
+  /**
+   * Save glimmer hunt data (daily visual/emotional capture)
+   */
+  async saveGlimmer(
+    userId: string,
+    emotion: string,
+    note: string,
+    reason: string,
+    imagePath?: string
+  ): Promise<NewMeUserMemory | null> {
+    const memoryKey = `glimmer_${new Date().toISOString().split('T')[0]}`;
+    const metadata = {
+      emotion,
+      note,
+      reason,
+      image_path: imagePath,
+      glimmer_date: new Date().toISOString(),
+    };
+
+    return this.saveMemory({
+      user_id: userId,
+      memory_type: 'glimmer',
+      memory_key: memoryKey,
+      memory_value: note,
+      context: `Daily glimmer: ${emotion}`,
+      importance_score: 4,
+      metadata,
+    });
+  }
+
+  /**
+   * Save authenticity pattern (lies/truths tracking)
+   */
+  async saveAuthenticityPattern(
+    userId: string,
+    context: string,
+    fakedFeeling: string,
+    realFeeling: string
+  ): Promise<NewMeUserMemory | null> {
+    const memoryKey = `authenticity_${Date.now()}`;
+    const metadata = {
+      context,
+      faked_feeling: fakedFeeling,
+      real_feeling: realFeeling,
+      pattern_date: new Date().toISOString(),
+    };
+
+    return this.saveMemory({
+      user_id: userId,
+      memory_type: 'authenticity_pattern',
+      memory_key: memoryKey,
+      memory_value: fakedFeeling,
+      context: `Authenticity pattern: ${context}`,
+      importance_score: 5,
+      metadata,
+    });
+  }
+
+  /**
+   * Get memory bombs - memories from 14+ days ago for deployment
+   */
+  async getMemoryBombs(userId: string, daysAgo: number = 14): Promise<NewMeUserMemory[]> {
+    try {
+      const targetDate = new Date();
+      targetDate.setDate(targetDate.getDate() - daysAgo);
+      
+      const { data, error } = await supabase
+        .from('newme_user_memories')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .lte('created_at', targetDate.toISOString())
+        .gte('importance_score', 3)
+        .order('importance_score', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      return data as unknown as NewMeUserMemory[];
+    } catch (error) {
+      console.error('Error fetching memory bombs:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get glimmer patterns for analysis
+   */
+  async getGlimmerPatterns(userId: string, days: number = 30): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('newme_user_memories')
+        .select('memory_value, metadata, created_at')
+        .eq('user_id', userId)
+        .eq('memory_type', 'glimmer')
+        .eq('is_active', true)
+        .gte('created_at', new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString())
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Group by memory_value (note) and analyze patterns
+      const patterns: { [key: string]: any } = {};
+      data?.forEach((memory: any) => {
+        const note = memory.memory_value;
+        if (!patterns[note]) {
+          patterns[note] = {
+            note,
+            frequency: 0,
+            emotions: [],
+            dates: [],
+          };
+        }
+        patterns[note].frequency++;
+        patterns[note].emotions.push(memory.metadata?.emotion);
+        patterns[note].dates.push(memory.created_at);
+      });
+
+      // Return patterns with frequency >= 3
+      return Object.values(patterns).filter((pattern: any) => pattern.frequency >= 3);
+    } catch (error) {
+      console.error('Error fetching glimmer patterns:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get authenticity patterns for analysis
+   */
+  async getAuthenticityPatterns(userId: string, days: number = 30): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('newme_user_memories')
+        .select('metadata, created_at')
+        .eq('user_id', userId)
+        .eq('memory_type', 'authenticity_pattern')
+        .eq('is_active', true)
+        .gte('created_at', new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString())
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching authenticity patterns:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get micro-assessment patterns
+   */
+  async getMicroAssessmentPatterns(userId: string, assessmentType?: string): Promise<any[]> {
+    try {
+      let query = supabase
+        .from('newme_user_memories')
+        .select('memory_key, memory_value, metadata, created_at')
+        .eq('user_id', userId)
+        .eq('memory_type', 'micro_assessment')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (assessmentType) {
+        query = query.eq('metadata->>assessment_type', assessmentType);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching micro-assessment patterns:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Build advanced context for provocative conversations
+   */
+  async buildAdvancedContext(userId: string): Promise<string> {
+    const context: string[] = [];
+    
+    // Get memory bombs
+    const memoryBombs = await this.getMemoryBombs(userId);
+    if (memoryBombs.length > 0) {
+      context.push(`\n### MEMORY BOMBS AVAILABLE:`);
+      memoryBombs.forEach((memory, index) => {
+        context.push(`${index + 1}. ${memory.memory_type}: ${memory.memory_value} (${memory.context})`);
+      });
+    }
+
+    // Get glimmer patterns
+    const glimmerPatterns = await this.getGlimmerPatterns(userId);
+    if (glimmerPatterns.length > 0) {
+      context.push(`\n### GLIMMER PATTERNS:`);
+      glimmerPatterns.forEach((pattern: any) => {
+        context.push(`- ${pattern.note}: ${pattern.frequency} times (emotions: ${pattern.emotions.join(', ')})`);
+      });
+    }
+
+    // Get authenticity patterns
+    const authPatterns = await this.getAuthenticityPatterns(userId);
+    if (authPatterns.length > 0) {
+      context.push(`\n### AUTHENTICITY PATTERNS:`);
+      authPatterns.slice(0, 3).forEach((pattern: any) => {
+        const meta = pattern.metadata;
+        context.push(`- Context: ${meta?.context}, Faked: ${meta?.faked_feeling}, Real: ${meta?.real_feeling}`);
+      });
+    }
+
+    return context.join('\n');
+  }
 }
 
 export const newMeMemoryService = new NewMeMemoryService();
