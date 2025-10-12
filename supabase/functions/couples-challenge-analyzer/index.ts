@@ -12,14 +12,21 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 );
 
-async function analyzeResponses(question: string, responseA: string, responseB: string): Promise<string> {
-  const zaiApiKey = Deno.env.get('ZAI_API_KEY');
-  const zaiBaseUrl = Deno.env.get('ZAI_BASE_URL') || 'https://api.z.ai/api/coding/paas/v4';
-  const zaiModel = Deno.env.get('ZAI_MODEL') || 'glm-4.6';
-
-  if (!zaiApiKey) {
-    throw new Error('Z.AI API key not configured');
+async function analyzeResponses(question: string, responseA: string, responseB: string, supabaseClient: any): Promise<string> {
+  // Retrieve API key from database using the same method as ai-assessment-processor
+  const { data: zaiApiKey, error: keyError } = await supabaseClient.rpc('get_provider_api_key_by_type', { p_provider_type: 'zai' });
+  
+  if (keyError) {
+    console.error('Error retrieving Z.AI API key:', keyError);
+    throw new Error(`Z.AI API key retrieval failed: ${keyError.message}`);
   }
+  
+  if (!zaiApiKey) {
+    throw new Error('Z.AI API key not configured. Please add your Z.ai API key in the admin panel.');
+  }
+
+  const zaiBaseUrl = 'https://api.z.ai/api/coding/paas/v4';
+  const zaiModel = 'GLM-4.6';
 
   const systemPrompt = `You are an expert relationship counselor and couples therapist. Analyze the responses from two people in a relationship challenge and provide insightful, constructive feedback.
 
@@ -126,7 +133,8 @@ serve(async (req) => {
         const analysis = await analyzeResponses(
           question,
           responseData.initiator_response,
-          responseData.partner_response
+          responseData.partner_response,
+          supabase
         );
         analyses.push(JSON.parse(analysis));
       }
