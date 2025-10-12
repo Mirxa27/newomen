@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 import { toast } from "sonner";
-import { Loader2, Edit, Trash2, Plus, Youtube, Music, Clock, Tag } from "lucide-react";
+import { Loader2, Edit, Trash2, Plus, Youtube, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface WellnessResource {
@@ -113,6 +113,17 @@ export default function WellnessLibraryManagement() {
   };
 
   const handleSave = async () => {
+    // Validate required fields
+    if (!formData.title.trim()) {
+      toast.error('Title is required');
+      return;
+    }
+
+    if (!formData.youtube_url.trim()) {
+      toast.error('YouTube URL is required');
+      return;
+    }
+
     setSaving(true);
     try {
       const resourceData = {
@@ -120,9 +131,9 @@ export default function WellnessLibraryManagement() {
         category: formData.category,
         duration: formData.duration,
         description: formData.description,
-        audio_type: formData.youtube_url ? 'youtube' as const : 'file' as const,
-        youtube_url: formData.youtube_url || null,
-        audio_url: formData.audio_url || (formData.youtube_url ? '' : ''),
+        audio_type: 'youtube' as const,
+        youtube_url: formData.youtube_url,
+        audio_url: formData.youtube_url,
         youtube_audio_extracted: false
       };
 
@@ -183,22 +194,6 @@ export default function WellnessLibraryManagement() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const getAudioTypeBadge = (resource: WellnessResource) => {
-    if (resource.audio_type === 'youtube') {
-      return (
-        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-          <Youtube className="w-3 h-3 mr-1" />
-          YouTube
-        </Badge>
-      );
-    }
-    return (
-      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-        <Music className="w-3 h-3 mr-1" />
-        Audio File
-      </Badge>
-    );
-  };
 
   return (
     <div className="space-y-6">
@@ -206,7 +201,7 @@ export default function WellnessLibraryManagement() {
         <div>
           <h1 className="text-3xl font-bold gradient-text">Wellness Library Management</h1>
           <p className="text-muted-foreground">
-            Manage wellness resources, including YouTube audio content
+            Add meditation, breathing, affirmations and wellness audio content
           </p>
         </div>
         <Button onClick={openCreateDialog} className="clay-button">
@@ -219,11 +214,10 @@ export default function WellnessLibraryManagement() {
       <Card className="glass-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Music className="w-5 h-5 text-primary" />
             Wellness Resources ({resources.length})
           </CardTitle>
           <CardDescription>
-            Click on a resource to edit its details or add YouTube links
+            Manage wellness audio resources. Click edit to update details or delete to remove.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -239,7 +233,6 @@ export default function WellnessLibraryManagement() {
                     <TableHead>Title</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Duration</TableHead>
-                    <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -270,9 +263,6 @@ export default function WellnessLibraryManagement() {
                           <Clock className="w-4 h-4 text-muted-foreground" />
                           <span>{formatDuration(resource.duration)}</span>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        {getAudioTypeBadge(resource)}
                       </TableCell>
                       <TableCell>
                         {resource.audio_type === 'youtube' && !resource.youtube_audio_extracted ? (
@@ -320,10 +310,10 @@ export default function WellnessLibraryManagement() {
         <DialogContent className="glass-card max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {selectedResource ? "Edit Resource" : "Create Resource"}
+              {selectedResource ? "Edit Wellness Resource" : "Add Wellness Resource"}
             </DialogTitle>
             <DialogDescription>
-              {selectedResource ? "Update the resource details below." : "Add a new wellness resource to the library."}
+              {selectedResource ? "Update the wellness resource details below." : "Add a new wellness resource using a YouTube video URL. The audio will be embedded for users."}
             </DialogDescription>
           </DialogHeader>
 
@@ -369,29 +359,18 @@ export default function WellnessLibraryManagement() {
             </div>
 
             <div>
-              <Label htmlFor="youtube_url">YouTube URL (Optional)</Label>
+              <Label htmlFor="youtube_url">YouTube URL *</Label>
               <Input
                 id="youtube_url"
                 value={formData.youtube_url}
                 onChange={(e) => setFormData({ ...formData, youtube_url: e.target.value })}
                 placeholder="https://www.youtube.com/watch?v=..."
+                required
               />
               <p className="text-xs text-muted-foreground mt-1">
-                If provided, this will be used as the audio source instead of a file
+                Enter a YouTube video URL - it will be embedded as audio for users
               </p>
             </div>
-
-            {!formData.youtube_url && (
-              <div>
-                <Label htmlFor="audio_url">Audio File URL</Label>
-                <Input
-                  id="audio_url"
-                  value={formData.audio_url}
-                  onChange={(e) => setFormData({ ...formData, audio_url: e.target.value })}
-                  placeholder="https://example.com/audio.mp3"
-                />
-              </div>
-            )}
 
             <div>
               <Label htmlFor="description">Description</Label>
