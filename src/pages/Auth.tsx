@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -17,9 +17,11 @@ const AuthPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  if (user) {
-    navigate('/onboarding');
-  }
+  useEffect(() => {
+    if (user) {
+      navigate('/onboarding');
+    }
+  }, [user, navigate]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
