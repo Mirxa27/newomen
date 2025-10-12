@@ -5,8 +5,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, openai-beta',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Max-Age': '86400'
 };
 
@@ -214,12 +214,15 @@ serve(async (req) => {
       // Return token with session info
       return new Response(
         JSON.stringify({
+          client_secret: tokenData.client_secret,
           token: tokenData.client_secret.value,
           expiresAt: tokenData.client_secret.expires_at,
           sessionId: session?.id,
           realtimeSessionId: tokenData.id,
           model: tokenData.model,
-          voice: tokenData.voice
+          voice: tokenData.voice,
+          promptId: 'pmpt_68e6d09ba8e48190bf411abef321e0930f5dd910b5b07a3c',
+          promptVersion: '4'
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -230,11 +233,14 @@ serve(async (req) => {
     // Return token without session (for non-authenticated users)
     return new Response(
       JSON.stringify({
+        client_secret: tokenData.client_secret,
         token: tokenData.client_secret.value,
         expiresAt: tokenData.client_secret.expires_at,
         realtimeSessionId: tokenData.id,
         model: tokenData.model,
-        voice: tokenData.voice
+        voice: tokenData.voice,
+        promptId: 'pmpt_68e6d09ba8e48190bf411abef321e0930f5dd910b5b07a3c',
+        promptVersion: '4'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
