@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Play, Pause, Search, Clock, Heart, Headphones } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+import { ArrowLeft, Play, Pause, Search, Clock, Heart } from "lucide-react";
 import { trackWellnessResourceCompletion } from "@/lib/gamification-events";
 
 interface Resource {
@@ -30,11 +29,7 @@ export default function WellnessLibrary() {
   const [filteredResources, setFilteredResources] = useState<Resource[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const [playingResource, setPlayingResource] = useState<string | null>(null);
 
   const loadResources = useCallback(async () => {
     setLoading(true);
@@ -84,31 +79,35 @@ export default function WellnessLibrary() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const handlePlay = async (resource: Resource) => {
-    if (resource.audio_type === 'youtube' && resource.youtube_url) {
-      // For YouTube audio, we'll use a different approach
-      // This is a placeholder - in a real implementation, you'd use a YouTube audio extraction service
-      toast.info("YouTube audio playback coming soon!");
-      return;
+  const extractYouTubeId = (url: string): string | null => {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/,
+      /youtube\.com\/embed\/([^&\n?#]+)/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) return match[1];
     }
+    return null;
+  };
 
-    if (currentlyPlaying === resource.id && isPlaying) {
-      audioRef.current?.pause();
-      setIsPlaying(false);
+  const handlePlay = async (resource: Resource) => {
+    if (playingResource === resource.id) {
+      // Stop playing
+      setPlayingResource(null);
     } else {
-      if (audioRef.current) {
-        if (currentlyPlaying !== resource.id) {
-          audioRef.current.src = resource.audio_url;
-          setCurrentlyPlaying(resource.id);
-          setCurrentTime(0);
+      // Start playing
+      setPlayingResource(resource.id);
+      
+      // Track for gamification
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await trackWellnessResourceCompletion(user.id, resource.id);
         }
-        try {
-          await audioRef.current.play();
-          setIsPlaying(true);
-        } catch (error) {
-          console.error("Error playing audio:", error);
-          toast.error("Failed to play audio file.");
-        }
+      } catch (error) {
+        console.error("Error tracking completion:", error);
       }
     }
   };
@@ -141,7 +140,9 @@ export default function WellnessLibrary() {
             </Button>
             <div>
               <h1 className="text-4xl font-bold gradient-text">Wellness Library</h1>
-              <p className="text-muted-foreground">Guided audio for meditation, breathing & more</p>
+              <p className="text-muted-foreground">
+                Guided audio for meditation, breathing, affirmations & more
+              </p>
             </div>
           </div>
         </div>
@@ -193,72 +194,64 @@ export default function WellnessLibrary() {
                     <Clock className="w-4 h-4" />
                     <span>{formatDuration(resource.duration)}</span>
                   </div>
-                  {currentlyPlaying === resource.id && (
-                    <span className="text-primary font-medium flex items-center gap-1">
-                      <Headphones className="w-4 h-4" />
-                      Playing
-                    </span>
-                  )}
                 </div>
 
-                {currentlyPlaying === resource.id && (
-                  <div className="space-y-2">
-                    <Progress value={(currentTime / duration) * 100} className="h-2" />
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{formatDuration(currentTime)}</span>
-                      <span>{formatDuration(duration)}</span>
+                {playingResource === resource.id ? (
+                  <div className="space-y-3">
+                    <div className="relative w-full aspect-video rounded-lg overflow-hidden">
+                      <iframe
+                        width="100%"
+                        height="100%"
+                        src={`https://www.youtube.com/embed/${extractYouTubeId(resource.youtube_url || resource.audio_url)}?autoplay=1`}
+                        title={resource.title}
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        className="rounded-lg"
+                      />
                     </div>
+                    <Button
+                      onClick={() => handlePlay(resource)}
+                      className="w-full clay-button"
+                      variant="secondary"
+                    >
+                      <Pause className="w-4 h-4 mr-2" />
+                      Close Player
+                    </Button>
                   </div>
-                )}
-
-                <div className="flex gap-2">
+                ) : (
                   <Button
                     onClick={() => handlePlay(resource)}
-                    className="flex-1 clay-button"
-                    variant={currentlyPlaying === resource.id && isPlaying ? "secondary" : "default"}
-                    disabled={resource.audio_type === 'youtube' && !resource.youtube_audio_extracted}
+                    className="w-full clay-button"
                   >
-                    {resource.audio_type === 'youtube' && !resource.youtube_audio_extracted ? (
-                      <><Clock className="w-4 h-4 mr-2" /> Processing...</>
-                    ) : currentlyPlaying === resource.id && isPlaying ? (
-                      <><Pause className="w-4 h-4 mr-2" /> Pause</>
-                    ) : (
-                      <><Play className="w-4 h-4 mr-2" /> Play</>
-                    )}
+                    <Play className="w-4 h-4 mr-2" />
+                    Play Audio
                   </Button>
-                </div>
+                )}
               </CardContent>
             </Card>
           ))}
         </div>
 
-        {filteredResources.length === 0 && (
+        {filteredResources.length === 0 && !loading && (
           <Card className="glass-card">
             <CardContent className="py-12 text-center">
               <Heart className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
               <h3 className="text-xl font-semibold mb-2">No Resources Found</h3>
-              <p className="text-muted-foreground">
-                Try adjusting your search or filter criteria. New content is added regularly!
+              <p className="text-muted-foreground mb-4">
+                {searchTerm || selectedCategory !== "all" 
+                  ? "Try adjusting your search or filter criteria."
+                  : "No wellness resources available yet."}
               </p>
+              {!searchTerm && selectedCategory === "all" && (
+                <p className="text-sm text-muted-foreground">
+                  Contact your administrator to add YouTube wellness content.
+                </p>
+              )}
             </CardContent>
           </Card>
         )}
 
-        <audio
-          ref={audioRef}
-          onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-          onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-          onEnded={async () => {
-            setIsPlaying(false);
-            setCurrentTime(0);
-            if (currentlyPlaying) {
-              const { data: { user } } = await supabase.auth.getUser();
-              if (user) {
-                void trackWellnessResourceCompletion(user.id, currentlyPlaying);
-              }
-            }
-          }}
-        />
       </div>
     </div>
   );

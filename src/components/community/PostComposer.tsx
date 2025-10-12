@@ -94,7 +94,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated, onCan
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Post Type */}
-        <Select value={postType} onValueChange={(value: any) => setPostType(value)}>
+        <Select value={postType} onValueChange={(value: "general" | "question" | "story" | "achievement" | "resource") => setPostType(value)}>
           <SelectTrigger className="bg-white/5 border-white/10 text-white">
             <SelectValue placeholder="Select post type" />
           </SelectTrigger>

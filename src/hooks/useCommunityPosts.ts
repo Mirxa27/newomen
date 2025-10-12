@@ -17,6 +17,8 @@ export interface CommunityPost {
   updated_at: string;
   author_name?: string;
   author_avatar?: string;
+  author_level?: number;
+  author_crystals?: number;
   is_liked_by_user?: boolean;
   is_following_author?: boolean;
   user_profiles?: {

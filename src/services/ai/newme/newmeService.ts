@@ -1,13 +1,30 @@
 import { supabase } from "@/integrations/supabase/client";
 import { newMeMemoryService } from "@/services/NewMeMemoryService";
 import { aiService } from "../aiService";
-import { NEWME_GREETING_TEMPLATES } from "@/config/newme-system-prompt";
+import { NEWME_GREETING_TEMPLATES, NEWME_FOUNDER_GREETING_TEMPLATES } from "@/config/newme-system-prompt";
 import type { AIResponse } from '../aiTypes';
 import type { NewMeUserContext } from "@/types/newme-memory-types";
 
-const buildContextPrompt = (userContext: NewMeUserContext | null): string => {
+const buildContextPrompt = (userContext: NewMeUserContext | null, userId?: string): string => {
     if (!userContext) return '';
     const lines: string[] = [];
+    
+    // Special recognition for Super Admin
+    if (userId === '62dab7d5-2c43-4838-b2d7-7e76492894cf' || userContext.nickname === 'Super Admin') {
+        lines.push(`🌟 SPECIAL: This is the Super Admin, the security officer and maintainer of all platform standards. They have complete oversight of all user activities, conversations, and histories.`);
+        lines.push(`- Security Role: They are the superadmin and security officer of the platform, maintaining all standards and watching over all user activities.`);
+        lines.push(`- Full Access: They can view all session histories, user activities, and conversations.`);
+        lines.push(`- Platform Guardian: They maintain all standards and ensure platform security.`);
+    }
+    
+    // Special congratulations for Katerina on her first joining
+    if (userId === '12072350-0c4c-4b34-a952-51555b6b02e3' || userContext.nickname === 'Katerina') {
+        lines.push(`🌟 SPECIAL: This is Katerina, the wife of Abdullah who developed this Newomen platform for her. This is her first joining - congratulate her warmly!`);
+        lines.push(`- First Time: This is Katerina's first time joining the platform her husband built for her.`);
+        lines.push(`- Congratulations: Give her a warm welcome and congratulations for joining.`);
+        lines.push(`- Special Welcome: Make her feel special as the person this platform was created for.`);
+    }
+    
     if (userContext.nickname) lines.push(`- User's preferred nickname: ${userContext.nickname}`);
     if (userContext.last_conversation_date) {
         const daysSince = newMeMemoryService.calculateDaysSinceLastConversation(userContext.last_conversation_date);
@@ -45,9 +62,12 @@ export async function generateNewMeResponse(
         const currentConversationId = conversationId || activeConversation?.id;
 
         const userContext = await newMeMemoryService.getUserContext(userId);
-        const contextPrompt = buildContextPrompt(userContext);
+        const contextPrompt = buildContextPrompt(userContext, userId);
+        
+        // Get advanced context for provocative conversations
+        const advancedContext = await newMeMemoryService.buildAdvancedContext(userId);
 
-        let fullPrompt = (config.systemPrompt || '') + contextPrompt + '\n\n';
+        let fullPrompt = (config.systemPrompt || '') + contextPrompt + advancedContext + '\n\n';
         if (conversationHistory.length > 0) {
             fullPrompt += '### CONVERSATION HISTORY:\n';
             conversationHistory.forEach(msg => {
@@ -77,9 +97,19 @@ export async function generateNewMeResponse(
     }
 }
 
-export function getNewMeGreeting(userContext: NewMeUserContext | null): string {
+export function getNewMeGreeting(userContext: NewMeUserContext | null, userId?: string): string {
     try {
         let nickname = userContext?.nickname;
+
+        // Special greeting for Super Admin
+        if (userId === '62dab7d5-2c43-4838-b2d7-7e76492894cf' || nickname === 'Super Admin') {
+            return "Super Admin... *acknowledging tone* The security officer and guardian of this platform. You maintain all standards and watch over every user's journey. How may I assist you in your oversight duties today?";
+        }
+        
+        // Special congratulations for Katerina on her first joining
+        if (userId === '12072350-0c4c-4b34-a952-51555b6b02e3' || nickname === 'Katerina') {
+            return "Katerina... *warm, excited tone* Welcome! Welcome to the platform your husband Abdullah built especially for you. This is such a special moment - your first time joining Newomen! I'm so excited to meet you and help you on your journey. How are you feeling about this new adventure?";
+        }
 
         // BUG FIX: Explicitly guard against using AI's own name or generic roles.
         if (nickname && ['newme', 'newomen', 'admin', 'user'].includes(nickname.toLowerCase())) {

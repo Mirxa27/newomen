@@ -4,6 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 interface ProcessAssessmentPayload {
@@ -12,6 +13,85 @@ interface ProcessAssessmentPayload {
   userId: string;
   responses: Record<string, unknown>;
   timeSpentMinutes: number;
+}
+
+// Z.AI API Integration (GLM-4.6) - Coding Subscription
+async function analyzeWithZAI(assessmentContext: any, aiConfig: any) {
+  const zaiApiKey = Deno.env.get('ZAI_API_KEY');
+  const zaiBaseUrl = Deno.env.get('ZAI_BASE_URL') || 'https://api.z.ai/api/coding/paas/v4';
+  const zaiModel = Deno.env.get('ZAI_MODEL') || 'glm-4.6';
+
+  if (!zaiApiKey) {
+    throw new Error('Z.AI API key not configured');
+  }
+
+  const systemPrompt = aiConfig.system_prompt || `You are an expert psychologist and personal growth coach. Analyze user responses to assessment questions and provide detailed, personalized feedback.
+
+Your response must be a valid JSON object with this exact structure:
+{
+  "score": <number between 0-100>,
+  "feedback": "<warm, personalized feedback about their responses>",
+  "explanation": "<detailed explanation of their results>",
+  "insights": ["<key insight 1>", "<key insight 2>", "<key insight 3>"],
+  "recommendations": ["<actionable recommendation 1>", "<actionable recommendation 2>", "<actionable recommendation 3>"],
+  "strengths": ["<strength 1>", "<strength 2>"],
+  "areas_for_improvement": ["<area 1>", "<area 2>"]
+}
+
+Be encouraging, insightful, and specific to their answers. Help them see patterns and opportunities for growth.`;
+
+  const userPrompt = `Please analyze this assessment attempt:
+
+Assessment: ${assessmentContext.title}
+Category: ${assessmentContext.category}
+Difficulty: ${assessmentContext.difficulty}
+
+Questions and User Responses:
+${JSON.stringify(assessmentContext.questions, null, 2)}
+${JSON.stringify(assessmentContext.responses, null, 2)}
+
+Time Spent: ${assessmentContext.timeSpent} minutes
+Scoring Rubric: ${JSON.stringify(assessmentContext.scoringRubric, null, 2)}
+Passing Score: ${assessmentContext.passingScore}
+
+Provide a comprehensive analysis with score, feedback, insights, and recommendations. Return ONLY valid JSON.`;
+
+  const response = await fetch(`${zaiBaseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept-Language': 'en-US,en',
+      'Authorization': `Bearer ${zaiApiKey}`
+    },
+    body: JSON.stringify({
+      model: zaiModel,
+      messages: [
+        {
+          role: 'system',
+          content: systemPrompt
+        },
+        {
+          role: 'user',
+          content: userPrompt
+        }
+      ],
+      temperature: aiConfig.temperature || 0.6,
+      max_tokens: aiConfig.max_tokens || 2000,
+      stream: false,
+      response_format: { type: 'json_object' }
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Z.AI API error: ${errorText}`);
+  }
+
+  const result = await response.json();
+  return {
+    content: result.choices[0].message.content,
+    usage: result.usage
+  };
 }
 
 serve(async (req) => {
@@ -23,7 +103,6 @@ serve(async (req) => {
     const payload: ProcessAssessmentPayload = await req.json();
     const { attemptId, assessmentId, userId, responses, timeSpentMinutes } = payload;
 
-    // Initialize Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -40,10 +119,9 @@ serve(async (req) => {
       throw new Error('Assessment not found');
     }
 
-    // Get AI configuration for this assessment
+    // Get AI configuration
     let aiConfig = assessment.ai_assessment_configs;
     
-    // If no specific config, get the default one
     if (!aiConfig) {
       const { data: defaultConfig } = await supabase
         .from('ai_assessment_configs')
@@ -59,7 +137,7 @@ serve(async (req) => {
       throw new Error('No AI configuration found');
     }
 
-    // Prepare the assessment context for AI analysis
+    // Prepare assessment context
     const assessmentContext = {
       title: assessment.title,
       description: assessment.description,
@@ -72,67 +150,22 @@ serve(async (req) => {
       passingScore: assessment.passing_score
     };
 
-    // Call OpenAI for analysis
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openaiApiKey) {
-      throw new Error('OpenAI API key not configured');
-    }
-
+    console.log('Processing assessment with Z.AI GLM-4.6...');
     const startTime = Date.now();
 
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: aiConfig.ai_model || 'gpt-4-turbo-preview',
-        messages: [
-          {
-            role: 'system',
-            content: aiConfig.system_prompt || `You are an expert assessment analyzer. Analyze user responses to assessment questions and provide detailed feedback, scoring, and insights. 
-            
-Your response must be a valid JSON object with this structure:
-{
-  "score": <number between 0-100>,
-  "feedback": "<personalized feedback string>",
-  "explanation": "<detailed explanation string>",
-  "insights": ["<insight 1>", "<insight 2>", ...],
-  "recommendations": ["<recommendation 1>", "<recommendation 2>", ...],
-  "strengths": ["<strength 1>", "<strength 2>", ...],
-  "areas_for_improvement": ["<area 1>", "<area 2>", ...]
-}`
-          },
-          {
-            role: 'user',
-            content: `Please analyze this assessment attempt:\n\n${JSON.stringify(assessmentContext, null, 2)}\n\nProvide a comprehensive analysis with score, feedback, insights, and recommendations.`
-          }
-        ],
-        temperature: aiConfig.temperature || 0.7,
-        max_tokens: aiConfig.max_tokens || 2000,
-      }),
-    });
-
+    // Call Z.AI for analysis
+    const aiResult = await analyzeWithZAI(assessmentContext, aiConfig);
     const processingTime = Date.now() - startTime;
 
-    if (!openaiResponse.ok) {
-      const error = await openaiResponse.text();
-      throw new Error(`OpenAI API error: ${error}`);
-    }
-
-    const aiResult = await openaiResponse.json();
-    const aiContent = aiResult.choices[0].message.content;
-    
     // Parse AI response
     let aiAnalysis;
     try {
-      aiAnalysis = JSON.parse(aiContent);
+      aiAnalysis = JSON.parse(aiResult.content);
     } catch (e) {
       // If JSON parsing fails, create a structured response
       aiAnalysis = {
         score: 70,
-        feedback: aiContent,
+        feedback: aiResult.content,
         explanation: "AI analysis completed",
         insights: [],
         recommendations: [],
@@ -141,7 +174,12 @@ Your response must be a valid JSON object with this structure:
       };
     }
 
-    // Update the assessment attempt with AI analysis
+    // Validate score
+    if (typeof aiAnalysis.score !== 'number' || aiAnalysis.score < 0 || aiAnalysis.score > 100) {
+      aiAnalysis.score = 70; // Default score if invalid
+    }
+
+    // Update the assessment attempt
     const { error: updateError } = await supabase
       .from('assessment_attempts')
       .update({
@@ -161,7 +199,7 @@ Your response must be a valid JSON object with this structure:
 
     // Log AI usage
     const tokensUsed = aiResult.usage?.total_tokens || 0;
-    const costPer1kTokens = 0.01; // Approximate cost for GPT-4
+    const costPer1kTokens = 0.001; // Z.AI GLM-4.6 is much cheaper than GPT-4
     const cost = (tokensUsed / 1000) * costPer1kTokens;
 
     await supabase
@@ -171,8 +209,8 @@ Your response must be a valid JSON object with this structure:
         assessment_id: assessmentId,
         attempt_id: attemptId,
         ai_config_id: aiConfig.id,
-        provider_name: aiConfig.ai_provider || 'openai',
-        model_name: aiConfig.ai_model || 'gpt-4-turbo-preview',
+        provider_name: 'zai',
+        model_name: Deno.env.get('ZAI_MODEL') || 'glm-4.6',
         tokens_used: tokensUsed,
         cost_usd: cost,
         processing_time_ms: processingTime,
@@ -248,11 +286,16 @@ Your response must be a valid JSON object with this structure:
       }
     }
 
+    console.log(`Assessment processed successfully with Z.AI. Score: ${aiAnalysis.score}, Tokens: ${tokensUsed}, Cost: $${cost.toFixed(4)}`);
+
     return new Response(
       JSON.stringify({
         success: true,
         analysis: aiAnalysis,
-        attemptId: attemptId
+        attemptId: attemptId,
+        provider: 'Z.AI GLM-4.6',
+        tokensUsed: tokensUsed,
+        cost: cost
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -261,43 +304,6 @@ Your response must be a valid JSON object with this structure:
 
   } catch (error) {
     console.error('Error processing assessment:', error);
-
-    // Log failed attempt
-    try {
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-      );
-
-      const payload: ProcessAssessmentPayload = await req.json();
-      
-      await supabase
-        .from('ai_usage_logs')
-        .insert({
-          user_id: payload.userId,
-          assessment_id: payload.assessmentId,
-          attempt_id: payload.attemptId,
-          provider_name: 'openai',
-          model_name: 'gpt-4-turbo-preview',
-          tokens_used: 0,
-          cost_usd: 0,
-          processing_time_ms: 0,
-          success: false,
-          error_message: error.message
-        });
-
-      // Update attempt with error
-      await supabase
-        .from('assessment_attempts')
-        .update({
-          ai_processing_error: error.message,
-          is_ai_processed: false,
-          status: 'completed'
-        })
-        .eq('id', payload.attemptId);
-    } catch (logError) {
-      console.error('Error logging failed attempt:', logError);
-    }
 
     return new Response(
       JSON.stringify({ 
@@ -312,4 +318,3 @@ Your response must be a valid JSON object with this structure:
     );
   }
 });
-

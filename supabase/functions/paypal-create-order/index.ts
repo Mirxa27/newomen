@@ -1,6 +1,10 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
-const PAYPAL_API_BASE = 'https://api.sandbox.paypal.com';
+// Use production PayPal API for live transactions
+const PAYPAL_MODE = Deno.env.get('PAYPAL_MODE') || 'live';
+const PAYPAL_API_BASE = PAYPAL_MODE === 'sandbox' 
+  ? 'https://api.sandbox.paypal.com'
+  : 'https://api.paypal.com';
 
 async function getAccessToken() {
   const clientId = Deno.env.get('PAYPAL_CLIENT_ID');

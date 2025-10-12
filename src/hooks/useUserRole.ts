@@ -19,10 +19,10 @@ export function useUserRole() {
         const { data: profile } = await supabase
           .from('user_profiles')
           .select('role')
-          .eq('id', user.id)
+          .eq('user_id', user.id)
           .single();
 
-        const userRole = (profile?.role as UserRole) || 'MODERATOR';
+        const userRole = (profile?.role as UserRole) || 'user';
         setRole(userRole);
         setPermissions(RolePermissions[userRole]);
       } catch (error) {

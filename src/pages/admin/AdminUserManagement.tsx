@@ -53,7 +53,7 @@ export default function AdminUserManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [formData, setFormData] = useState<EditUserForm>({
-    role: 'member',
+    role: 'user',
     subscription_tier: 'discovery',
     remaining_minutes: 10,
     nickname: '',
@@ -101,7 +101,7 @@ export default function AdminUserManagement() {
 
     try {
       const { data, error } = await (supabase as unknown as TypedSupabaseClient).rpc('admin_update_user_profile', {
-        target_user_id: selectedUser.user_id,
+        target_user_id: selectedUser.id,
         new_role: formData.role,
         new_subscription_tier: formData.subscription_tier,
         new_remaining_minutes: formData.remaining_minutes,
@@ -125,11 +125,12 @@ export default function AdminUserManagement() {
 
   const getRoleIcon = (role: string) => {
     switch (role) {
-      case 'admin':
       case 'superadmin':
+        return <Crown className="w-4 h-4 text-purple-600" />;
+      case 'admin':
         return <Shield className="w-4 h-4 text-red-500" />;
-      case 'premium':
-        return <Crown className="w-4 h-4 text-yellow-500" />;
+      case 'moderator':
+        return <Users className="w-4 h-4 text-orange-500" />;
       default:
         return <Users className="w-4 h-4 text-blue-500" />;
     }
@@ -305,8 +306,8 @@ export default function AdminUserManagement() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="member">Member</SelectItem>
-                  <SelectItem value="premium">Premium</SelectItem>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="moderator">Moderator</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="superadmin">Super Admin</SelectItem>
                 </SelectContent>
