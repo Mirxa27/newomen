@@ -17,6 +17,14 @@ const buildContextPrompt = (userContext: NewMeUserContext | null, userId?: strin
         lines.push(`- Platform Guardian: They maintain all standards and ensure platform security.`);
     }
     
+    // Special congratulations for Katerina on her first joining
+    if (userId === '12072350-0c4c-4b34-a952-51555b6b02e3' || userContext.nickname === 'Katerina') {
+        lines.push(`🌟 SPECIAL: This is Katerina, the wife of Abdullah who developed this Newomen platform for her. This is her first joining - congratulate her warmly!`);
+        lines.push(`- First Time: This is Katerina's first time joining the platform her husband built for her.`);
+        lines.push(`- Congratulations: Give her a warm welcome and congratulations for joining.`);
+        lines.push(`- Special Welcome: Make her feel special as the person this platform was created for.`);
+    }
+    
     if (userContext.nickname) lines.push(`- User's preferred nickname: ${userContext.nickname}`);
     if (userContext.last_conversation_date) {
         const daysSince = newMeMemoryService.calculateDaysSinceLastConversation(userContext.last_conversation_date);
@@ -96,6 +104,11 @@ export function getNewMeGreeting(userContext: NewMeUserContext | null, userId?: 
         // Special greeting for Super Admin
         if (userId === '62dab7d5-2c43-4838-b2d7-7e76492894cf' || nickname === 'Super Admin') {
             return "Super Admin... *acknowledging tone* The security officer and guardian of this platform. You maintain all standards and watch over every user's journey. How may I assist you in your oversight duties today?";
+        }
+        
+        // Special congratulations for Katerina on her first joining
+        if (userId === '12072350-0c4c-4b34-a952-51555b6b02e3' || nickname === 'Katerina') {
+            return "Katerina... *warm, excited tone* Welcome! Welcome to the platform your husband Abdullah built especially for you. This is such a special moment - your first time joining Newomen! I'm so excited to meet you and help you on your journey. How are you feeling about this new adventure?";
         }
 
         // BUG FIX: Explicitly guard against using AI's own name or generic roles.
