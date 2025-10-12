@@ -8,7 +8,7 @@ export default function MobileFooter() {
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
 
-  if (!user || location.pathname === "/" || location.pathname === "/auth") {
+  if (!user || location.pathname === "/auth") {
     return null;
   }
 

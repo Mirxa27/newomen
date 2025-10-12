@@ -56,6 +56,7 @@ export default function Header() {
 
   const publicLinks = useMemo(
     () => [
+      { to: "/", label: "Home", icon: Home },
       { to: "/about", label: "About", icon: BookOpen },
       { to: "/assessments", label: "Free Assessments", icon: Sparkles },
     ],
