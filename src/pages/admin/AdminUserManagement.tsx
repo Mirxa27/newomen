@@ -53,7 +53,7 @@ export default function AdminUserManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [formData, setFormData] = useState<EditUserForm>({
-    role: 'member',
+    role: 'user',
     subscription_tier: 'discovery',
     remaining_minutes: 10,
     nickname: '',
@@ -101,7 +101,7 @@ export default function AdminUserManagement() {
 
     try {
       const { data, error } = await (supabase as unknown as TypedSupabaseClient).rpc('admin_update_user_profile', {
-        target_user_id: selectedUser.user_id,
+        target_user_id: selectedUser.id,
         new_role: formData.role,
         new_subscription_tier: formData.subscription_tier,
         new_remaining_minutes: formData.remaining_minutes,
