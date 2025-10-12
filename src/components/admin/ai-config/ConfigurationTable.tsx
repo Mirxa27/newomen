@@ -10,9 +10,9 @@ import ResponsiveTable from "@/components/ui/ResponsiveTable";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Edit2, Trash2, TestTube } from "lucide-react";
-import type { Tables } from '@/integrations/supabase/types';
+import type { Database } from '@/integrations/supabase/types';
 
-type AIConfiguration = Tables<'ai_configurations'>;
+type AIConfiguration = Database['public']['Tables']['ai_configurations']['Row'];
 
 interface ConfigurationTableProps {
   configurations: AIConfiguration[];

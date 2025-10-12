@@ -2,11 +2,28 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { logger } from '@/lib/logging';
 import { ErrorBoundaryFallback } from './ErrorBoundaryFallback';
 import { ErrorReportDialog } from './ErrorReportDialog';
-import { sanitizeError } from '@/lib/security/sanitization';
+
+// Helper function to sanitize error objects for logging
+function sanitizeError(error: Error): Error {
+  return {
+    name: error.name,
+    message: error.message,
+    stack: error.stack
+  } as Error;
+}
 
 export interface ErrorBoundaryProps {
   children: ReactNode;
-  fallback?: React.ComponentType<{ error: Error; reset: () => void }>;
+  fallback?: React.ComponentType<{ 
+    error: Error; 
+    reset: () => void;
+    retry?: () => void;
+    retryCount?: number;
+    maxRetries?: number;
+    isRetrying?: boolean;
+    onReportError?: () => void;
+    environment?: 'development' | 'staging' | 'production';
+  }>;
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
   onReset?: () => void;
   resetOnPropsChange?: boolean;
