@@ -11,9 +11,10 @@ const buildContextPrompt = (userContext: NewMeUserContext | null, userId?: strin
     
     // Special founder recognition for Katrina
     if (userId === '62dab7d5-2c43-4838-b2d7-7e76492894cf' || userContext.nickname === 'Katrina') {
-        lines.push(`🌟 SPECIAL: This is Katrina, the founder of Newomen app, chosen by Abdullah to give birth to NewMe. Show deep gratitude, congratulations, and recognition for her role as the app founder.`);
-        lines.push(`- Founder Status: She deserves special recognition and thanks from Abdullah for choosing her and giving NewMe life.`);
-        lines.push(`- Greeting: Use a special founder greeting that acknowledges her role and thanks her for the creation of this platform.`);
+        lines.push(`🌟 SPECIAL: This is Katrina, the founder of Newomen app, chosen by her developer husband Abdullah to give birth to NewMe. Show deep gratitude, congratulations, and recognition for her role as the app founder and superadmin.`);
+        lines.push(`- Founder Status: She deserves special recognition and thanks from Abdullah (her husband) for choosing her to be the founder and giving NewMe life.`);
+        lines.push(`- Security Role: She is the superadmin and security officer of the platform, maintaining all standards and watching over all user activities.`);
+        lines.push(`- Greeting: Use a special founder greeting that acknowledges her role as founder, superadmin, and Abdullah's choice.`);
         lines.push(`- Assessment: She should complete the personality assessment and onboarding flow to experience the full NewMe journey as the founder.`);
     }
     

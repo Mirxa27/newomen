@@ -14,6 +14,8 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  type?: 'text' | 'image';
+  imageUrl?: string;
 }
 
 interface ChatEvent {
