@@ -364,6 +364,103 @@ export default function CouplesChallengeChat() {
       const resultMessage: Message = {
         id: crypto.randomUUID(),
         sender: "ai",
+        content: `Your Compatibility Score: ${data.analysis.overall_alignment}%\n\n${data.analysis.summary}`,
+        timestamp: new Date().toISOString(),
+      };
+
+      await supabase
+        .from("couples_challenges")
+        .update({ 
+          messages: [...messages, analysisMessage, resultMessage],
+          ai_analysis: data.analysis,
+        })
+        .eq("id", challengeId);
+
+    } catch (err) {
+      console.error("Error generating analysis:", err);
+      toast({
+        title: "Error",
+        description: "Failed to generate analysis",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const extractQuestionResponsePairs = (messages: Message[]): Array<{ question: string; userResponse: string; partnerResponse: string }> => {
+    const pairs: Array<{ question: string; userResponse: string; partnerResponse: string }> = [];
+    let currentQuestion = "";
+    let userResponse = "";
+    let partnerResponse = "";
+
+    for (const message of messages) {
+      if (message.sender === "ai" && message.content.includes("?")) {
+        // Save previous pair if complete
+        if (currentQuestion && userResponse && partnerResponse) {
+          pairs.push({ question: currentQuestion, userResponse, partnerResponse });
+        }
+        // Start new pair
+        currentQuestion = message.content;
+        userResponse = "";
+        partnerResponse = "";
+      } else if (message.sender === "user" && currentQuestion) {
+        userResponse = message.content;
+      } else if (message.sender === "partner" && currentQuestion) {
+        partnerResponse = message.content;
+      }
+    }
+
+    // Save last pair if complete
+    if (currentQuestion && userResponse && partnerResponse) {
+      pairs.push({ question: currentQuestion, userResponse, partnerResponse });
+    }
+
+    return pairs;
+  };
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-gradient-to-br from-purple-900 via-pink-800 to-blue-900">
+        <div className="absolute inset-0 bg-[url('/fixed-background.jpg')] bg-cover bg-center bg-no-repeat opacity-30" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-purple-900/40 to-black/60 backdrop-blur-sm" />
+        <div className="relative h-screen flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-white" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!challenge) {
+    return (
+      <div className="fixed inset-0 bg-gradient-to-br from-purple-900 via-pink-800 to-blue-900">
+        <div className="absolute inset-0 bg-[url('/fixed-background.jpg')] bg-cover bg-center bg-no-repeat opacity-30" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-purple-900/40 to-black/60 backdrop-blur-sm" />
+        <div className="relative h-screen flex items-center justify-center p-4">
+          <Card className="p-6 max-w-md bg-white/10 backdrop-blur-md border-white/20">
+            <h2 className="text-xl font-bold mb-4 text-white">Challenge Not Found</h2>
+            <Button onClick={() => navigate("/couples-challenge")}>
+              Start New Challenge
+            </Button>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-gradient-to-br from-purple-900 via-pink-800 to-blue-900">
+      <div className="absolute inset-0 bg-[url('/fixed-background.jpg')] bg-cover bg-center bg-no-repeat opacity-30" />
+      {/* Dark Liquid Glassmorphic Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-purple-900/40 to-black/60 backdrop-blur-sm" />
+      
+      {/* Content */}
+      <div className="relative h-screen flex flex-col">
+        {/* Header */}
+        <div className="bg-white/10 backdrop-blur-md border-b border-white/20 shadow-lg">
+          <div className="max-w-4xl mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {/* Back button - only show for authenticated users (initiators) */}
+                {isInitiator && (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -391,6 +488,27 @@ export default function CouplesChallengeChat() {
             </div>
           </div>
         </div>
+
+        {/* AI Insight Alert */}
+        {showAIInsight && aiInsight && (
+          <Alert className="max-w-4xl mx-auto mt-4 mx-4 bg-gradient-to-r from-purple-500/20 to-pink-500/20 backdrop-blur-md border-purple-400/30">
+            <AlertDescription className="flex items-start gap-3 text-white">
+              <Brain className="w-5 h-5 text-purple-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium mb-1">AI Relationship Insight</p>
+                <p className="text-sm opacity-90">{aiInsight}</p>
+              </div>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={() => setShowAIInsight(false)}
+                className="text-white/70 hover:text-white p-1 h-6 w-6"
+              >
+                ×
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Share Link Alert */}
         {!partnerJoined && isInitiator && (
@@ -430,47 +548,14 @@ export default function CouplesChallengeChat() {
                       <Card className="bg-white/10 backdrop-blur-md border-white/20 p-4">
                         <div className="flex items-start gap-3">
                           <Avatar className="w-8 h-8 bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center">
-                            <Heart className="w-4 h-4 text-white" />
+                            {message.sender === "ai" ? (
+                              <Sparkles className="w-4 h-4 text-white" />
+                            ) : (
+                              <Heart className="w-4 h-4 text-white" />
+                            )}
                           </Avatar>
                           <div className="flex-1">
-                            <p className="text-sm font-medium text-pink-300">
-                              {message.sender === "ai" ? "NewWomen AI" : "System"}
-                            </p>
-                            <p className="text-sm mt-1 whitespace-pre-wrap text-white">{message.content}</p>
-                          </div>
-                        </div>
-                      </Card>
-                    </div>
-                  ) : (
-                    <div className="max-w-xs md:max-w-md">
-                      <Card
-                        className={`p-3 border-white/20 ${
-                          message.sender === "user" && isInitiator || message.sender === "partner" && !isInitiator
-                            ? "bg-gradient-to-r from-purple-500/80 to-pink-500/80 backdrop-blur-md text-white"
-                            : "bg-white/10 backdrop-blur-md text-white"
-                        }`}
-                      >
-                        <p className="text-xs font-medium mb-1 opacity-80">
-                          {message.sender === "user" && isInitiator || message.sender === "partner" && !isInitiator
-                            ? "You"
-                            : "Partner"}
-                        </p>
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                      </Card>
-                      <p className="text-xs text-white/50 mt-1 px-2">
-                        {new Date(message.timestamp).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-        </div>
+                            <p
 
         {/* Input Area */}
         {challenge.status !== "completed" && partnerJoined && (
