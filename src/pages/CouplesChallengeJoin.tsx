@@ -51,9 +51,19 @@ export default function CouplesChallengeJoin() {
         .eq("id", challengeId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Database error:", error);
+        throw error;
+      }
 
-      if (data.partner_id) {
+      if (!data) {
+        console.error("Challenge not found:", challengeId);
+        setError("This challenge link is invalid or the challenge no longer exists. Please ask your partner for a new link.");
+        setLoading(false);
+        return;
+      }
+
+      if (data.partner_id && data.partner_id !== "guest") {
         setError("This challenge already has a partner joined.");
         return;
       }
@@ -66,7 +76,7 @@ export default function CouplesChallengeJoin() {
       setChallenge(data as ChallengeWithProfile);
     } catch (err) {
       console.error("Error loading challenge:", err);
-      setError("Challenge not found or has expired.");
+      setError("Challenge not found. Please check the link and try again, or ask your partner for a new invitation.");
     } finally {
       setLoading(false);
     }
@@ -88,15 +98,31 @@ export default function CouplesChallengeJoin() {
 
     setJoining(true);
     try {
+      console.log('Starting join process for challenge:', challengeId);
+      
       // Fetch current challenge data
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: currentChallenge, error: fetchError } = await (supabase as any)
         .from("couples_challenges")
-        .select("messages, question_set")
+        .select("messages, question_set, status, partner_id")
         .eq("id", challengeId)
         .single();
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error('Fetch error:', fetchError);
+        throw new Error(`Failed to fetch challenge: ${fetchError.message}`);
+      }
+
+      if (!currentChallenge) {
+        throw new Error('Challenge not found');
+      }
+
+      // Check if already joined
+      if (currentChallenge.partner_id && currentChallenge.partner_id !== null) {
+        throw new Error('This challenge already has a partner');
+      }
+
+      console.log('Challenge data loaded:', currentChallenge);
 
       const currentMessages = currentChallenge?.messages || [];
       const questionSet = currentChallenge?.question_set as { title?: string; description?: string; questions?: string[] | string };
@@ -120,21 +146,28 @@ export default function CouplesChallengeJoin() {
       };
 
       // Update challenge with partner name and status
+      console.log('Updating challenge with partner info...');
+      const updateData = {
+        partner_name: partnerName.trim(),
+        partner_id: "guest", // Mark as guest partner
+        status: "in_progress",
+        messages: [...currentMessages, joinMessage, firstQuestion],
+      };
+      console.log('Update data:', updateData);
+      
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: updateError } = await (supabase as any)
+      const { data: updateResult, error: updateError } = await (supabase as any)
         .from("couples_challenges")
-        .update({
-          partner_name: partnerName.trim(),
-          partner_id: "guest", // Mark as guest partner
-          status: "in_progress",
-          messages: [...currentMessages, joinMessage, firstQuestion],
-        })
-        .eq("id", challengeId);
+        .update(updateData)
+        .eq("id", challengeId)
+        .select();
 
       if (updateError) {
-        console.error("Update error:", updateError);
-        throw updateError;
+        console.error("Update error details:", updateError);
+        throw new Error(`Failed to update challenge: ${updateError.message}. ${updateError.hint || ''}`);
       }
+
+      console.log('Challenge updated successfully:', updateResult);
 
       toast({
         title: "Welcome!",
@@ -145,9 +178,10 @@ export default function CouplesChallengeJoin() {
       navigate(`/couples-challenge/chat/${challengeId}`);
     } catch (err) {
       console.error("Error joining challenge:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to join challenge. Please try again.";
       toast({
         title: "Error",
-        description: "Failed to join challenge. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
