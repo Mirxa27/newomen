@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Copy, Check, Send, Heart, Users } from "lucide-react";
+import { Loader2, Copy, Check, Send, Heart, Users, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar } from "@/components/ui/avatar";
 
@@ -357,6 +357,18 @@ export default function CouplesChallengeChat() {
           <div className="max-w-4xl mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
+                {/* Back button - only show for authenticated users (initiators) */}
+                {isInitiator && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => navigate("/dashboard")}
+                    className="text-white hover:bg-white/20"
+                    title="Back to Dashboard"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </Button>
+                )}
                 <Heart className="w-6 h-6 text-pink-400" />
                 <div>
                   <h1 className="text-lg font-bold text-white">{challenge.question_set.title}</h1>
