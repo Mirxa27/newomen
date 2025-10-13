@@ -1,5 +1,19 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// Define types for better code quality
+interface ChallengeTemplate {
+  title: string;
+  description: string;
+  questions: string[];
+}
+
+interface ChallengeResponse {
+  [key: string]: {
+    initiator_response?: string;
+    partner_response?: string;
+  };
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,7 +26,7 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 );
 
-async function analyzeResponses(question: string, responseA: string, responseB: string, supabaseClient: any): Promise<string> {
+async function analyzeResponses(question: string, responseA: string, responseB: string, supabaseClient: SupabaseClient): Promise<string> {
   // Retrieve API key from database using the same method as ai-assessment-processor
   const { data: zaiApiKey, error: keyError } = await supabaseClient.rpc('get_provider_api_key_by_type', { p_provider_type: 'zai' });
   
@@ -99,28 +113,30 @@ serve(async (req) => {
     // Get challenge data
     const { data: challenge, error: challengeError } = await supabase
       .from('couples_challenges')
-      .select(`
-        *,
-        challenge_templates (
-          title,
-          description,
-          questions
-        )
-      `)
+      .select('*')
       .eq('id', challengeId)
       .single();
 
     if (challengeError) throw challengeError;
 
     // Check if both partners have responded
-    const responses = challenge.responses as Record<string, any>;
-    const template = challenge.challenge_templates as any;
+    const responses = challenge.responses as ChallengeResponse;
+    const questionSet = challenge.question_set as Record<string, unknown>;
     
-    if (!responses || !template) {
+    if (!responses || !questionSet) {
       throw new Error('Challenge data incomplete');
     }
 
-    const questions = Array.isArray(template.questions) ? template.questions : [];
+    // Extract template data from question_set
+    const template: ChallengeTemplate = {
+      title: (questionSet.title as string) || "Couple's Challenge",
+      description: (questionSet.description as string) || "",
+      questions: Array.isArray(questionSet.questions) 
+        ? questionSet.questions as string[] 
+        : (questionSet.questions ? JSON.parse(questionSet.questions as string) : [])
+    };
+
+    const questions = template.questions;
     const analyses = [];
 
     // Analyze each question
@@ -212,13 +228,14 @@ serve(async (req) => {
       }
     );
 
-  } catch (error) {
-    console.error('Error analyzing challenge:', error);
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error('Error analyzing challenge:', err);
 
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message 
+        error: err.message 
       }),
       {
         status: 500,

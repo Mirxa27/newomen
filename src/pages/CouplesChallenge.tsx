@@ -19,7 +19,7 @@ type ChallengeTemplate = Tables<'challenge_templates'> & {
 type Challenge = Tables<'couples_challenges'>;
 
 export default function CouplesChallenge() {
-  const { id } = useParams<{ id: string }>();
+  const { id: challengeId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -30,9 +30,11 @@ export default function CouplesChallenge() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [templates, setTemplates] = useState<ChallengeTemplate[]>([]);
+  const [showTemplateSelection, setShowTemplateSelection] = useState(!challengeId);
 
   const loadChallenge = useCallback(async () => {
-    if (!id) return;
+    if (!challengeId) return;
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -44,14 +46,28 @@ export default function CouplesChallenge() {
 
       const { data: challengeData, error: challengeError } = await supabase
         .from("couples_challenges")
-        .select("*, challenge_templates(*)")
-        .eq("id", id)
+        .select("*")
+        .eq("id", challengeId)
         .single();
 
       if (challengeError) throw challengeError;
 
       setChallenge(challengeData as unknown as Challenge);
-      setTemplate(challengeData.challenge_templates as unknown as ChallengeTemplate);
+      // Use question_set which contains the template data
+      const questionSet = challengeData.question_set as any;
+      if (questionSet) {
+        setTemplate({
+          id: challengeData.id,
+          title: questionSet.title || "Couple's Challenge",
+          description: questionSet.description || null,
+          category: questionSet.category || "communication",
+          questions: Array.isArray(questionSet.questions) ? questionSet.questions : (questionSet.questions ? JSON.parse(questionSet.questions) : []),
+          is_active: true,
+          created_by: null,
+          created_at: challengeData.created_at || new Date().toISOString(),
+          updated_at: challengeData.updated_at || new Date().toISOString()
+        });
+      }
       setResponses((challengeData.responses as Record<string, unknown>) || {});
     } catch (err) {
       console.error("Error loading challenge:", err);
@@ -59,11 +75,92 @@ export default function CouplesChallenge() {
     } finally {
       setLoading(false);
     }
-  }, [id, navigate]);
+  }, [challengeId, navigate]);
 
   useEffect(() => {
-    loadChallenge();
-  }, [loadChallenge]);
+    if (challengeId) {
+      loadChallenge();
+    } else {
+      loadTemplates();
+    }
+  }, [challengeId, loadChallenge]);
+
+  const loadTemplates = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("challenge_templates")
+        .select("*")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setTemplates((data || []) as ChallengeTemplate[]);
+    } catch (err) {
+      console.error("Error loading templates:", err);
+      toast({
+        title: "Error",
+        description: "Failed to load challenge templates.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startChallenge = async (templateId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/auth");
+        return;
+      }
+
+      const selectedTemplate = templates.find(t => t.id === templateId);
+      if (!selectedTemplate) {
+        toast({
+          title: "Error",
+          description: "Template not found.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create a new couples challenge with the selected template
+      const { data: newChallenge, error: createError } = await supabase
+        .from("couples_challenges")
+        .insert({
+          initiator_id: user.id,
+          question_set: {
+            title: selectedTemplate.title,
+            description: selectedTemplate.description,
+            category: selectedTemplate.category,
+            questions: selectedTemplate.questions
+          },
+          status: "pending",
+          responses: {}
+        })
+        .select()
+        .single();
+
+      if (createError) throw createError;
+
+      toast({
+        title: "Challenge Created!",
+        description: "Share the link with your partner to get started.",
+      });
+
+      // Navigate to the new challenge
+      navigate(`/couples-challenge/${newChallenge.id}`);
+    } catch (err) {
+      console.error("Error creating challenge:", err);
+      toast({
+        title: "Error",
+        description: "Failed to create challenge.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleResponseChange = (questionIndex: string, value: string) => {
     if (!challenge) return;
@@ -139,6 +236,57 @@ export default function CouplesChallenge() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // Show template selection if no challenge ID
+  if (!challengeId || showTemplateSelection) {
+    return (
+      <div className="min-h-screen bg-background py-12 px-4">
+        <div className="max-w-4xl mx-auto">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3 mb-4">
+                <Button variant="ghost" onClick={() => navigate("/dashboard")}>
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+                <div>
+                  <CardTitle className="text-3xl">Choose a Challenge</CardTitle>
+                  <CardDescription>Select a challenge to start with your partner</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4">
+                {templates.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Heart className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                    <p>No challenges available yet.</p>
+                    <p className="text-sm mt-2">Check back soon for new challenges!</p>
+                  </div>
+                ) : (
+                  templates.map((template) => (
+                    <Card key={template.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => startChallenge(template.id)}>
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <CardTitle className="text-xl">{String(template.title)}</CardTitle>
+                            <CardDescription>{String(template.description)}</CardDescription>
+                          </div>
+                          <Badge variant="secondary">{String(template.category)}</Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          {template.questions.length} questions
+                        </p>
+                      </CardHeader>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
