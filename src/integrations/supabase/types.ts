@@ -509,6 +509,75 @@ export type Database = {
           }
         ]
       }
+      couples_challenges: {
+        Row: {
+          id: string
+          initiator_id: string
+          partner_id: string | null
+          partner_name: string | null
+          status: string
+          question_set: Json
+          messages: Json | null
+          current_question_index: number
+          ai_analysis: Json | null
+          unique_link: string | null
+          responses: Json | null
+          compatibility_score: number | null
+          created_at: string
+          updated_at: string
+          expires_at: string | null
+        }
+        Insert: {
+          id?: string
+          initiator_id: string
+          partner_id?: string | null
+          partner_name?: string | null
+          status?: string
+          question_set: Json
+          messages?: Json | null
+          current_question_index?: number
+          ai_analysis?: Json | null
+          unique_link?: string | null
+          responses?: Json | null
+          compatibility_score?: number | null
+          created_at?: string
+          updated_at?: string
+          expires_at?: string | null
+        }
+        Update: {
+          id?: string
+          initiator_id?: string
+          partner_id?: string | null
+          partner_name?: string | null
+          status?: string
+          question_set?: Json
+          messages?: Json | null
+          current_question_index?: number
+          ai_analysis?: Json | null
+          unique_link?: string | null
+          responses?: Json | null
+          compatibility_score?: number | null
+          created_at?: string
+          updated_at?: string
+          expires_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "couples_challenges_initiator_id_fkey"
+            columns: ["initiator_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "couples_challenges_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
