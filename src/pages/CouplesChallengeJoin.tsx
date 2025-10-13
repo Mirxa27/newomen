@@ -88,22 +88,7 @@ export default function CouplesChallengeJoin() {
 
     setJoining(true);
     try {
-      // Create a temporary guest user profile for the partner
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: guestProfile, error: profileError } = await (supabase as any)
-        .from("user_profiles")
-        .insert({
-          email: `guest_${Date.now()}@temp.newomen.app`,
-          nickname: partnerName.trim(),
-          frontend_name: partnerName.trim(),
-          role: "guest",
-        })
-        .select()
-        .single();
-
-      if (profileError) throw profileError;
-
-      // Update challenge with partner ID and ask first question
+      // Fetch current challenge data
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: currentChallenge, error: fetchError } = await (supabase as any)
         .from("couples_challenges")
@@ -123,7 +108,7 @@ export default function CouplesChallengeJoin() {
       const joinMessage = {
         id: crypto.randomUUID(),
         sender: "system",
-        content: `${partnerName} has joined the challenge! 🎉`,
+        content: `${partnerName.trim()} has joined the challenge! 🎉`,
         timestamp: new Date().toISOString(),
       };
 
@@ -134,17 +119,22 @@ export default function CouplesChallengeJoin() {
         timestamp: new Date().toISOString(),
       };
 
+      // Update challenge with partner name and status
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: updateError } = await (supabase as any)
         .from("couples_challenges")
         .update({
-          partner_id: guestProfile.id,
+          partner_name: partnerName.trim(),
+          partner_id: "guest", // Mark as guest partner
           status: "in_progress",
           messages: [...currentMessages, joinMessage, firstQuestion],
         })
         .eq("id", challengeId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error("Update error:", updateError);
+        throw updateError;
+      }
 
       toast({
         title: "Welcome!",
