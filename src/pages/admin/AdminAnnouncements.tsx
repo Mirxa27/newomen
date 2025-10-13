@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { format } from '@/lib/date-utils';
+import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
 // Allow intentional use of `any` in this admin utility file to work around generated Supabase typing gaps.

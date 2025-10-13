@@ -15,7 +15,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { useCommunityAnnouncements } from '@/hooks/useCommunityAnnouncements';
-import { format } from '@/lib/date-utils';
+import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
 interface AnnouncementsProps {
