@@ -138,9 +138,7 @@ const App = () => {
             </ProtectedRoute>
           } />
           <Route path="/couples-challenge/chat/:id" element={
-            <ProtectedRoute>
-              <CouplesChallengeChat />
-            </ProtectedRoute>
+            <CouplesChallengeChat />
           } />
           <Route path="/couples-challenge/join/:id" element={
             <CouplesChallengeJoin />

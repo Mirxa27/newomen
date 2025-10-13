@@ -118,7 +118,8 @@ export default function CouplesChallengeChat() {
       console.log('Loaded messages:', loadedMessages);
       setMessages(loadedMessages);
       setIsInitiator(currentUserId === challengeData.initiator_id);
-      setPartnerJoined(!!challengeData.partner_id);
+      // Partner joined if they have partner_id OR partner_name (for guests)
+      setPartnerJoined(!!(challengeData.partner_id || challengeData.partner_name));
 
       // Initialize chat if no messages yet
       if (!loadedMessages || loadedMessages.length === 0) {
