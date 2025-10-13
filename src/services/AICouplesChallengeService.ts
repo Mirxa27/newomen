@@ -55,14 +55,19 @@ export class AICouplesChallengeService {
 
     try {
       // Use the correct function name from the types
-      const { data, error } = await (supabase.rpc as any)('get_provider_api_key_by_type', { 
+      interface RPCResponse {
+        data: string | null;
+        error: Error | null;
+      }
+      
+      const { data, error } = await (supabase.rpc as unknown as (functionName: string, params: Record<string, unknown>) => Promise<RPCResponse>)('get_provider_api_key_by_type', { 
         p_provider_type: 'zai' 
       });
 
       if (error) throw error;
       if (!data) throw new Error('Z.AI API key not configured');
 
-      this.zaiApiKey = data as string;
+      this.zaiApiKey = data;
       return this.zaiApiKey;
     } catch (err) {
       console.error('Error retrieving Z.AI API key:', err);

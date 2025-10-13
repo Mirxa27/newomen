@@ -6,9 +6,11 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Copy, Check, Send, Heart, Users, ArrowLeft } from "lucide-react";
+import { Loader2, Copy, Check, Send, Heart, Users, ArrowLeft, Sparkles, Brain } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar } from "@/components/ui/avatar";
+import { aiCouplesChallengeService } from "@/services/AICouplesChallengeService";
+import type { AIQuestionGeneration, AICouplesAnalysis } from "@/services/AICouplesChallengeService";
 
 type Message = {
   id: string;
@@ -46,6 +48,10 @@ export default function CouplesChallengeChat() {
   const [partnerJoined, setPartnerJoined] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isInitiator, setIsInitiator] = useState(false);
+  const [aiInsight, setAiInsight] = useState<string | null>(null);
+  const [aiQuestion, setAiQuestion] = useState<AIQuestionGeneration | null>(null);
+  const [showAIInsight, setShowAIInsight] = useState(false);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   const shareUrl = `${window.location.origin}/couples-challenge/join/${challengeId}`;
 
@@ -244,12 +250,17 @@ export default function CouplesChallengeChat() {
 
     // If both answered current question, move to next
     if (partnerJoined && userMessages.length > currentIndex && partnerMessages.length > currentIndex) {
+      // Generate AI insight after each completed question
+      await generateRealTimeInsight(currentMessages);
+
       if (currentIndex < questions.length - 1) {
-        // Ask next question
+        // Generate dynamic AI question based on their responses
+        const dynamicQuestion = await generateDynamicQuestion(currentMessages);
+        
         const nextQuestion: Message = {
           id: crypto.randomUUID(),
           sender: "ai",
-          content: questions[currentIndex + 1],
+          content: dynamicQuestion.question,
           timestamp: new Date().toISOString(),
         };
 
@@ -270,59 +281,48 @@ export default function CouplesChallengeChat() {
     }
   };
 
-  const generateAnalysis = async () => {
+  const generateDynamicQuestion = async (currentMessages: Message[]): Promise<AIQuestionGeneration> => {
     try {
-      const analysisMessage: Message = {
-        id: crypto.randomUUID(),
-        sender: "ai",
-        content: "Thank you both for completing the challenge! 🎉 Analyzing your responses...",
-        timestamp: new Date().toISOString(),
-      };
+      setIsGeneratingAI(true);
+      
+      // Extract previous question-answer pairs
+      const previousResponses = extractQuestionResponsePairs(currentMessages);
+      const currentContext = challenge?.question_set.description || "Couples challenge";
+      const progress = challenge ? (challenge.current_question_index / challenge.question_set.questions.length) * 100 : 0;
 
-      await supabase
-        .from("couples_challenges")
-        .update({ 
-          messages: [...messages, analysisMessage],
-          status: "completed",
-        })
-        .eq("id", challengeId);
+      const dynamicQuestion = await aiCouplesChallengeService.generateDynamicQuestion(
+        previousResponses,
+        currentContext,
+        progress
+      );
 
-      // Call edge function to generate AI analysis
-      const { data, error } = await supabase.functions.invoke('couples-challenge-analyzer', {
-        body: { challengeId },
-      });
-
-      if (error) throw error;
-
-      // Add analysis results to chat
-      const resultMessage: Message = {
-        id: crypto.randomUUID(),
-        sender: "ai",
-        content: `Your Compatibility Score: ${data.analysis.overall_alignment}%\n\n${data.analysis.summary}`,
-        timestamp: new Date().toISOString(),
-      };
-
-      await supabase
-        .from("couples_challenges")
-        .update({ 
-          messages: [...messages, analysisMessage, resultMessage],
-          ai_analysis: data.analysis,
-        })
-        .eq("id", challengeId);
-
+      setAiQuestion(dynamicQuestion);
+      return dynamicQuestion;
     } catch (err) {
-      console.error("Error generating analysis:", err);
-      toast({
-        title: "Error",
-        description: "Failed to generate analysis",
-        variant: "destructive",
-      });
+      console.error("Error generating dynamic question:", err);
+      // Fallback to static question
+      return {
+        question: challenge?.question_set.questions[challenge.current_question_index + 1] || "What's something you'd like to know about each other?",
+        context: "Continuing the challenge",
+        psychologicalIntent: "Understanding each other better",
+        expectedInsight: "Deeper connection"
+      };
+    } finally {
+      setIsGeneratingAI(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="fixed inset-0 bg-gradient-to-br from-purple-900 via-pink-800 to-blue-900">
+  const generateRealTimeInsight = async (currentMessages: Message[]): Promise<void> => {
+    try {
+      // Get recent messages (last 4-6 exchanges)
+      const recentMessages = currentMessages.slice(-6).map(msg => ({
+        sender: msg.sender,
+        content: msg.content,
+        timestamp: msg.timestamp
+      }));
+
+      const progress = challenge ? (challenge.current_question_index / challenge.question_set.questions.length) * 100 : 0;
+
         <div className="absolute inset-0 bg-[url('/fixed-background.jpg')] bg-cover bg-center bg-no-repeat opacity-30" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-purple-900/40 to-black/60 backdrop-blur-sm" />
         <div className="relative h-screen flex items-center justify-center">
