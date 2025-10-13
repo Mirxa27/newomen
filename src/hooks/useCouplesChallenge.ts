@@ -64,7 +64,15 @@ export function useCouplesChallenge() {
         created_at: string;
       }
       
-      const { data, error } = await (supabase as unknown as { from: (table: string) => any })
+      const { data, error } = await (supabase as unknown as { 
+        from: (table: string) => { 
+          select: (columns: string) => { 
+            eq: (column: string, value: boolean) => { 
+              order: (column: string, options: { ascending: boolean }) => Promise<{ data: RawChallengeTemplate[]; error: any }> 
+            } 
+          } 
+        } 
+      })
         .from('challenge_templates')
         .select('*')
         .eq('is_active', true)
@@ -75,7 +83,7 @@ export function useCouplesChallenge() {
       // Transform the data to match our ChallengeTemplate type
       const transformedData: ChallengeTemplate[] = (data as RawChallengeTemplate[]).map(template => ({
         ...template,
-        questions: Array.isArray(template.questions) ? template.questions : JSON.parse(template.questions as string)
+        questions: Array.isArray(template.questions) ? template.questions : JSON.parse(template.questions as string) as string[]
       }));
       
       setTemplates(transformedData);
@@ -133,7 +141,15 @@ export function useCouplesChallenge() {
         created_at: string;
       }
       
-      const { data: template, error: templateError } = await (supabase as unknown as { from: (table: string) => any })
+      const { data: template, error: templateError } = await (supabase as unknown as { 
+        from: (table: string) => { 
+          select: (columns: string) => { 
+            eq: (column: string, value: string) => { 
+              single: () => Promise<{ data: RawChallengeTemplate; error: any }> 
+            } 
+          } 
+        } 
+      })
         .from('challenge_templates')
         .select('*')
         .eq('id', templateId)
@@ -145,7 +161,7 @@ export function useCouplesChallenge() {
       // Transform the template data
       const transformedTemplate = {
         ...template,
-        questions: Array.isArray(template.questions) ? template.questions : JSON.parse(template.questions as string)
+        questions: Array.isArray(template.questions) ? template.questions : JSON.parse(template.questions as string) as string[]
       };
 
       // Create challenge with proper typing
