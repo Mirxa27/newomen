@@ -55,9 +55,7 @@ export function useCommunityAnnouncements(filters?: AnnouncementFilters) {
       setLoading(true);
       setError(null);
 
-      // Use any type to bypass TypeScript strict typing for community tables
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('community_announcements')
         .select(`
           *,
@@ -66,11 +64,14 @@ export function useCommunityAnnouncements(filters?: AnnouncementFilters) {
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
+      // Cast response into our local type for stronger typing
+      const announcementsData = (data as unknown) as CommunityAnnouncement[];
+
       if (error) throw error;
 
       // Filter out expired announcements
       const now = new Date().toISOString();
-      const validAnnouncements = (data as CommunityAnnouncement[]).filter(ann => 
+      const validAnnouncements = (announcementsData || []).filter(ann => 
         !ann.expires_at || new Date(ann.expires_at) > new Date(now)
       );
 
@@ -89,19 +90,20 @@ export function useCommunityAnnouncements(filters?: AnnouncementFilters) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      // Use any type to bypass TypeScript strict typing for community tables
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('community_challenge_announcements')
         .select('*')
         .eq('is_active', true)
         .order('start_date', { ascending: false });
 
+      // Cast to our local challenge announcement type
+      const challengesData = (data as unknown) as CommunityChallengeAnnouncement[];
+
       if (error) throw error;
 
       // Filter current and upcoming challenges
       const now = new Date().toISOString();
-      const validChallenges = (data as CommunityChallengeAnnouncement[]).filter(challenge => 
+      const validChallenges = (challengesData || []).filter(challenge => 
         !challenge.end_date || new Date(challenge.end_date) > new Date(now)
       );
 
@@ -117,16 +119,16 @@ export function useCommunityAnnouncements(filters?: AnnouncementFilters) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Use any type to bypass TypeScript strict typing for community tables
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: reads, error: readsError } = await (supabase as any)
+      const { data: reads, error: readsError } = await supabase
         .from('community_announcement_reads')
         .select('announcement_id')
         .eq('user_id', user.id);
 
+      const readsData = (reads as unknown) as { announcement_id: string }[] | null;
+
       if (readsError) throw readsError;
 
-      const readIds = new Set(reads?.map((r: any) => r.announcement_id) || []);
+      const readIds = new Set((readsData || []).map(r => r.announcement_id));
 
       // Count unread announcements
       const unreadAnnouncements = announcements.filter(ann => 
@@ -144,9 +146,7 @@ export function useCommunityAnnouncements(filters?: AnnouncementFilters) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Use any type to bypass TypeScript strict typing for community tables
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('community_announcement_reads')
         .insert({
           announcement_id: announcementId,

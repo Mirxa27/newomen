@@ -53,6 +53,7 @@ const ContentManagement = lazy(() => import("./pages/admin/ContentManagement"));
 const GamificationSettings = lazy(() => import("./pages/admin/GamificationSettings"));
 const BrandingAssetManagement = lazy(() => import("./pages/admin/BrandingAssetManagement"));
 const APISettings = lazy(() => import("./pages/admin/APISettings"));
+const AdminAnnouncements = lazy(() => import("./pages/admin/AdminAnnouncements"));
 
 const queryClient = new QueryClient();
 
@@ -176,6 +177,7 @@ const App = () => {
             <Route path="gamification-settings" element={<GamificationSettings />} />
             <Route path="branding" element={<BrandingAssetManagement />} />
             <Route path="api-settings" element={<APISettings />} />
+            <Route path="announcements" element={<AdminAnnouncements />} />
           </Route>
           <Route path="/narrative-exploration" element={
             <ProtectedRoute>

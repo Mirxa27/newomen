@@ -1,4 +1,4 @@
-iamport { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -188,10 +188,13 @@ export function Announcements({ className, showHeader = true, maxItems }: Announ
                     <Avatar className="h-6 w-6">
                       <AvatarImage src={announcement.author_info.avatar_url || undefined} />
                       <AvatarFallback className="text-xs">
-                        {announcement.author_info.nickname?.[0]?.toUpperCase()}
+                        {(() => {
+                          const nick = announcement.author_info?.nickname ?? '';
+                          return nick ? String(nick).charAt(0).toUpperCase() : '?';
+                        })()}
                       </AvatarFallback>
                     </Avatar>
-                    <span>{announcement.author_info.nickname}</span>
+                    <span>{announcement.author_info?.nickname ?? 'Unknown'}</span>
                     <span>•</span>
                     <Clock className="w-3 h-3" />
                     <span>{format(new Date(announcement.created_at), 'MMM d, h:mm a')}</span>

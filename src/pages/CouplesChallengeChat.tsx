@@ -284,7 +284,6 @@ export default function CouplesChallengeChat() {
         .update({ 
           messages: [...messages, analysisMessage],
           status: "completed",
-          completed_at: new Date().toISOString(),
         })
         .eq("id", challengeId);
 

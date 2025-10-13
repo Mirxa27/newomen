@@ -154,6 +154,361 @@ export type Database = {
           },
         ]
       }
+
+      /* Community tables added to match apply_community_migration.sql */
+      community_chat_rooms: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          room_type: 'general' | 'support' | 'announcements' | 'challenges' | 'assessments' | 'quizzes'
+          is_active: boolean | null
+          created_by: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          room_type?: 'general' | 'support' | 'announcements' | 'challenges' | 'assessments' | 'quizzes'
+          is_active?: boolean | null
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          room_type?: 'general' | 'support' | 'announcements' | 'challenges' | 'assessments' | 'quizzes'
+          is_active?: boolean | null
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_chat_rooms_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      community_chat_messages: {
+        Row: {
+          id: string
+          room_id: string | null
+          user_id: string | null
+          message: string
+          message_type: 'text' | 'image' | 'file' | 'announcement' | 'challenge' | 'assessment' | 'quiz'
+          metadata: Json | null
+          is_edited: boolean | null
+          edited_at: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          room_id?: string | null
+          user_id?: string | null
+          message: string
+          message_type?: 'text' | 'image' | 'file' | 'announcement' | 'challenge' | 'assessment' | 'quiz'
+          metadata?: Json | null
+          is_edited?: boolean | null
+          edited_at?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          room_id?: string | null
+          user_id?: string | null
+          message?: string
+          message_type?: 'text' | 'image' | 'file' | 'announcement' | 'challenge' | 'assessment' | 'quiz'
+          metadata?: Json | null
+          is_edited?: boolean | null
+          edited_at?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_chat_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "community_chat_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_chat_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      community_announcements: {
+        Row: {
+          id: string
+          title: string
+          content: string
+          announcement_type: 'general' | 'challenge' | 'assessment' | 'quiz' | 'maintenance' | 'feature'
+          priority: 'low' | 'normal' | 'high' | 'urgent'
+          target_audience: 'all' | 'discovery' | 'growth' | 'transformation' | 'premium'
+          is_active: boolean | null
+          scheduled_at: string | null
+          expires_at: string | null
+          created_by: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          title: string
+          content: string
+          announcement_type: 'general' | 'challenge' | 'assessment' | 'quiz' | 'maintenance' | 'feature'
+          priority?: 'low' | 'normal' | 'high' | 'urgent'
+          target_audience?: 'all' | 'discovery' | 'growth' | 'transformation' | 'premium'
+          is_active?: boolean | null
+          scheduled_at?: string | null
+          expires_at?: string | null
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          title?: string
+          content?: string
+          announcement_type?: 'general' | 'challenge' | 'assessment' | 'quiz' | 'maintenance' | 'feature'
+          priority?: 'low' | 'normal' | 'high' | 'urgent'
+          target_audience?: 'all' | 'discovery' | 'growth' | 'transformation' | 'premium'
+          is_active?: boolean | null
+          scheduled_at?: string | null
+          expires_at?: string | null
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_announcements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      community_announcement_reads: {
+        Row: {
+          id: string
+          announcement_id: string | null
+          user_id: string | null
+          read_at: string | null
+        }
+        Insert: {
+          id?: string
+          announcement_id: string
+          user_id: string
+          read_at?: string | null
+        }
+        Update: {
+          id?: string
+          announcement_id?: string
+          user_id?: string
+          read_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_announcement_reads_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "community_announcements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_announcement_reads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      community_challenge_announcements: {
+        Row: {
+          id: string
+          challenge_id: string | null
+          challenge_type: 'daily' | 'weekly' | 'monthly' | 'special'
+          title: string
+          description: string | null
+          instructions: string | null
+          reward_crystals: number | null
+          start_date: string | null
+          end_date: string | null
+          is_active: boolean | null
+          created_by: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          challenge_id?: string | null
+          challenge_type: 'daily' | 'weekly' | 'monthly' | 'special'
+          title: string
+          description?: string | null
+          instructions?: string | null
+          reward_crystals?: number | null
+          start_date: string | null
+          end_date?: string | null
+          is_active?: boolean | null
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          challenge_id?: string | null
+          challenge_type?: 'daily' | 'weekly' | 'monthly' | 'special'
+          title?: string
+          description?: string | null
+          instructions?: string | null
+          reward_crystals?: number | null
+          start_date?: string | null
+          end_date?: string | null
+          is_active?: boolean | null
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_challenge_announcements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      community_assessment_announcements: {
+        Row: {
+          id: string
+          assessment_id: string | null
+          title: string
+          description: string | null
+          special_instructions: string | null
+          reward_crystals: number | null
+          start_date: string | null
+          end_date: string | null
+          is_active: boolean | null
+          created_by: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          assessment_id?: string | null
+          title: string
+          description?: string | null
+          special_instructions?: string | null
+          reward_crystals?: number | null
+          start_date: string | null
+          end_date?: string | null
+          is_active?: boolean | null
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          assessment_id?: string | null
+          title?: string
+          description?: string | null
+          special_instructions?: string | null
+          reward_crystals?: number | null
+          start_date?: string | null
+          end_date?: string | null
+          is_active?: boolean | null
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_assessment_announcements_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments_enhanced"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_assessment_announcements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      community_quiz_announcements: {
+        Row: {
+          id: string
+          quiz_id: string | null
+          title: string
+          description: string | null
+          questions: Json | null
+          correct_answers: Json | null
+          reward_crystals: number | null
+          start_date: string | null
+          end_date: string | null
+          is_active: boolean | null
+          created_by: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          quiz_id?: string | null
+          title: string
+          description?: string | null
+          questions?: Json | null
+          correct_answers?: Json | null
+          reward_crystals?: number | null
+          start_date: string | null
+          end_date?: string | null
+          is_active?: boolean | null
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          quiz_id?: string | null
+          title?: string
+          description?: string | null
+          questions?: Json | null
+          correct_answers?: Json | null
+          reward_crystals?: number | null
+          start_date?: string | null
+          end_date?: string | null
+          is_active?: boolean | null
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_quiz_announcements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
