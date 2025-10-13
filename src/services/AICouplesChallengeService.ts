@@ -67,10 +67,6 @@ export class AICouplesChallengeService {
     } catch (err) {
       console.error('Error retrieving Z.AI API key:', err);
       throw new Error(`Z.AI API key retrieval failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      return this.zaiApiKey;
-    } catch (err) {
-      console.error('Error retrieving Z.AI API key:', err);
-      throw new Error(`Z.AI API key retrieval failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   }
 
