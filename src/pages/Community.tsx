@@ -123,6 +123,9 @@ export default function Community() {
 
           {/* Feed Tab */}
           <TabsContent value="feed" className="space-y-6">
+            {/* Community Announcements */}
+            <Announcements maxItems={3} showHeader={true} />
+            
             <div className="grid md:grid-cols-[1fr_300px] gap-6">
               {/* Posts Feed */}
               <div className="space-y-4">

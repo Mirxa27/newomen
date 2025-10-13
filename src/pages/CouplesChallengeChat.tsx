@@ -51,14 +51,14 @@ export default function CouplesChallengeChat() {
 
   useEffect(() => {
     loadChallenge();
-    
-    // Subscribe to realtime updates
+
+    // Subscribe to realtime updates (UPDATE events for this challenge row)
     const channel = supabase
       .channel(`challenge-${challengeId}`)
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'UPDATE',
           schema: 'public',
           table: 'couples_challenges',
           filter: `id=eq.${challengeId}`
@@ -70,8 +70,14 @@ export default function CouplesChallengeChat() {
       )
       .subscribe();
 
+    // Fallback polling to guarantee UI freshness in case realtime is blocked
+    const pollingId = window.setInterval(() => {
+      void loadChallenge();
+    }, 4000);
+
     return () => {
       supabase.removeChannel(channel);
+      window.clearInterval(pollingId);
     };
   }, [challengeId]);
 
