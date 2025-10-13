@@ -73,8 +73,9 @@ export default function AdminAnnouncements() {
     }
   };
 
-    useEffect(() => {
+  useEffect(() => {
     void loadAnnouncements();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const resetForm = () => {
