@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import type { Tables, TablesInsert, TablesUpdate, Json } from '@/integrations/supabase/types';
+import { supabase } from '../integrations/supabase/client';
+import { useToast } from './use-toast';
+import type { Tables, TablesInsert, TablesUpdate, Json } from '../integrations/supabase/types';
 
 export type Message = {
   id: string;
@@ -53,15 +53,32 @@ export function useCouplesChallenge() {
   const loadTemplates = useCallback(async () => {
     try {
       setLoading(true);
-      // Use any type since challenge_templates is not in our types yet
-      const { data, error } = await (supabase as any)
+      // Use proper typing for challenge_templates query
+      interface RawChallengeTemplate {
+        id: string;
+        title: string;
+        description: string;
+        category: string;
+        questions: string[] | string;
+        is_active: boolean;
+        created_at: string;
+      }
+      
+      const { data, error } = await (supabase as unknown as { from: (table: string) => any })
         .from('challenge_templates')
         .select('*')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTemplates(data as ChallengeTemplate[]);
+      
+      // Transform the data to match our ChallengeTemplate type
+      const transformedData: ChallengeTemplate[] = (data as RawChallengeTemplate[]).map(template => ({
+        ...template,
+        questions: Array.isArray(template.questions) ? template.questions : JSON.parse(template.questions as string)
+      }));
+      
+      setTemplates(transformedData);
     } catch (err) {
       console.error('Error loading templates:', err);
       setError('Failed to load challenge templates');
@@ -83,7 +100,7 @@ export function useCouplesChallenge() {
         .from('couples_challenges')
         .select('*')
         .or(`initiator_id.eq.${userId},partner_id.eq.${userId}`)
-        .order('created_at', { descending: true });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setChallenges(data as ChallengeData[]);
@@ -106,7 +123,17 @@ export function useCouplesChallenge() {
       setLoading(true);
       
       // Get template data
-      const { data: template, error: templateError } = await (supabase as any)
+      interface RawChallengeTemplate {
+        id: string;
+        title: string;
+        description: string;
+        category: string;
+        questions: string[] | string;
+        is_active: boolean;
+        created_at: string;
+      }
+      
+      const { data: template, error: templateError } = await (supabase as unknown as { from: (table: string) => any })
         .from('challenge_templates')
         .select('*')
         .eq('id', templateId)
@@ -114,6 +141,12 @@ export function useCouplesChallenge() {
 
       if (templateError) throw templateError;
       if (!template) throw new Error('Template not found');
+      
+      // Transform the template data
+      const transformedTemplate = {
+        ...template,
+        questions: Array.isArray(template.questions) ? template.questions : JSON.parse(template.questions as string)
+      };
 
       // Create challenge with proper typing
       const challengeData: TablesInsert<'couples_challenges'> = {
@@ -122,10 +155,10 @@ export function useCouplesChallenge() {
         partner_name: null,
         status: 'pending',
         question_set: {
-          title: template.title,
-          description: template.description,
-          category: template.category,
-          questions: template.questions
+          title: transformedTemplate.title,
+          description: transformedTemplate.description,
+          category: transformedTemplate.category,
+          questions: transformedTemplate.questions
         },
         messages: [],
         current_question_index: 0,
