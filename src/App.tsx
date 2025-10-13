@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from "react";
+import React, { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,14 +8,20 @@ import { AuthProvider } from "./hooks/useAuth";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 import MainLayout from "./components/layout/MainLayout";
+import MobileOptimizedLayout from "./components/mobile/MobileOptimizedLayout";
 import AdminLayout from "./components/layout/AdminLayout";
+import { MobileUtils } from "./utils/MobileUtils";
+import { CapacitorUtils } from "./utils/CapacitorUtils";
 
 const Landing = lazy(() => import("./pages/Landing"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const MobileDashboard = lazy(() => import("./pages/mobile/MobileDashboard"));
 const Chat = lazy(() => import("./pages/Chat"));
 const CouplesChallenge = lazy(() => import("./pages/CouplesChallenge"));
+const CouplesChallengeChat = lazy(() => import("./pages/CouplesChallengeChat"));
+const CouplesChallengeJoin = lazy(() => import("./pages/CouplesChallengeJoin"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Profile = lazy(() => import("./pages/Profile"));
 const WellnessLibrary = lazy(() => import("./pages/WellnessLibrary"));
@@ -50,7 +56,14 @@ const APISettings = lazy(() => import("./pages/admin/APISettings"));
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  // Initialize mobile optimizations
+  useEffect(() => {
+    MobileUtils.initialize();
+    CapacitorUtils.initialize();
+  }, []);
+
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -87,7 +100,11 @@ const App = () => (
           } />
           <Route path="/dashboard" element={
             <ProtectedRoute>
-              <MainLayout><Dashboard /></MainLayout>
+              {MobileUtils.isMobile() ? (
+                <MobileOptimizedLayout><MobileDashboard /></MobileOptimizedLayout>
+              ) : (
+                <MainLayout><Dashboard /></MainLayout>
+              )}
             </ProtectedRoute>
           } />
           <Route path="/profile" element={
@@ -115,10 +132,18 @@ const App = () => (
               <MainLayout><Community /></MainLayout>
             </ProtectedRoute>
           } />
-          <Route path="/couples-challenge/:challengeId?" element={
+          <Route path="/couples-challenge" element={
             <ProtectedRoute>
               <MainLayout><CouplesChallenge /></MainLayout>
             </ProtectedRoute>
+          } />
+          <Route path="/couples-challenge/chat/:id" element={
+            <ProtectedRoute>
+              <CouplesChallengeChat />
+            </ProtectedRoute>
+          } />
+          <Route path="/couples-challenge/join/:id" element={
+            <CouplesChallengeJoin />
           } />
           <Route path="/member-assessments" element={
             <ProtectedRoute>
@@ -172,6 +197,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

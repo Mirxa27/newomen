@@ -2,13 +2,16 @@ import { Link, useLocation } from "react-router-dom";
 import { Home, Sparkles, Users, User, MessageCircle, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
+import { useKeyboard } from "@/hooks/useKeyboard";
 
 export default function MobileFooter() {
   const location = useLocation();
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
+  const { isOpen: isKeyboardOpen } = useKeyboard();
 
-  if (!user || location.pathname === "/auth") {
+  // Hide footer when keyboard is open or user is not logged in
+  if (!user || location.pathname === "/auth" || isKeyboardOpen) {
     return null;
   }
 

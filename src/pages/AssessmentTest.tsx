@@ -107,17 +107,25 @@ export default function AssessmentTest() {
       setAssessment(testAssessment);
       setTimeRemaining(testAssessment.time_limit_minutes * 60);
 
-      // Simulate creating an attempt
-      const mockAttempt = {
-        id: 'test-attempt-1',
-        assessment_id: testAssessment.id,
-        user_id: 'test-user',
-        attempt_number: 1,
-        started_at: new Date().toISOString(),
-        status: 'in_progress',
-        raw_responses: {}
-      };
-      setAttempt(mockAttempt);
+      // Create real assessment attempt
+      const { data: attemptData, error: attemptError } = await supabase
+        .from('assessment_attempts')
+        .insert({
+          assessment_id: testAssessment.id,
+          user_id: 'test-user',
+          attempt_number: 1,
+          started_at: new Date().toISOString(),
+          status: 'in_progress',
+          raw_responses: {}
+        })
+        .select('*')
+        .single();
+
+      if (attemptError) {
+        throw new Error(`Failed to create assessment attempt: ${attemptError.message}`);
+      }
+
+      setAttempt(attemptData);
 
       toast({
         title: "Test Assessment Created",
@@ -159,48 +167,43 @@ export default function AssessmentTest() {
 
     setSubmitting(true);
     try {
-      // Simulate AI processing
       setAiProcessing(true);
 
-      // Simulate AI analysis
-      setTimeout(() => {
-        const mockAIResult: AIResults = {
-          score: Math.floor(Math.random() * 40) + 60, // 60-100
-          feedback: "Based on your responses, you demonstrate strong emotional intelligence and effective communication skills. Your approach to problem-solving shows both analytical thinking and empathy.",
-          explanation: "Your answers indicate a balanced personality with strengths in interpersonal relationships and stress management. You show good self-awareness and adaptability.",
-          insights: [
-            "High emotional intelligence",
-            "Strong communication skills",
-            "Good problem-solving approach",
-            "Effective stress management"
-          ],
-          recommendations: [
-            "Continue developing your leadership skills",
-            "Practice active listening in conversations",
-            "Consider mentoring others to share your insights"
-          ],
-          strengths: [
-            "Emotional awareness",
-            "Communication effectiveness",
-            "Team collaboration",
-            "Adaptability"
-          ],
-          areas_for_improvement: [
-            "Time management under pressure",
-            "Delegation skills",
-            "Conflict resolution techniques"
-          ]
+      // Submit responses to database
+      await submitAssessmentResponses(attempt.id, responses);
+
+      // Process with real AI service
+      const aiResult = await processAssessmentWithAI(assessment.id, {
+        assessment_id: assessment.id,
+        user_id: attempt.user_id,
+        responses,
+        time_spent_minutes: Math.floor((assessment.time_limit_minutes * 60 - timeRemaining) / 60),
+        attempt_id: attempt.id,
+        attempt_number: attempt.attempt_number,
+      });
+
+      if (aiResult.success && aiResult.result) {
+        const processedResult: AIResults = {
+          score: aiResult.result.score || 0,
+          feedback: aiResult.result.feedback || "Thank you for completing this assessment.",
+          explanation: aiResult.result.explanation || "Your responses have been analyzed.",
+          insights: aiResult.result.insights || [],
+          recommendations: aiResult.result.recommendations || [],
+          strengths: aiResult.result.strengths || [],
+          areas_for_improvement: aiResult.result.areas_for_improvement || []
         };
 
-        setAiResults(mockAIResult);
+        setAiResults(processedResult);
         setAiProcessing(false);
         setSubmitting(false);
 
         toast({
           title: "Assessment Complete!",
-          description: "AI analysis has been generated for your responses.",
+          description: "Your AI analysis is ready",
         });
-      }, 3000);
+      } else {
+        throw new Error(aiResult.error || "AI processing failed");
+      }
 
     } catch (error) {
       console.error("Error submitting assessment:", error);

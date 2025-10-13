@@ -4,7 +4,19 @@ import type { Database } from './types'
 // Create a single supabase client for interacting with your database
 export const supabase = createClient<Database>(
   import.meta.env.VITE_SUPABASE_URL || '',
-  import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+  import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+  {
+    realtime: {
+      params: {
+        eventsPerSecond: 10,
+      },
+    },
+    global: {
+      headers: {
+        'X-Client-Info': 'newomen-web@1.0.0',
+      },
+    },
+  }
 )
 
 // Export a typed supabase client for better type inference

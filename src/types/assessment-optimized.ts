@@ -107,6 +107,7 @@ export interface AIProcessingResult {
   tokensUsed?: number;
   cost?: number;
   details?: Record<string, unknown>;
+  error?: string;
 }
 
 // Query result types to prevent complex inference

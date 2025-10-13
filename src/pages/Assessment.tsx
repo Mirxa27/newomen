@@ -40,13 +40,13 @@ interface AssessmentQuestion {
   weight?: number;
 }
 
-// Extend Tables<'assessments_enhanced'> to include the 'questions' and 'scoring_rubric' JSON types
+// Extend AssessmentEnhanced to include the 'questions' and 'scoring_rubric' JSON types
 interface Assessment extends Omit<Tables<'assessments_enhanced'>, 'questions' | 'scoring_rubric'> {
   questions: AssessmentQuestion[];
   scoring_rubric: Record<string, unknown>;
 }
 
-// Extend Tables<'assessment_attempts'> to include 'raw_responses' JSON type
+// Extend AssessmentAttemptType to include 'raw_responses' JSON type
 interface AssessmentAttempt extends Omit<Tables<'assessment_attempts'>, 'raw_responses'> {
   raw_responses: Record<string, unknown>;
 }
@@ -58,6 +58,8 @@ interface AIAnalysisResult {
   strengths: string[];
   areas_for_improvement: string[];
   recommendations: string[];
+  insights?: string[];
+  is_passing?: boolean;
 }
 
 export default function Assessment() {
@@ -134,7 +136,7 @@ export default function Assessment() {
     setSubmitting(true);
     try {
       // Submit responses
-      const timeSpent = Math.max(0, assessment.time_limit_minutes * 60 - timeRemaining);
+      const timeSpent = Math.max(0, (assessment.time_limit_minutes || 0) * 60 - timeRemaining);
       const success = await submitAssessmentResponses(attempt.id, responses, Math.floor(timeSpent / 60));
 
       if (!success) {
@@ -167,10 +169,10 @@ export default function Assessment() {
               score: aiResult.score,
               feedback: aiResult.feedback,
               explanation: aiResult.explanation,
-              insights: aiResult.insights,
-              recommendations: aiResult.recommendations,
-              strengths: aiResult.strengths,
-              areas_for_improvement: aiResult.areas_for_improvement,
+              insights: aiResult.insights || [],
+              recommendations: aiResult.recommendations || [],
+              strengths: aiResult.strengths || [],
+              areas_for_improvement: aiResult.areas_for_improvement || [],
               is_passing: aiResult.is_passing,
             } as AIAnalysisResult);
             toast({

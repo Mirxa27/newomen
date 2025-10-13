@@ -8,9 +8,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Database } from '@/integrations/supabase/types';
-
-type AIConfiguration = Database['public']['Tables']['ai_configurations']['Row'];
+interface AIConfiguration {
+  id?: string;
+  name?: string;
+  provider?: string;
+  model_name?: string;
+  api_key?: string;
+  base_url?: string;
+  temperature?: number;
+  max_tokens?: number;
+  top_p?: number;
+  frequency_penalty?: number;
+  presence_penalty?: number;
+  system_prompt?: string;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
 
 interface ConfigurationFormProps {
   formData: Partial<AIConfiguration>;
@@ -77,7 +91,7 @@ export const ConfigurationForm = ({ formData, onFieldChange, onSelectChange }: C
           <Label htmlFor="api_base_url">API Base URL (Optional)</Label>
           <Input
             id="api_base_url"
-            value={formData.api_base_url || ""}
+            value={formData.base_url || ""}
             onChange={handleInputChange}
             placeholder="e.g., https://api.openai.com"
             className="glass"

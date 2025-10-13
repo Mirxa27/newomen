@@ -403,19 +403,64 @@ function discoverGeminiModels(): ModelRecord[] {
   }));
 }
 
-// Placeholder functions for new providers
-function discoverCartesiaModels(): ModelRecord[] {
-  return [{
-    provider_id: "", model_id: "cartesia-voice-v1", display_name: "Cartesia Voice",
-    modality: "audio", context_limit: 1000, latency_hint_ms: 150, is_realtime: true, enabled: true
-  }];
+// Real Cartesia API integration
+async function discoverCartesiaModels(apiKey: string): Promise<ModelRecord[]> {
+  try {
+    const response = await fetch('https://api.cartesia.ai/v1/models', {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Cartesia API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.models?.map((model: any) => ({
+      provider_id: "", // Will be set by caller
+      model_id: model.id,
+      display_name: model.name || model.id,
+      modality: "audio",
+      context_limit: model.context_length || 1000,
+      latency_hint_ms: model.latency_hint || 150,
+      is_realtime: model.realtime || false,
+      enabled: true
+    })) || [];
+  } catch (error) {
+    console.error('Error discovering Cartesia models:', error);
+    return [];
+  }
 }
 
-function discoverCartesiaVoices(): VoiceRecord[] {
-  return [{
-    provider_id: "", voice_id: "cartesia-default-female", name: "Cartesia Female",
-    locale: "en-US", gender: "female", latency_hint_ms: 150, enabled: true
-  }];
+async function discoverCartesiaVoices(apiKey: string): Promise<VoiceRecord[]> {
+  try {
+    const response = await fetch('https://api.cartesia.ai/v1/voices', {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Cartesia API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.voices?.map((voice: any) => ({
+      provider_id: "", // Will be set by caller
+      voice_id: voice.id,
+      name: voice.name || voice.id,
+      locale: voice.locale || null,
+      gender: voice.gender || null,
+      latency_hint_ms: voice.latency_hint || 150,
+      enabled: true
+    })) || [];
+  } catch (error) {
+    console.error('Error discovering Cartesia voices:', error);
+    return [];
+  }
 }
 
 function discoverDeepgramModels(): ModelRecord[] {

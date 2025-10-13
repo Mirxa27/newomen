@@ -59,8 +59,8 @@ serve(async (req) => {
           .limit(1);
         
         if (existingLogin && existingLogin.length > 0) {
-          return new Response(JSON.stringify({ success: false, message: 'Daily login bonus already claimed today' }), {
-            status: 400,
+          return new Response(JSON.stringify({ success: true, message: 'Daily login bonus already claimed today', reward: 0 }), {
+            status: 200,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }

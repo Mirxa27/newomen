@@ -8,11 +8,11 @@ interface ChallengeTemplate {
   questions: string[];
 }
 
-interface ChallengeResponse {
-  [key: string]: {
-    initiator_response?: string;
-    partner_response?: string;
-  };
+interface Message {
+  id: string;
+  sender: "ai" | "user" | "partner" | "system";
+  content: string;
+  timestamp: string;
 }
 
 const corsHeaders = {
@@ -119,11 +119,11 @@ serve(async (req) => {
 
     if (challengeError) throw challengeError;
 
-    // Check if both partners have responded
-    const responses = challenge.responses as ChallengeResponse;
+    // Extract messages and question set
+    const messages = (challenge.messages as Message[]) || [];
     const questionSet = challenge.question_set as Record<string, unknown>;
     
-    if (!responses || !questionSet) {
+    if (!messages || messages.length === 0 || !questionSet) {
       throw new Error('Challenge data incomplete');
     }
 
@@ -137,19 +137,29 @@ serve(async (req) => {
     };
 
     const questions = template.questions;
+    
+    // Extract responses from messages
+    const userMessages = messages.filter(m => m.sender === "user");
+    const partnerMessages = messages.filter(m => m.sender === "partner");
+
+    if (userMessages.length !== questions.length || partnerMessages.length !== questions.length) {
+      throw new Error('Not all questions have been answered by both partners');
+    }
+
     const analyses = [];
 
     // Analyze each question
     for (let i = 0; i < questions.length; i++) {
       const question = questions[i];
-      const responseData = responses[i.toString()] || {};
+      const userResponse = userMessages[i]?.content;
+      const partnerResponse = partnerMessages[i]?.content;
       
-      if (responseData.initiator_response && responseData.partner_response) {
+      if (userResponse && partnerResponse) {
         console.log(`Analyzing question ${i + 1} with Z.AI...`);
         const analysis = await analyzeResponses(
           question,
-          responseData.initiator_response,
-          responseData.partner_response,
+          userResponse,
+          partnerResponse,
           supabase
         );
         analyses.push(JSON.parse(analysis));
@@ -167,6 +177,8 @@ serve(async (req) => {
       detailed_analyses: analyses,
       summary: analyses.length > 0 ? analyses[0].overall_analysis : 'Analysis pending',
       next_steps: analyses.flatMap(a => a.conversation_starters).slice(0, 3),
+      strengths: analyses.flatMap(a => a.strengths_as_couple).slice(0, 5),
+      growth_opportunities: analyses.flatMap(a => a.growth_opportunities).slice(0, 5),
       provider: 'Z.AI GLM-4.6'
     };
 
@@ -199,7 +211,7 @@ serve(async (req) => {
             }
           })
         }),
-        fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/gamification-engine`, {
+        challenge.partner_id ? fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/gamification-engine`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -212,7 +224,7 @@ serve(async (req) => {
               challengeId: challengeId
             }
           })
-        })
+        }) : Promise.resolve()
       ]);
     } catch (gamError) {
       console.error('Gamification error (non-critical):', gamError);
