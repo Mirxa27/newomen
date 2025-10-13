@@ -323,47 +323,47 @@ export default function CouplesChallengeChat() {
 
       const progress = challenge ? (challenge.current_question_index / challenge.question_set.questions.length) * 100 : 0;
 
-        <div className="absolute inset-0 bg-[url('/fixed-background.jpg')] bg-cover bg-center bg-no-repeat opacity-30" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-purple-900/40 to-black/60 backdrop-blur-sm" />
-        <div className="relative h-screen flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-white" />
-        </div>
-      </div>
-    );
-  }
+      const insight = await aiCouplesChallengeService.generateRealTimeInsight(
+        recentMessages,
+        progress
+      );
 
-  if (!challenge) {
-    return (
-      <div className="fixed inset-0 bg-gradient-to-br from-purple-900 via-pink-800 to-blue-900">
-        <div className="absolute inset-0 bg-[url('/fixed-background.jpg')] bg-cover bg-center bg-no-repeat opacity-30" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-purple-900/40 to-black/60 backdrop-blur-sm" />
-        <div className="relative h-screen flex items-center justify-center p-4">
-          <Card className="p-6 max-w-md bg-white/10 backdrop-blur-md border-white/20">
-            <h2 className="text-xl font-bold mb-4 text-white">Challenge Not Found</h2>
-            <Button onClick={() => navigate("/couples-challenge")}>
-              Start New Challenge
-            </Button>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+      setAiInsight(insight.insight);
+      setShowAIInsight(true);
+    } catch (err) {
+      console.error("Error generating real-time insight:", err);
+      // Silently fail - insights are optional
+    }
+  };
 
-  return (
-    <div className="fixed inset-0 bg-gradient-to-br from-purple-900 via-pink-800 to-blue-900">
-      <div className="absolute inset-0 bg-[url('/fixed-background.jpg')] bg-cover bg-center bg-no-repeat opacity-30" />
-      {/* Dark Liquid Glassmorphic Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-purple-900/40 to-black/60 backdrop-blur-sm" />
-      
-      {/* Content */}
-      <div className="relative h-screen flex flex-col">
-        {/* Header */}
-        <div className="bg-white/10 backdrop-blur-md border-b border-white/20 shadow-lg">
-          <div className="max-w-4xl mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {/* Back button - only show for authenticated users (initiators) */}
-                {isInitiator && (
+  const generateAnalysis = async () => {
+    try {
+      const analysisMessage: Message = {
+        id: crypto.randomUUID(),
+        sender: "ai",
+        content: "Thank you both for completing the challenge! 🎉 Analyzing your responses...",
+        timestamp: new Date().toISOString(),
+      };
+
+      await supabase
+        .from("couples_challenges")
+        .update({ 
+          messages: [...messages, analysisMessage],
+          status: "completed",
+        })
+        .eq("id", challengeId);
+
+      // Call edge function to generate AI analysis
+      const { data, error } = await supabase.functions.invoke('couples-challenge-analyzer', {
+        body: { challengeId },
+      });
+
+      if (error) throw error;
+
+      // Add analysis results to chat
+      const resultMessage: Message = {
+        id: crypto.randomUUID(),
+        sender: "ai",
                   <Button
                     variant="ghost"
                     size="icon"
