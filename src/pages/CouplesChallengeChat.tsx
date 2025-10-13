@@ -106,20 +106,23 @@ export default function CouplesChallengeChat() {
         partner_id: challengeData.partner_id,
         status: challengeData.status,
         question_set: {
-          title: questionSet.title || "Couple's Challenge",
-          description: questionSet.description || "",
-          questions: Array.isArray(questionSet.questions) ? questionSet.questions : JSON.parse(questionSet.questions || "[]"),
+          title: questionSet?.title || "Couple's Challenge",
+          description: questionSet?.description || "",
+          questions: Array.isArray(questionSet?.questions) ? questionSet.questions : (questionSet?.questions ? JSON.parse(questionSet.questions) : []),
         },
         messages: challengeData.messages || [],
         current_question_index: challengeData.current_question_index || 0,
       });
 
-      setMessages(challengeData.messages || []);
+      const loadedMessages = challengeData.messages || [];
+      console.log('Loaded messages:', loadedMessages);
+      setMessages(loadedMessages);
       setIsInitiator(currentUserId === challengeData.initiator_id);
       setPartnerJoined(!!challengeData.partner_id);
 
       // Initialize chat if no messages yet
-      if (!challengeData.messages || challengeData.messages.length === 0) {
+      if (!loadedMessages || loadedMessages.length === 0) {
+        console.log('No messages found, initializing chat...');
         await initializeChat(challengeData, questionSet);
       }
 
@@ -140,13 +143,13 @@ export default function CouplesChallengeChat() {
       {
         id: crypto.randomUUID(),
         sender: "ai",
-        content: `Welcome to ${questionSet.title}! 💕`,
+        content: `Welcome to ${questionSet?.title || "Couple's Challenge"}! 💕`,
         timestamp: new Date().toISOString(),
       },
       {
         id: crypto.randomUUID(),
         sender: "ai",
-        content: questionSet.description,
+        content: questionSet?.description || "Answer questions together and discover your compatibility!",
         timestamp: new Date().toISOString(),
       },
       {
@@ -157,10 +160,19 @@ export default function CouplesChallengeChat() {
       },
     ];
 
-    await supabase
+    console.log('Creating welcome messages:', welcomeMessages);
+
+    const { error } = await supabase
       .from("couples_challenges")
       .update({ messages: welcomeMessages })
       .eq("id", challengeData.id);
+
+    if (error) {
+      console.error('Error initializing chat:', error);
+    } else {
+      console.log('Chat initialized successfully');
+      setMessages(welcomeMessages);
+    }
   };
 
   const handleCopyLink = () => {
@@ -188,10 +200,12 @@ export default function CouplesChallengeChat() {
       const updatedMessages = [...messages, newMessage];
       
       // Save message to database
-      await supabase
+      const { error } = await supabase
         .from("couples_challenges")
         .update({ messages: updatedMessages })
         .eq("id", challengeId);
+
+      if (error) throw error;
 
       setMessages(updatedMessages);
       setInput("");
@@ -218,13 +232,11 @@ export default function CouplesChallengeChat() {
     const currentIndex = challenge.current_question_index;
 
     // Count responses for current question
-    const questionResponses = currentMessages.filter(m => 
-      (m.sender === "user" || m.sender === "partner") && 
-      m.content.length > 0
-    );
+    const userMessages = currentMessages.filter(m => m.sender === "user");
+    const partnerMessages = currentMessages.filter(m => m.sender === "partner");
 
     // If both answered current question, move to next
-    if (partnerJoined && questionResponses.length >= (currentIndex + 1) * 2) {
+    if (partnerJoined && userMessages.length > currentIndex && partnerMessages.length > currentIndex) {
       if (currentIndex < questions.length - 1) {
         // Ask next question
         const nextQuestion: Message = {
@@ -247,21 +259,6 @@ export default function CouplesChallengeChat() {
       } else {
         // All questions answered, generate analysis
         await generateAnalysis();
-      }
-    } else if (!partnerJoined) {
-      // Ask first question when partner joins
-      if (currentMessages.length === 3) { // Only initial messages
-        const firstQuestion: Message = {
-          id: crypto.randomUUID(),
-          sender: "ai",
-          content: questions[0],
-          timestamp: new Date().toISOString(),
-        };
-
-        await supabase
-          .from("couples_challenges")
-          .update({ messages: [...currentMessages, firstQuestion] })
-          .eq("id", challengeId);
       }
     }
   };
@@ -319,161 +316,186 @@ export default function CouplesChallengeChat() {
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gradient-to-b from-purple-50 to-pink-50 dark:from-gray-900 dark:to-gray-800">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="fixed inset-0 bg-gradient-to-br from-purple-900 via-pink-800 to-blue-900">
+        <div className="absolute inset-0 bg-[url('/fixed-background.jpg')] bg-cover bg-center bg-no-repeat opacity-30" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-purple-900/40 to-black/60 backdrop-blur-sm" />
+        <div className="relative h-screen flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-white" />
+        </div>
       </div>
     );
   }
 
   if (!challenge) {
     return (
-      <div className="h-screen flex items-center justify-center p-4">
-        <Card className="p-6 max-w-md">
-          <h2 className="text-xl font-bold mb-4">Challenge Not Found</h2>
-          <Button onClick={() => navigate("/couples-challenge")}>
-            Start New Challenge
-          </Button>
-        </Card>
+      <div className="fixed inset-0 bg-gradient-to-br from-purple-900 via-pink-800 to-blue-900">
+        <div className="absolute inset-0 bg-[url('/fixed-background.jpg')] bg-cover bg-center bg-no-repeat opacity-30" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-purple-900/40 to-black/60 backdrop-blur-sm" />
+        <div className="relative h-screen flex items-center justify-center p-4">
+          <Card className="p-6 max-w-md bg-white/10 backdrop-blur-md border-white/20">
+            <h2 className="text-xl font-bold mb-4 text-white">Challenge Not Found</h2>
+            <Button onClick={() => navigate("/couples-challenge")}>
+              Start New Challenge
+            </Button>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-b from-purple-50 to-pink-50 dark:from-gray-900 dark:to-gray-800">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Heart className="w-6 h-6 text-pink-500" />
-              <div>
-                <h1 className="text-lg font-bold">{challenge.question_set.title}</h1>
-                <p className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  {partnerJoined ? "Both partners connected" : "Waiting for partner..."}
-                </p>
-              </div>
-            </div>
-            {challenge.status !== "completed" && (
-              <Badge variant={partnerJoined ? "default" : "secondary"}>
-                {partnerJoined ? "Active" : "Pending"}
-              </Badge>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Share Link Alert */}
-      {!partnerJoined && isInitiator && (
-        <Alert className="max-w-4xl mx-auto mt-4 mx-4">
-          <AlertDescription className="flex items-center justify-between gap-4">
-            <span className="text-sm">Share this link with your partner to start the challenge</span>
-            <Button size="sm" variant="outline" onClick={handleCopyLink}>
-              {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-              {copied ? "Copied!" : "Copy Link"}
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 max-w-4xl w-full mx-auto">
-        <div className="space-y-4">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${
-                message.sender === "ai" || message.sender === "system"
-                  ? "justify-center"
-                  : message.sender === "user" && isInitiator || message.sender === "partner" && !isInitiator
-                  ? "justify-end"
-                  : "justify-start"
-              }`}
-            >
-              {message.sender === "ai" || message.sender === "system" ? (
-                <div className="max-w-2xl">
-                  <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur p-4">
-                    <div className="flex items-start gap-3">
-                      <Avatar className="w-8 h-8 bg-gradient-to-br from-purple-400 to-pink-400">
-                        <Heart className="w-4 h-4 text-white m-auto" />
-                      </Avatar>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-primary">
-                          {message.sender === "ai" ? "NewWomen AI" : "System"}
-                        </p>
-                        <p className="text-sm mt-1 whitespace-pre-wrap">{message.content}</p>
-                      </div>
-                    </div>
-                  </Card>
-                </div>
-              ) : (
-                <div className="max-w-xs md:max-w-md">
-                  <Card
-                    className={`p-3 ${
-                      message.sender === "user" && isInitiator || message.sender === "partner" && !isInitiator
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-white dark:bg-gray-700"
-                    }`}
-                  >
-                    <p className="text-sm font-medium mb-1">
-                      {message.sender === "user" && isInitiator || message.sender === "partner" && !isInitiator
-                        ? "You"
-                        : "Partner"}
-                    </p>
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                  </Card>
-                  <p className="text-xs text-muted-foreground mt-1 px-2">
-                    {new Date(message.timestamp).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+    <div className="fixed inset-0 bg-gradient-to-br from-purple-900 via-pink-800 to-blue-900">
+      <div className="absolute inset-0 bg-[url('/fixed-background.jpg')] bg-cover bg-center bg-no-repeat opacity-30" />
+      {/* Dark Liquid Glassmorphic Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-purple-900/40 to-black/60 backdrop-blur-sm" />
+      
+      {/* Content */}
+      <div className="relative h-screen flex flex-col">
+        {/* Header */}
+        <div className="bg-white/10 backdrop-blur-md border-b border-white/20 shadow-lg">
+          <div className="max-w-4xl mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Heart className="w-6 h-6 text-pink-400" />
+                <div>
+                  <h1 className="text-lg font-bold text-white">{challenge.question_set.title}</h1>
+                  <p className="text-sm text-gray-300 flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    {partnerJoined ? "Both partners connected" : "Waiting for partner..."}
                   </p>
                 </div>
+              </div>
+              {challenge.status !== "completed" && (
+                <Badge variant={partnerJoined ? "default" : "secondary"} className="bg-white/20 backdrop-blur border-white/30 text-white">
+                  {partnerJoined ? "Active" : "Pending"}
+                </Badge>
               )}
             </div>
-          ))}
-          <div ref={messagesEndRef} />
+          </div>
         </div>
-      </div>
 
-      {/* Input Area */}
-      {challenge.status !== "completed" && partnerJoined && (
-        <div className="bg-white dark:bg-gray-800 border-t shadow-lg">
-          <div className="max-w-4xl mx-auto px-4 py-4">
-            <div className="flex gap-2">
-              <Input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
-                placeholder="Type your answer..."
-                className="flex-1"
-                disabled={sending}
-              />
-              <Button onClick={handleSendMessage} disabled={sending || !input.trim()}>
-                {sending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
+        {/* Share Link Alert */}
+        {!partnerJoined && isInitiator && (
+          <Alert className="max-w-4xl mx-auto mt-4 mx-4 bg-white/10 backdrop-blur-md border-white/20">
+            <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-white">
+              <span className="text-sm">Share this link with your partner to start the challenge</span>
+              <Button size="sm" variant="outline" onClick={handleCopyLink} className="bg-white/20 backdrop-blur border-white/30 text-white hover:bg-white/30 shrink-0">
+                {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+                {copied ? "Copied!" : "Copy Link"}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-4 py-6 max-w-4xl w-full mx-auto">
+          <div className="space-y-4">
+            {messages.length === 0 ? (
+              <div className="text-center text-white/70 py-12">
+                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+                <p>Loading messages...</p>
+              </div>
+            ) : (
+              messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${
+                    message.sender === "ai" || message.sender === "system"
+                      ? "justify-center"
+                      : message.sender === "user" && isInitiator || message.sender === "partner" && !isInitiator
+                      ? "justify-end"
+                      : "justify-start"
+                  }`}
+                >
+                  {message.sender === "ai" || message.sender === "system" ? (
+                    <div className="max-w-2xl">
+                      <Card className="bg-white/10 backdrop-blur-md border-white/20 p-4">
+                        <div className="flex items-start gap-3">
+                          <Avatar className="w-8 h-8 bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center">
+                            <Heart className="w-4 h-4 text-white" />
+                          </Avatar>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-pink-300">
+                              {message.sender === "ai" ? "NewWomen AI" : "System"}
+                            </p>
+                            <p className="text-sm mt-1 whitespace-pre-wrap text-white">{message.content}</p>
+                          </div>
+                        </div>
+                      </Card>
+                    </div>
+                  ) : (
+                    <div className="max-w-xs md:max-w-md">
+                      <Card
+                        className={`p-3 border-white/20 ${
+                          message.sender === "user" && isInitiator || message.sender === "partner" && !isInitiator
+                            ? "bg-gradient-to-r from-purple-500/80 to-pink-500/80 backdrop-blur-md text-white"
+                            : "bg-white/10 backdrop-blur-md text-white"
+                        }`}
+                      >
+                        <p className="text-xs font-medium mb-1 opacity-80">
+                          {message.sender === "user" && isInitiator || message.sender === "partner" && !isInitiator
+                            ? "You"
+                            : "Partner"}
+                        </p>
+                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      </Card>
+                      <p className="text-xs text-white/50 mt-1 px-2">
+                        {new Date(message.timestamp).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
+
+        {/* Input Area */}
+        {challenge.status !== "completed" && partnerJoined && (
+          <div className="bg-white/10 backdrop-blur-md border-t border-white/20 shadow-lg">
+            <div className="max-w-4xl mx-auto px-4 py-4">
+              <div className="flex gap-2">
+                <Input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
+                  placeholder="Type your answer..."
+                  className="flex-1 bg-white/10 backdrop-blur border-white/30 text-white placeholder:text-white/50"
+                  disabled={sending}
+                />
+                <Button 
+                  onClick={handleSendMessage} 
+                  disabled={sending || !input.trim()}
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                >
+                  {sending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {challenge.status === "completed" && (
+          <div className="bg-gradient-to-r from-purple-500/80 to-pink-500/80 backdrop-blur-md text-white border-t border-white/20">
+            <div className="max-w-4xl mx-auto px-4 py-6 text-center">
+              <Heart className="w-12 h-12 mx-auto mb-2" />
+              <p className="text-lg font-bold">Challenge Completed!</p>
+              <p className="text-sm opacity-90">Check the messages above for your compatibility results</p>
+              <Button variant="secondary" className="mt-4 bg-white/20 backdrop-blur border-white/30 hover:bg-white/30" onClick={() => navigate("/dashboard")}>
+                Back to Dashboard
               </Button>
             </div>
           </div>
-        </div>
-      )}
-
-      {challenge.status === "completed" && (
-        <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-          <div className="max-w-4xl mx-auto px-4 py-6 text-center">
-            <Heart className="w-12 h-12 mx-auto mb-2" />
-            <p className="text-lg font-bold">Challenge Completed!</p>
-            <p className="text-sm opacity-90">Check the messages above for your compatibility results</p>
-            <Button variant="secondary" className="mt-4" onClick={() => navigate("/dashboard")}>
-              Back to Dashboard
-            </Button>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
-

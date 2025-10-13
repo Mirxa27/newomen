@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,24 +8,44 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Heart, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+type ChallengeWithProfile = {
+  id: string;
+  initiator_id: string;
+  partner_id: string | null;
+  status: string;
+  question_set: {
+    title: string;
+    description: string;
+    questions: string[];
+  };
+  messages: Array<{
+    id: string;
+    sender: string;
+    content: string;
+    timestamp: string;
+  }>;
+  user_profiles?: {
+    nickname: string | null;
+    frontend_name: string | null;
+  };
+};
+
 export default function CouplesChallengeJoin() {
   const { id: challengeId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [challenge, setChallenge] = useState<any>(null);
+  const [challenge, setChallenge] = useState<ChallengeWithProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [partnerName, setPartnerName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadChallenge();
-  }, [challengeId]);
-
-  const loadChallenge = async () => {
+  const loadChallenge = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      // Using explicit type bypass since couples_challenges table isn't in the limited TypeScript types
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
         .from("couples_challenges")
         .select("*, user_profiles!couples_challenges_initiator_id_fkey(nickname, frontend_name)")
         .eq("id", challengeId)
@@ -43,14 +63,18 @@ export default function CouplesChallengeJoin() {
         return;
       }
 
-      setChallenge(data);
+      setChallenge(data as ChallengeWithProfile);
     } catch (err) {
       console.error("Error loading challenge:", err);
       setError("Challenge not found or has expired.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [challengeId]);
+
+  useEffect(() => {
+    loadChallenge();
+  }, [loadChallenge]);
 
   const handleJoin = async () => {
     if (!partnerName.trim()) {
@@ -65,7 +89,8 @@ export default function CouplesChallengeJoin() {
     setJoining(true);
     try {
       // Create a temporary guest user profile for the partner
-      const { data: guestProfile, error: profileError } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: guestProfile, error: profileError } = await (supabase as any)
         .from("user_profiles")
         .insert({
           email: `guest_${Date.now()}@temp.newomen.app`,
@@ -78,18 +103,23 @@ export default function CouplesChallengeJoin() {
 
       if (profileError) throw profileError;
 
-      // Update challenge with partner ID
-      const { error: updateError } = await supabase
+      // Update challenge with partner ID and ask first question
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: currentChallenge, error: fetchError } = await (supabase as any)
         .from("couples_challenges")
-        .update({
-          partner_id: guestProfile.id,
-          status: "in_progress",
-        })
-        .eq("id", challengeId);
+        .select("messages, question_set")
+        .eq("id", challengeId)
+        .single();
 
-      if (updateError) throw updateError;
+      if (fetchError) throw fetchError;
 
-      // Add system message that partner joined
+      const currentMessages = currentChallenge?.messages || [];
+      const questionSet = currentChallenge?.question_set as { title?: string; description?: string; questions?: string[] | string };
+      const questions = Array.isArray(questionSet?.questions) 
+        ? questionSet.questions 
+        : (questionSet?.questions ? JSON.parse(questionSet.questions as string) : []);
+
+      // Add system message and first question
       const joinMessage = {
         id: crypto.randomUUID(),
         sender: "system",
@@ -97,20 +127,24 @@ export default function CouplesChallengeJoin() {
         timestamp: new Date().toISOString(),
       };
 
-      const { data: currentChallenge } = await supabase
-        .from("couples_challenges")
-        .select("messages")
-        .eq("id", challengeId)
-        .single();
+      const firstQuestion = {
+        id: crypto.randomUUID(),
+        sender: "ai",
+        content: questions[0] || "Let's get started!",
+        timestamp: new Date().toISOString(),
+      };
 
-      const currentMessages = currentChallenge?.messages || [];
-      
-      await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: updateError } = await (supabase as any)
         .from("couples_challenges")
         .update({
-          messages: [...currentMessages, joinMessage],
+          partner_id: guestProfile.id,
+          status: "in_progress",
+          messages: [...currentMessages, joinMessage, firstQuestion],
         })
         .eq("id", challengeId);
+
+      if (updateError) throw updateError;
 
       toast({
         title: "Welcome!",
@@ -133,96 +167,110 @@ export default function CouplesChallengeJoin() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-purple-50 to-pink-50 dark:from-gray-900 dark:to-gray-800">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="fixed inset-0 bg-gradient-to-br from-purple-900 via-pink-800 to-blue-900">
+        <div className="absolute inset-0 bg-[url('/fixed-background.jpg')] bg-cover bg-center bg-no-repeat opacity-30" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-purple-900/40 to-black/60 backdrop-blur-sm" />
+        <div className="relative min-h-screen flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-white" />
+        </div>
       </div>
     );
   }
 
   if (error || !challenge) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-purple-50 to-pink-50 dark:from-gray-900 dark:to-gray-800">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <Heart className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <CardTitle>Oops!</CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <Button onClick={() => navigate("/")}>Go to Homepage</Button>
-          </CardContent>
-        </Card>
+      <div className="fixed inset-0 bg-gradient-to-br from-purple-900 via-pink-800 to-blue-900">
+        <div className="absolute inset-0 bg-[url('/fixed-background.jpg')] bg-cover bg-center bg-no-repeat opacity-30" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-purple-900/40 to-black/60 backdrop-blur-sm" />
+        <div className="relative min-h-screen flex items-center justify-center p-4">
+          <Card className="w-full max-w-md bg-white/10 backdrop-blur-md border-white/20">
+            <CardHeader className="text-center">
+              <Heart className="w-12 h-12 text-pink-400 mx-auto mb-4" />
+              <CardTitle className="text-white">Oops!</CardTitle>
+              <CardDescription className="text-gray-300">{error}</CardDescription>
+            </CardHeader>
+            <CardContent className="text-center">
+              <Button onClick={() => navigate("/")} className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
+                Go to Homepage
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
-  const questionSet = challenge.question_set || {};
+  const questionSet = challenge.question_set || { title: "Couple's Challenge", description: "", questions: [] };
   const initiatorName = challenge.user_profiles?.nickname || challenge.user_profiles?.frontend_name || "Your partner";
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-purple-50 to-pink-50 dark:from-gray-900 dark:to-gray-800">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-full p-4">
-              <Heart className="w-12 h-12 text-white" />
+    <div className="fixed inset-0 bg-gradient-to-br from-purple-900 via-pink-800 to-blue-900">
+      <div className="absolute inset-0 bg-[url('/fixed-background.jpg')] bg-cover bg-center bg-no-repeat opacity-30" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-purple-900/40 to-black/60 backdrop-blur-sm" />
+      <div className="relative min-h-screen flex items-center justify-center p-4">
+        <Card className="w-full max-w-md bg-white/10 backdrop-blur-md border-white/20">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-full p-4">
+                <Heart className="w-12 h-12 text-white" />
+              </div>
             </div>
-          </div>
-          <CardTitle className="text-2xl">You've Been Invited!</CardTitle>
-          <CardDescription className="text-base">
-            {initiatorName} invites you to join a couple's challenge
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="bg-muted/50 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Users className="w-5 h-5 text-primary" />
-              <h3 className="font-semibold">{questionSet.title || "Couple's Challenge"}</h3>
+            <CardTitle className="text-2xl text-white">You've Been Invited!</CardTitle>
+            <CardDescription className="text-base text-gray-300">
+              {initiatorName} invites you to join a couple's challenge
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="bg-white/5 backdrop-blur rounded-lg p-4 border border-white/10">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="w-5 h-5 text-pink-400" />
+                <h3 className="font-semibold text-white">{questionSet.title}</h3>
+              </div>
+              <p className="text-sm text-gray-300">
+                {questionSet.description}
+              </p>
+              <p className="text-sm text-gray-400 mt-2">
+                {Array.isArray(questionSet.questions) ? questionSet.questions.length : 0} questions
+              </p>
             </div>
-            <p className="text-sm text-muted-foreground">
-              {questionSet.description || "Answer questions together and discover your compatibility!"}
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              {Array.isArray(questionSet.questions) ? questionSet.questions.length : 0} questions
-            </p>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="name">Your Name</Label>
-            <Input
-              id="name"
-              placeholder="Enter your name"
-              value={partnerName}
-              onChange={(e) => setPartnerName(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleJoin()}
-              disabled={joining}
-            />
-            <p className="text-xs text-muted-foreground">
-              No account needed - just enter your name to start
-            </p>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-white">Your Name</Label>
+              <Input
+                id="name"
+                placeholder="Enter your name"
+                value={partnerName}
+                onChange={(e) => setPartnerName(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && handleJoin()}
+                disabled={joining}
+                className="bg-white/10 backdrop-blur border-white/30 text-white placeholder:text-white/50"
+              />
+              <p className="text-xs text-gray-400">
+                No account needed - just enter your name to start
+              </p>
+            </div>
 
-          <Button
-            onClick={handleJoin}
-            disabled={joining || !partnerName.trim()}
-            className="w-full"
-            size="lg"
-          >
-            {joining ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Joining...</>
-            ) : (
-              <><Heart className="w-4 h-4 mr-2" /> Join Challenge</>
-            )}
-          </Button>
+            <Button
+              onClick={handleJoin}
+              disabled={joining || !partnerName.trim()}
+              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+              size="lg"
+            >
+              {joining ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Joining...</>
+              ) : (
+                <><Heart className="w-4 h-4 mr-2" /> Join Challenge</>
+              )}
+            </Button>
 
-          <div className="text-center">
-            <p className="text-xs text-muted-foreground">
-              Powered by <span className="font-semibold text-primary">NewWomen</span>
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="text-center">
+              <p className="text-xs text-gray-400">
+                Powered by <span className="font-semibold text-pink-400">NewWomen</span>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
-
