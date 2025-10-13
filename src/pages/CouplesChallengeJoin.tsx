@@ -63,7 +63,8 @@ export default function CouplesChallengeJoin() {
         return;
       }
 
-      if (data.partner_id && data.partner_id !== "guest") {
+      // Check if partner already joined (either registered user or guest)
+      if (data.partner_id || data.partner_name) {
         setError("This challenge already has a partner joined.");
         return;
       }
@@ -104,7 +105,7 @@ export default function CouplesChallengeJoin() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: currentChallenge, error: fetchError } = await (supabase as any)
         .from("couples_challenges")
-        .select("messages, question_set, status, partner_id")
+        .select("messages, question_set, status, partner_id, partner_name")
         .eq("id", challengeId)
         .single();
 
@@ -117,8 +118,8 @@ export default function CouplesChallengeJoin() {
         throw new Error('Challenge not found');
       }
 
-      // Check if already joined
-      if (currentChallenge.partner_id && currentChallenge.partner_id !== null) {
+      // Check if already joined (either by registered user or guest)
+      if (currentChallenge.partner_id || currentChallenge.partner_name) {
         throw new Error('This challenge already has a partner');
       }
 
@@ -146,10 +147,12 @@ export default function CouplesChallengeJoin() {
       };
 
       // Update challenge with partner name and status
+      // Note: We DON'T set partner_id for guests (leave it NULL)
+      // We only use partner_name to identify guest partners
       console.log('Updating challenge with partner info...');
       const updateData = {
         partner_name: partnerName.trim(),
-        partner_id: "guest", // Mark as guest partner
+        // partner_id stays NULL for guest partners
         status: "in_progress",
         messages: [...currentMessages, joinMessage, firstQuestion],
       };
