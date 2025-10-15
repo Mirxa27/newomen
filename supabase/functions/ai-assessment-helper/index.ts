@@ -16,12 +16,13 @@ interface AssessmentHelperPayload {
   questionType?: string;
 }
 
-const ZAI_BASE_URL = Deno.env.get('ZAI_BASE_URL') || 'https://api.z.ai/api/coding/paas/v4';
-const ZAI_MODEL = Deno.env.get('ZAI_MODEL') || 'GLM-4.5-Air';
+const ZAI_BASE_URL = 'https://api.z.ai/api/coding/paas/v4';
+const ZAI_MODEL_SUGGESTIONS = 'GLM-4.5-Air'; // For generating answer suggestions
+const ZAI_AUTH_TOKEN = 'b8979b7827034e8ab50df3d09f975ca7.fQUeGKyLX1xtGJgN';
 
 // Z.AI API Integration for Assessment Helper
 async function callZAI(prompt: string, systemPrompt: string, supabase: any) {
-  let zaiApiKey = Deno.env.get('ZAI_AUTH_TOKEN') || Deno.env.get('ZAI_API_KEY');
+  let zaiApiKey = ZAI_AUTH_TOKEN;
 
   if (!zaiApiKey) {
     // Retrieve API key directly from provider_api_keys table as fallback
@@ -63,7 +64,7 @@ async function callZAI(prompt: string, systemPrompt: string, supabase: any) {
       'Authorization': `Bearer ${zaiApiKey}`
     },
     body: JSON.stringify({
-      model: ZAI_MODEL,
+      model: ZAI_MODEL_SUGGESTIONS,
       messages: [
         {
           role: 'system',

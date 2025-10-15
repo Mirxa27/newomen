@@ -138,7 +138,10 @@ export default function Assessment() {
 
   // Generate AI answer options for a specific question
   const generateAIAnswerOptions = useCallback(async (questionId: string, questionText: string, questionType: string) => {
-    if (!id || !requiresAI) return;
+    if (!id) return;
+    
+    // Don't regenerate if we already have suggestions for this question
+    if (aiAnswerOptions[questionId]) return;
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -175,7 +178,7 @@ export default function Assessment() {
     } catch (error) {
       console.error('AI answer generation failed:', error);
     }
-  }, [id, requiresAI]);
+  }, [id]);
 
   const loadAssessment = useCallback(async () => {
     if (!id) return;
@@ -246,7 +249,8 @@ export default function Assessment() {
 
       // Parse questions from JSON
       const questions = unifiedAIAssessmentService.parseAssessmentQuestions(assessment.questions);
-      if (requiresAI && questions.length > 0) {
+      // ALWAYS generate AI suggestions for the first question
+      if (questions.length > 0) {
         const firstQuestion = questions[0];
         await generateAIAnswerOptions(
           firstQuestion.id,
@@ -260,7 +264,7 @@ export default function Assessment() {
     } finally {
       setLoading(false);
     }
-  }, [assessment, id, aiHealthCheck, generateAIAnswerOptions, toast, requiresAI]);
+  }, [assessment, id, aiHealthCheck, generateAIAnswerOptions, toast]);
 
   const submitAssessment = useCallback(async () => {
     if (!attempt || !assessment) return;
@@ -392,7 +396,8 @@ export default function Assessment() {
         const newIndex = currentQuestionIndex + 1;
         setCurrentQuestionIndex(newIndex);
         
-        if (requiresAI && questions[newIndex]) {
+        // ALWAYS generate AI suggestions for every question
+        if (questions[newIndex]) {
           const question = questions[newIndex];
           await generateAIAnswerOptions(
             question.id,
@@ -839,8 +844,8 @@ export default function Assessment() {
           </CardContent>
         </Card>
 
-        {/* AI Answer Options */}
-        {requiresAI && currentQuestion && aiAnswerOptions[currentQuestion.id] && (
+        {/* AI Answer Options - Always show for every question */}
+        {currentQuestion && aiAnswerOptions[currentQuestion.id] && (
           <Card className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 border-2 border-green-300 mt-4 shadow-md">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-green-800 text-lg">

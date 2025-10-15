@@ -15,39 +15,16 @@ interface ProcessAssessmentPayload {
   timeSpentMinutes: number;
 }
 
-// Z.AI API Integration (GLM-4.6) - Coding Subscription
-async function analyzeWithZAI(assessmentContext: Record<string, unknown>, aiConfig: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
-  // Retrieve API key directly from provider_api_keys table
-  const { data: apiKeyData, error: keyError } = await supabase
-    .from('provider_api_keys')
-    .select('api_key, encrypted')
-    .eq('provider_id', '9415e5a1-4fcf-4aaa-98f8-44a5e9be1df8') // Z.ai provider ID
-    .single();
-  
-  if (keyError) {
-    console.error('Error retrieving Z.AI API key:', keyError);
-    throw new Error(`Z.AI API key retrieval failed: ${keyError.message}`);
-  }
-  
-  if (!apiKeyData) {
-    throw new Error('Z.AI API key not configured. Please add your Z.ai API key in the admin panel.');
-  }
+// Z.AI API Integration - Using GLM-4.6 for final results
+const ZAI_BASE_URL = 'https://api.z.ai/api/coding/paas/v4';
+const ZAI_MODEL_RESULTS = 'GLM-4.6'; // For generating final assessment results
+const ZAI_AUTH_TOKEN = 'b8979b7827034e8ab50df3d09f975ca7.fQUeGKyLX1xtGJgN';
 
-  // Decrypt API key if needed
-  let zaiApiKey = apiKeyData.api_key;
-  if (apiKeyData.encrypted) {
-    try {
-      // Simple decryption (in production, use proper encryption)
-      const decoded = atob(apiKeyData.api_key);
-      zaiApiKey = decoded.split('_encrypted_')[0];
-      console.log('API key decrypted successfully');
-    } catch (decryptError) {
-      console.error('Failed to decrypt API key:', decryptError);
-      throw new Error('API key decryption failed');
-    }
-  }
-  const zaiBaseUrl = aiConfig.api_base_url || 'https://api.z.ai/api/coding/paas/v4';
-  const zaiModel = aiConfig.model_name || 'GLM-4.6';
+async function analyzeWithZAI(assessmentContext: Record<string, unknown>, aiConfig: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
+  // Use configured Z.AI credentials
+  const zaiApiKey = ZAI_AUTH_TOKEN;
+  const zaiBaseUrl = ZAI_BASE_URL;
+  const zaiModel = ZAI_MODEL_RESULTS;
 
   const systemPrompt = aiConfig.system_prompt || `You are an expert psychologist and personal growth coach. Analyze user responses to assessment questions and provide detailed, personalized feedback.
 
