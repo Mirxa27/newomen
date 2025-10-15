@@ -24,7 +24,7 @@ interface SecurityInfo {
 
 interface FrameMessage {
   type: 'url-change' | 'title-change' | 'favicon-change' | 'security-info' | 'loading-state';
-  data: any;
+  data: string | boolean | SecurityInfo;
 }
 
 export function BrowserFrame({

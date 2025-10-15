@@ -109,7 +109,17 @@ export function AgentsTab({ onDataChange }: AgentsTabProps) {
       .from('agents')
       .select('id, name, description, model_id, voice_id, prompt_id, status, created_at, last_tested_at');
     if (error) throw error;
-    return (data || []).map((row: any) => ({
+    return (data || []).map((row: {
+      id: string;
+      name: string;
+      description: string | null;
+      model_id: string;
+      voice_id: string | null;
+      prompt_id: string | null;
+      status: string;
+      created_at: string;
+      last_tested_at: string | null;
+    }) => ({
       id: row.id,
       name: row.name,
       description: row.description || '',

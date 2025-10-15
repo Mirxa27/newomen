@@ -192,7 +192,7 @@ describe('Landing Page', () => {
       global.dispatchEvent(new Event('resize'));
       
       const { container } = renderWithRouter(<Landing />);
-      expect(container)} toBeInTheDocument();
+      expect(container).toBeInTheDocument();
     });
   });
 });

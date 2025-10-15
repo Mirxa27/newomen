@@ -36,7 +36,8 @@ export const useAdmin = () => {
           console.error("Failed to load admin role:", error);
           setIsAdmin(isAdminByEmail);
         } else {
-          const isAdminByRole = ((data as any)?.role ?? "user") === "admin";
+          const profileData = data as { role?: string };
+          const isAdminByRole = (profileData?.role ?? "user") === "admin";
           setIsAdmin(isAdminByRole || isAdminByEmail);
         }
       } catch (error) {

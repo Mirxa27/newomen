@@ -86,7 +86,18 @@ export function MonitoringTab({ onDataChange }: MonitoringTabProps) {
         .select('tokens_used, cost_usd, created_at')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      const totals = (logs || []).reduce((acc: any, row: any) => {
+      interface UsageLog {
+        tokens_used: number | null;
+        cost_usd: number | string | null;
+        created_at: string;
+      }
+      interface UsageTotals {
+        totalRequests: number;
+        totalTokens: number;
+        totalCost: number;
+        requestsToday: number;
+      }
+      const totals = (logs || []).reduce((acc: UsageTotals, row: UsageLog) => {
         acc.totalRequests += 1;
         acc.totalTokens += row.tokens_used || 0;
         acc.totalCost += Number(row.cost_usd || 0);

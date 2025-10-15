@@ -1,15 +1,24 @@
 import { useState, useCallback, useRef } from 'react';
 import { useToast } from './useToast';
 
+interface AICommandParameters {
+  url?: string;
+  query?: string;
+  selector?: string;
+  direction?: 'up' | 'down';
+  amount?: number;
+  [key: string]: string | number | undefined;
+}
+
 interface AICommand {
   type: 'search' | 'navigate' | 'new_tab' | 'close_tab' | 'screenshot' | 'scroll' | 'click' | 'extract';
-  parameters: any;
+  parameters: AICommandParameters;
   context?: string;
 }
 
 interface AIResponse {
   success: boolean;
-  data?: any;
+  data?: string | object | null;
   error?: string;
   suggestedActions?: AICommand[];
 }
@@ -136,8 +145,8 @@ export function useAIAgent(options: UseAIAgentOptions = {}) {
 
   const executeDefaultCommand = async (command: AICommand): Promise<AIResponse> => {
     switch (command.type) {
-      case 'search':
-        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(command.parameters.query)}`;
+      case 'search': {
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(command.parameters.query || '')}`;
         window.open(searchUrl, '_blank');
         return {
           success: true,
@@ -147,8 +156,9 @@ export function useAIAgent(options: UseAIAgentOptions = {}) {
             { type: 'extract', parameters: { contentType: 'search results' } }
           ]
         };
+      }
 
-      case 'navigate':
+      case 'navigate': {
         window.open(command.parameters.url, '_blank');
         return {
           success: true,
@@ -158,37 +168,42 @@ export function useAIAgent(options: UseAIAgentOptions = {}) {
             { type: 'extract', parameters: { contentType: 'page content' } }
           ]
         };
+      }
 
-      case 'new_tab':
+      case 'new_tab': {
         window.open('about:blank', '_blank');
         return {
           success: true,
           data: { action: 'new tab opened' },
           suggestedActions: [{ type: 'navigate', parameters: { url: 'https://google.com' } }]
         };
+      }
 
-      case 'close_tab':
+      case 'close_tab': {
         // Note: This is limited by browser security
         return {
           success: false,
           error: 'Cannot close tabs due to browser security restrictions'
         };
+      }
 
-      case 'screenshot':
+      case 'screenshot': {
         return {
           success: true,
           data: { action: 'screenshot requested' },
           suggestedActions: [{ type: 'extract', parameters: { contentType: 'visible content' } }]
         };
+      }
 
-      case 'scroll':
+      case 'scroll': {
         return {
           success: true,
           data: { direction: command.parameters.direction, amount: command.parameters.amount },
           suggestedActions: [{ type: 'extract', parameters: { contentType: 'newly visible content' } }]
         };
+      }
 
-      case 'click':
+      case 'click': {
         return {
           success: true,
           data: { target: command.parameters.target },
@@ -197,19 +212,22 @@ export function useAIAgent(options: UseAIAgentOptions = {}) {
             { type: 'extract', parameters: { contentType: 'interaction result' } }
           ]
         };
+      }
 
-      case 'extract':
+      case 'extract': {
         return {
           success: true,
           data: { contentType: command.parameters.contentType },
           suggestedActions: [{ type: 'screenshot', parameters: {} }]
         };
+      }
 
-      default:
+      default: {
         return {
           success: false,
           error: `Unknown command type: ${command.type}`
         };
+      }
     }
   };
 

@@ -135,7 +135,17 @@ export function ConfigurationsTab({ onDataChange }: ConfigurationsTabProps) {
       .select('*')
       .order('created_at', { ascending: false });
     if (error) throw error;
-    return (data || []).map((row: any) => ({
+    return (data || []).map((row: {
+      id: string;
+      name: string;
+      description: string | null;
+      is_active: boolean;
+      temperature: number | null;
+      max_tokens: number | null;
+      system_prompt: string | null;
+      created_at: string;
+      updated_at: string;
+    }) => ({
       id: row.id,
       name: row.name,
       description: row.description || '',
@@ -143,7 +153,7 @@ export function ConfigurationsTab({ onDataChange }: ConfigurationsTabProps) {
       modelId: row.id, // placeholder mapping to model via mappings below if needed
       isActive: row.is_active,
       settings: {
-        temperature: Number(row.temperature) ?? 0.7,
+        temperature: row.temperature !== null ? Number(row.temperature) : 0.7,
         maxTokens: row.max_tokens ?? 1000,
         systemPrompt: row.system_prompt || ''
       },

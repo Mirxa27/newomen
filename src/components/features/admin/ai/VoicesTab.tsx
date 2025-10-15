@@ -50,11 +50,16 @@ export function VoicesTab() {
       ]);
 
       // Enhance voices with provider info
-      const enhancedVoices = voicesData.map(voice => ({
-        ...voice,
-        providerName: (voice as any).providers?.name || 'Unknown',
-        providerType: (voice as any).providers?.type || 'unknown'
-      }));
+      const enhancedVoices = voicesData.map(voice => {
+        const voiceWithProvider = voice as typeof voice & {
+          providers?: { name: string; type: string };
+        };
+        return {
+          ...voice,
+          providerName: voiceWithProvider.providers?.name || 'Unknown',
+          providerType: voiceWithProvider.providers?.type || 'unknown'
+        };
+      });
 
       setVoices(enhancedVoices);
       setProviders(providersData);

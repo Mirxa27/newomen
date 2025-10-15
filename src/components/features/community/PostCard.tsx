@@ -13,7 +13,7 @@ interface PostCardProps {
   post: CommunityPost;
   onLike?: (postId: string) => void;
   onUnlike?: (postId: string) => void;
-  onComment?: (postId: string, content: string) => Promise<any>;
+  onComment?: (postId: string, content: string) => Promise<void>;
   onShare?: (postId: string) => void;
   onClick?: (postId: string) => void;
 }

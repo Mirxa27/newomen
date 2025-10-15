@@ -50,11 +50,16 @@ export function ModelsTab() {
       ]);
 
       // Enhance models with provider info
-      const enhancedModels = modelsData.map(model => ({
-        ...model,
-        providerName: (model as any).providers?.name || 'Unknown',
-        providerType: (model as any).providers?.type || 'unknown'
-      }));
+      const enhancedModels = modelsData.map(model => {
+        const modelWithProvider = model as typeof model & {
+          providers?: { name: string; type: string };
+        };
+        return {
+          ...model,
+          providerName: modelWithProvider.providers?.name || 'Unknown',
+          providerType: modelWithProvider.providers?.type || 'unknown'
+        };
+      });
 
       setModels(enhancedModels);
       setProviders(providersData);

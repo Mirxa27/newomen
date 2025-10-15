@@ -33,37 +33,46 @@ export function VoiceInterface({
     isSupported: false
   });
 
-  const recognitionRef = useRef<any>(null);
+  interface SpeechRecognitionType {
+    continuous: boolean;
+    interimResults: boolean;
+    lang: string;
+    maxAlternatives: number;
+    onstart: () => void;
+    onend: () => void;
+    onerror: (event: { error: string }) => void;
+    onresult: (event: SpeechRecognitionEvent) => void;
+    start: () => void;
+    stop: () => void;
+  }
+
+  interface SpeechRecognitionEvent {
+    resultIndex: number;
+    results: {
+      length: number;
+      [index: number]: {
+        isFinal: boolean;
+        [index: number]: { transcript: string };
+      };
+    };
+  }
+
+  const recognitionRef = useRef<SpeechRecognitionType | null>(null);
   const synthesisRef = useRef<SpeechSynthesis | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
 
-  // Initialize voice capabilities
-  useEffect(() => {
-    const checkSupport = () => {
-      const hasSpeechRecognition = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
-      const hasSpeechSynthesis = 'speechSynthesis' in window;
-      
-      setState(prev => ({
-        ...prev,
-        isSupported: hasSpeechRecognition && hasSpeechSynthesis
-      }));
-
-      if (hasSpeechSynthesis) {
-        synthesisRef.current = window.speechSynthesis;
-      }
-
-      if (hasSpeechRecognition) {
-        initializeSpeechRecognition();
-      }
-    };
-
-    checkSupport();
-  }, []);
-
   const initializeSpeechRecognition = useCallback(() => {
-    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    const SpeechRecognition = (window as Window & typeof globalThis & {
+      webkitSpeechRecognition?: new () => SpeechRecognitionType;
+      SpeechRecognition?: new () => SpeechRecognitionType;
+    }).webkitSpeechRecognition || (window as Window & typeof globalThis & {
+      webkitSpeechRecognition?: new () => SpeechRecognitionType;
+      SpeechRecognition?: new () => SpeechRecognitionType;
+    }).SpeechRecognition;
+    
+    if (!SpeechRecognition) return;
     recognitionRef.current = new SpeechRecognition();
     
     recognitionRef.current.continuous = true;
@@ -79,12 +88,12 @@ export function VoiceInterface({
       setState(prev => ({ ...prev, isListening: false }));
     };
 
-    recognitionRef.current.onerror = (event: any) => {
+    recognitionRef.current.onerror = (event: { error: string }) => {
       console.error('Speech recognition error:', event.error);
       setState(prev => ({ ...prev, isListening: false }));
     };
 
-    recognitionRef.current.onresult = (event: any) => {
+    recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
       let finalTranscript = '';
       let interimTranscript = '';
 

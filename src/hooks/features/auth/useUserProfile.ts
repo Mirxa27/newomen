@@ -48,7 +48,7 @@ export function useUserProfile(options: UseUserProfileOptions = {}) {
         throw profileError || new Error('Profile not found');
       }
 
-      setProfile(profileData as any);
+      setProfile(profileData);
 
       const { data: thresholdsData, error: thresholdsError } = await supabase
         .from('level_thresholds')

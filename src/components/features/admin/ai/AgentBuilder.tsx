@@ -52,9 +52,21 @@ interface AgentTemplate {
   capabilities: string[];
 }
 
+interface Agent {
+  id: string;
+  name: string;
+  description: string;
+  modelId: string;
+  voiceId?: string;
+  promptId?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface AgentBuilderProps {
-  onAgentCreated?: (agent: any) => void;
-  onAgentUpdated?: (agent: any) => void;
+  onAgentCreated?: (agent: Agent) => void;
+  onAgentUpdated?: (agent: Agent) => void;
 }
 
 export function AgentBuilder({ onAgentCreated, onAgentUpdated }: AgentBuilderProps) {

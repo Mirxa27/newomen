@@ -31,7 +31,7 @@ export function useCommunity() {
   const [searching, setSearching] = useState(false);
 
   // Helper function to handle Supabase errors
-  const handleSupabaseError = (error: any, context: string) => {
+  const handleSupabaseError = (error: Error, context: string) => {
     console.error(`Supabase error in ${context}:`, error);
     toast.error(`An error occurred while ${context}.`);
   };

@@ -64,7 +64,17 @@ export function useCommunityReal() {
         throw error;
       }
 
-      const formattedConnections: SimpleConnection[] = (data || []).map((conn: any) => ({
+      interface RawConnection {
+        id: string;
+        requester_id: string;
+        receiver_id: string;
+        status: string;
+        requester_nickname?: string;
+        requester_avatar?: string;
+        receiver_nickname?: string;
+        receiver_avatar?: string;
+      }
+      const formattedConnections: SimpleConnection[] = (data || []).map((conn: RawConnection) => ({
         id: conn.id,
         requester_id: conn.requester_id,
         receiver_id: conn.receiver_id,
@@ -100,16 +110,23 @@ export function useCommunityReal() {
     try {
       // Query connections directly without joins due to type issues
       const { data: connectionsData, error: connError } = await supabase
-        .from('community_connections' as any)
+        .from('community_connections')
         .select('*')
         .or(`requester_id.eq.${profile.id},receiver_id.eq.${profile.id}`)
         .order('created_at', { ascending: false });
 
       if (connError) throw connError;
 
+      interface DirectConnection {
+        id: string;
+        requester_id: string;
+        receiver_id: string;
+        status: string;
+      }
+
       // Get unique user IDs to fetch user details separately
       const userIds = new Set<string>();
-      (connectionsData || []).forEach((conn: any) => {
+      (connectionsData || []).forEach((conn: DirectConnection) => {
         userIds.add(conn.requester_id);
         userIds.add(conn.receiver_id);
       });
@@ -118,7 +135,7 @@ export function useCommunityReal() {
       const userProfiles: Record<string, UserProfile> = {};
       if (userIds.size > 0) {
         const { data: usersData, error: usersError } = await supabase
-          .from('user_profiles' as any)
+          .from('user_profiles')
           .select('id, nickname, avatar_url, full_name')
           .in('id', Array.from(userIds));
 
@@ -130,7 +147,7 @@ export function useCommunityReal() {
       }
 
       // Combine data
-      const formattedConnections: SimpleConnection[] = (connectionsData || []).map((conn: any) => ({
+      const formattedConnections: SimpleConnection[] = (connectionsData || []).map((conn: DirectConnection) => ({
         id: conn.id,
         requester_id: conn.requester_id,
         receiver_id: conn.receiver_id,
@@ -179,7 +196,12 @@ export function useCommunityReal() {
         throw error;
       }
 
-      const users: SimpleUser[] = (data || []).map((user: any) => ({
+      interface SearchUser {
+        id: string;
+        nickname: string;
+        avatar_url?: string;
+      }
+      const users: SimpleUser[] = (data || []).map((user: SearchUser) => ({
         id: user.id,
         nickname: user.nickname,
         avatar_url: user.avatar_url
@@ -202,7 +224,7 @@ export function useCommunityReal() {
 
     try {
       const { data, error } = await supabase
-        .from('user_profiles' as any)
+        .from('user_profiles')
         .select('id, nickname, avatar_url')
         .or(`nickname.ilike.%${query}%,full_name.ilike.%${query}%`)
         .neq('id', profile.id)
@@ -210,7 +232,12 @@ export function useCommunityReal() {
 
       if (error) throw error;
 
-      const users: SimpleUser[] = (data || []).map((user: any) => ({
+      interface DirectSearchUser {
+        id: string;
+        nickname: string;
+        avatar_url?: string;
+      }
+      const users: SimpleUser[] = (data || []).map((user: DirectSearchUser) => ({
         id: user.id,
         nickname: user.nickname,
         avatar_url: user.avatar_url
