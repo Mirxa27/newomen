@@ -363,7 +363,8 @@ export default function WellnessLibrary() {
         audio_url: string;
         youtube_url?: string;
         description: string;
-        is_active?: boolean;
+        status?: string;
+        audio_type?: string;
       }
 
       // Type-safe query with proper error handling
@@ -375,7 +376,7 @@ export default function WellnessLibrary() {
       const result = await supabase
         .from('wellness_resources' as 'community_announcements') // Type workaround
         .select('*')
-        .eq('is_active', true)
+        .eq('status', 'active')
         .order('created_at', { ascending: false }) as unknown as WellnessQueryResult;
 
       const { data, error } = result;
