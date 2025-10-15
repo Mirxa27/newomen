@@ -8,14 +8,17 @@ import { Input } from "@/components/shared/ui/input";
 import { Textarea } from "@/components/shared/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/shared/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/shared/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/shared/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Eye, Edit, Trash2, Plus } from "lucide-react";
+import { Eye, Edit, Trash2, Plus, Sparkles, Loader2 } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { ConfirmationDialog } from "@/components/shared/ui/ConfirmationDialog";
+import { Label } from "@/components/shared/ui/label";
 
 const AFFIRMATION_CATEGORIES = ["self-love", "growth", "empowerment", "resilience"] as const;
 const CHALLENGE_CATEGORIES = ["connection", "intimacy", "communication", "play"] as const;
+const VISIBILITY_OPTIONS = ["public", "members_only", "subscribed_only"] as const;
 
 type Affirmation = Tables<"affirmations">;
 type ChallengeTemplate = Tables<"challenge_templates">;
@@ -24,6 +27,16 @@ type WellnessResource = Tables<"wellness_resources">;
 
 type NewAffirmationState = { content: string; category: (typeof AFFIRMATION_CATEGORIES)[number]; tone: string; };
 type NewChallengeState = { title: string; question: string; category: (typeof CHALLENGE_CATEGORIES)[number]; description: string; };
+
+interface AssessmentFormState {
+  title: string;
+  description: string;
+  category: string;
+  assessment_type: string;
+  difficulty_level: string;
+  is_public: (typeof VISIBILITY_OPTIONS)[number];
+  ai_prompt?: string;
+}
 
 export default function ContentManagement() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
@@ -35,6 +48,19 @@ export default function ContentManagement() {
   const [newChallenge, setNewChallenge] = useState<NewChallengeState>({ title: "", question: "", category: "connection", description: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dialogState, setDialogState] = useState<{ type: 'assessment' | 'affirmation' | 'challenge'; id: string } | null>(null);
+  
+  // Assessment creation state
+  const [assessmentDialogOpen, setAssessmentDialogOpen] = useState(false);
+  const [assessmentFormData, setAssessmentFormData] = useState<AssessmentFormState>({
+    title: "",
+    description: "",
+    category: "personality",
+    assessment_type: "personality",
+    difficulty_level: "medium",
+    is_public: "public",
+    ai_prompt: ""
+  });
+  const [generatingAssessment, setGeneratingAssessment] = useState(false);
 
   useEffect(() => {
     loadContent();
@@ -115,6 +141,78 @@ export default function ContentManagement() {
     }
   };
 
+  const generateAssessmentWithAI = async () => {
+    if (!assessmentFormData.title.trim()) {
+      toast.error("Please enter an assessment title");
+      return;
+    }
+
+    setGeneratingAssessment(true);
+    try {
+      // Call Supabase edge function to generate assessment with AI
+      const { data, error } = await supabase.functions.invoke('ai-content-builder', {
+        body: {
+          topic: assessmentFormData.title,
+          type: 'assessment',
+          isPublic: assessmentFormData.is_public === 'public',
+          context: `${assessmentFormData.description}. Category: ${assessmentFormData.category}. Difficulty: ${assessmentFormData.difficulty_level}. ${assessmentFormData.ai_prompt ? `Custom instructions: ${assessmentFormData.ai_prompt}` : ''}`,
+        }
+      });
+
+      if (error) throw error;
+
+      // Map visibility option to is_public
+      const isPublic = assessmentFormData.is_public === 'public';
+      
+      // Convert the generated assessment structure to match our database schema
+      const questions = (data.questions || []).map((q: any) => ({
+        id: `q-${Math.random().toString(36).substr(2, 9)}`,
+        question: q.question,
+        type: q.type || 'multiple_choice',
+        options: q.options,
+        required: q.required !== false,
+        weight: 1,
+        order: q.order || 0,
+      }));
+
+      // Insert the generated assessment into the database
+      const { error: insertError } = await supabase.from("assessments_enhanced").insert({
+        title: data.title || assessmentFormData.title,
+        description: data.description || assessmentFormData.description || null,
+        category: assessmentFormData.category,
+        type: assessmentFormData.assessment_type,
+        difficulty_level: assessmentFormData.difficulty_level,
+        questions: questions,
+        scoring_rubric: {
+          passing_score: 70,
+          scoring_method: 'points'
+        },
+        is_public: isPublic,
+        is_active: true,
+      });
+
+      if (insertError) throw insertError;
+
+      toast.success("Assessment created with AI successfully!");
+      setAssessmentDialogOpen(false);
+      setAssessmentFormData({
+        title: "",
+        description: "",
+        category: "personality",
+        assessment_type: "personality",
+        difficulty_level: "medium",
+        is_public: "public",
+        ai_prompt: ""
+      });
+      await loadContent();
+    } catch (error) {
+      console.error("Error generating assessment:", error);
+      toast.error("Failed to generate assessment with AI");
+    } finally {
+      setGeneratingAssessment(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!dialogState) return;
     const { type, id } = dialogState;
@@ -137,6 +235,20 @@ export default function ContentManagement() {
     } finally {
       setDialogState(null);
     }
+  };
+
+  const getVisibilityBadge = (visibility: string) => {
+    const variants: Record<string, "default" | "secondary" | "outline"> = {
+      public: "default",
+      members_only: "secondary",
+      subscribed_only: "outline"
+    };
+    const labels: Record<string, string> = {
+      public: "Public",
+      members_only: "Members Only",
+      subscribed_only: "Subscribed Only"
+    };
+    return { variant: variants[visibility] || "secondary", label: labels[visibility] || visibility };
   };
 
   if (loading) {
@@ -165,20 +277,36 @@ export default function ContentManagement() {
                   <CardTitle>Assessments</CardTitle>
                   <CardDescription>Manage personality tests and assessments</CardDescription>
                 </div>
-                <Button className="clay-button"><Plus className="w-4 h-4 mr-2" />Create Assessment</Button>
+                <Button className="clay-button" onClick={() => setAssessmentDialogOpen(true)}>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Create with AI
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
               <ResponsiveTable>
                 <Table>
-                  <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>Type</TableHead><TableHead>Questions</TableHead><TableHead>Visibility</TableHead><TableHead>Created</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Questions</TableHead>
+                      <TableHead>Visibility</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
                   <TableBody>
                     {assessments.map((assessment) => (
                       <TableRow key={assessment.id}>
                         <TableCell className="font-medium">{assessment.title}</TableCell>
-                        <TableCell>{assessment.category}</TableCell>
+                        <TableCell>{assessment.type}</TableCell>
                         <TableCell>{Array.isArray(assessment.questions) ? assessment.questions.length : 0}</TableCell>
-                        <TableCell><Badge variant={assessment.is_public ? "default" : "secondary"}>{assessment.is_public ? "Public" : "Members Only"}</Badge></TableCell>
+                        <TableCell>
+                          <Badge variant={getVisibilityBadge(assessment.is_public ? 'public' : 'members_only').variant as any}>
+                            {getVisibilityBadge(assessment.is_public ? 'public' : 'members_only').label}
+                          </Badge>
+                        </TableCell>
                         <TableCell>{assessment.created_at ? new Date(assessment.created_at).toLocaleDateString() : "-"}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
@@ -302,7 +430,7 @@ export default function ContentManagement() {
                       <div className="space-y-2">
                         <p className="text-sm font-medium">Questions:</p>
                         <ul className="list-disc list-inside space-y-1">
-                          {Array.isArray(challenge.questions) ? (challenge.questions as string[]).map((question, idx) => <li key={idx} className="text-sm text-muted-foreground">{question}</li>) : null}
+                          {Array.isArray(challenge.questions) ? (challenge.questions as string[]).map((question, idx) => <li key={`q-${idx}`} className="text-sm text-muted-foreground">{question}</li>) : null}
                         </ul>
                       </div>
                     </CardContent>
@@ -314,6 +442,134 @@ export default function ContentManagement() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Assessment Creation Dialog with AI */}
+      <Dialog open={assessmentDialogOpen} onOpenChange={setAssessmentDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create Assessment with AI</DialogTitle>
+            <DialogDescription>
+              Use AI to generate personalized assessment questions based on your specifications.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="title">Assessment Title *</Label>
+              <Input
+                id="title"
+                placeholder="e.g., Relationship Communication Skills"
+                value={assessmentFormData.title}
+                onChange={(e) => setAssessmentFormData(prev => ({ ...prev, title: e.target.value }))}
+                className="glass mt-1"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Brief description of the assessment..."
+                value={assessmentFormData.description}
+                onChange={(e) => setAssessmentFormData(prev => ({ ...prev, description: e.target.value }))}
+                className="glass mt-1"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="category">Category</Label>
+                <Select value={assessmentFormData.category} onValueChange={(value) => setAssessmentFormData(prev => ({ ...prev, category: value }))}>
+                  <SelectTrigger className="glass mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="personality">Personality</SelectItem>
+                    <SelectItem value="cognitive">Cognitive</SelectItem>
+                    <SelectItem value="emotional">Emotional</SelectItem>
+                    <SelectItem value="relationship">Relationship</SelectItem>
+                    <SelectItem value="wellness">Wellness</SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="type">Type</Label>
+                <Select value={assessmentFormData.assessment_type} onValueChange={(value) => setAssessmentFormData(prev => ({ ...prev, assessment_type: value }))}>
+                  <SelectTrigger className="glass mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="multiple_choice">Multiple Choice</SelectItem>
+                    <SelectItem value="likert_scale">Likert Scale</SelectItem>
+                    <SelectItem value="open_ended">Open Ended</SelectItem>
+                    <SelectItem value="personality">Personality</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="difficulty">Difficulty</Label>
+                <Select value={assessmentFormData.difficulty_level} onValueChange={(value) => setAssessmentFormData(prev => ({ ...prev, difficulty_level: value }))}>
+                  <SelectTrigger className="glass mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="easy">Easy</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="hard">Hard</SelectItem>
+                    <SelectItem value="expert">Expert</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="visibility">Visibility</Label>
+                <Select value={assessmentFormData.is_public} onValueChange={(value) => setAssessmentFormData(prev => ({ ...prev, is_public: value as any }))}>
+                  <SelectTrigger className="glass mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="public">Public</SelectItem>
+                    <SelectItem value="members_only">Members Only</SelectItem>
+                    <SelectItem value="subscribed_only">Subscribed Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="prompt">Custom AI Prompt (Optional)</Label>
+              <Textarea
+                id="prompt"
+                placeholder="Provide specific instructions for AI-generated questions..."
+                value={assessmentFormData.ai_prompt}
+                onChange={(e) => setAssessmentFormData(prev => ({ ...prev, ai_prompt: e.target.value }))}
+                className="glass mt-1"
+              />
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <Button variant="outline" onClick={() => setAssessmentDialogOpen(false)}>Cancel</Button>
+              <Button onClick={generateAssessmentWithAI} disabled={generatingAssessment} className="clay-button">
+                {generatingAssessment ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate with AI
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <ConfirmationDialog
         open={!!dialogState}
         onOpenChange={() => setDialogState(null)}
