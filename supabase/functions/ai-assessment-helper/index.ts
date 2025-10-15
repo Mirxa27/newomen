@@ -61,7 +61,7 @@ async function callZAI(prompt: string, systemPrompt: string, supabase: any) {
     headers: {
       'Content-Type': 'application/json',
       'Accept-Language': 'en-US,en',
-      'Authorization': `Bearer ${zaiApiKey}`
+      'Authorization': zaiApiKey
     },
     body: JSON.stringify({
       model: ZAI_MODEL_SUGGESTIONS,

@@ -68,7 +68,7 @@ Provide a comprehensive analysis with score, feedback, insights, and recommendat
     headers: {
       'Content-Type': 'application/json',
       'Accept-Language': 'en-US,en',
-      'Authorization': `Bearer ${zaiApiKey}`
+      'Authorization': zaiApiKey
     },
     body: JSON.stringify({
       model: zaiModel,
