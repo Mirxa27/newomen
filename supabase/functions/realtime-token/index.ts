@@ -214,11 +214,11 @@ serve(async (req) => {
       // Return token with session info
       return new Response(
         JSON.stringify({
+          ephemeral_key: tokenData.client_secret.value,
+          session_id: tokenData.id,
           client_secret: tokenData.client_secret,
-          token: tokenData.client_secret.value,
-          expiresAt: tokenData.client_secret.expires_at,
-          sessionId: session?.id,
-          realtimeSessionId: tokenData.id,
+          expires_at: tokenData.client_secret.expires_at,
+          db_session_id: session?.id,
           model: tokenData.model,
           voice: tokenData.voice,
           promptId: 'pmpt_68e6d09ba8e48190bf411abef321e0930f5dd910b5b07a3c',
@@ -233,10 +233,10 @@ serve(async (req) => {
     // Return token without session (for non-authenticated users)
     return new Response(
       JSON.stringify({
+        ephemeral_key: tokenData.client_secret.value,
+        session_id: tokenData.id,
         client_secret: tokenData.client_secret,
-        token: tokenData.client_secret.value,
-        expiresAt: tokenData.client_secret.expires_at,
-        realtimeSessionId: tokenData.id,
+        expires_at: tokenData.client_secret.expires_at,
         model: tokenData.model,
         voice: tokenData.voice,
         promptId: 'pmpt_68e6d09ba8e48190bf411abef321e0930f5dd910b5b07a3c',

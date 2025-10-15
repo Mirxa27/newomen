@@ -1,0 +1,160 @@
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║              🌐 SETUP CUSTOM DOMAIN: newomen.me                             ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+🎯 GOAL: Replace Vercel URL with your custom domain newomen.me
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 STEP 1: ADD DOMAIN IN VERCEL (5 minutes)
+
+1. Open Vercel Dashboard:
+   👉 https://vercel.com/mirxa27s-projects/newomen
+
+2. Go to: Settings → Domains
+
+3. Click "Add" button
+
+4. Enter: newomen.me
+
+5. Click "Add" again
+
+6. Copy the DNS records Vercel shows you:
+   
+   A Record:
+   ┌────────────────────────────────────────┐
+   │ Type:  A                               │
+   │ Name:  @                               │
+   │ Value: 76.76.21.21                     │
+   └────────────────────────────────────────┘
+   
+   CNAME Record (for www):
+   ┌────────────────────────────────────────┐
+   │ Type:  CNAME                           │
+   │ Name:  www                             │
+   │ Value: cname.vercel-dns.com            │
+   └────────────────────────────────────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 STEP 2: CONFIGURE DNS AT YOUR REGISTRAR (10 minutes)
+
+1. Login to where you bought newomen.me
+   (GoDaddy, Namecheap, Cloudflare, etc.)
+
+2. Find "DNS Management" or "DNS Settings"
+
+3. Add A Record:
+   ┌────────────────────────────────────────┐
+   │ Type:  A                               │
+   │ Name:  @ (or leave blank)              │
+   │ Value: 76.76.21.21                     │
+   │ TTL:   Automatic or 3600               │
+   └────────────────────────────────────────┘
+
+4. Add CNAME Record:
+   ┌────────────────────────────────────────┐
+   │ Type:  CNAME                           │
+   │ Name:  www                             │
+   │ Value: cname.vercel-dns.com            │
+   │ TTL:   Automatic or 3600               │
+   └────────────────────────────────────────┘
+
+5. Delete any conflicting A or CNAME records
+
+6. Save changes
+
+7. Wait 1-2 hours for DNS propagation
+   (Check status: https://dnschecker.org/#A/newomen.me)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 STEP 3: UPDATE SUPABASE AUTH (2 minutes)
+
+1. Open Supabase Auth Settings:
+   👉 https://supabase.com/dashboard/project/fkikaozubngmzcrnhkqe/auth/url-configuration
+
+2. Update Site URL:
+   ┌────────────────────────────────────────────────────────────────┐
+   │ Site URL:                                                      │
+   │                                                                │
+   │ OLD: https://newomen-dbpuusg87-mirxa27s-projects.vercel.app   │
+   │ NEW: https://newomen.me                                        │
+   └────────────────────────────────────────────────────────────────┘
+
+3. Update Redirect URLs (remove old, add new):
+   
+   ❌ REMOVE:
+      https://newomen-dbpuusg87-mirxa27s-projects.vercel.app/**
+      Any URLs with "dualite"
+   
+   ✅ ADD:
+      https://newomen.me/**
+      https://newomen.me/auth/callback
+      https://newomen.me/onboarding
+      https://www.newomen.me/**
+      https://www.newomen.me/auth/callback
+      https://www.newomen.me/onboarding
+      http://localhost:3000/**
+      http://localhost:5173/**
+
+4. Click "Save"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🧪 STEP 4: TEST YOUR NEW DOMAIN (After DNS propagates)
+
+1. Wait for DNS to propagate (1-2 hours)
+
+2. Visit: https://newomen.me
+   ✅ Should load your app
+
+3. Test signup flow:
+   ✅ Should redirect to https://newomen.me/onboarding
+   ❌ Should NOT redirect to dualite or old Vercel URL
+
+4. Check SSL:
+   ✅ Should show green padlock (HTTPS)
+
+5. Test www redirect:
+   ✅ https://www.newomen.me → https://newomen.me
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📖 DETAILED GUIDE:
+   cat SETUP_CUSTOM_DOMAIN.md
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⏱️  TIMELINE:
+   • Vercel setup: 5 minutes
+   • DNS configuration: 10 minutes
+   • DNS propagation: 1-2 hours
+   • SSL provisioning: 10 minutes (automatic)
+   • Supabase update: 2 minutes
+   • Testing: 5 minutes
+   
+   Total: ~2-3 hours (mostly waiting for DNS)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎉 AFTER SETUP:
+
+Your platform will be live at:
+   
+   ✨ https://newomen.me ✨
+   
+With:
+   ✅ Custom domain
+   ✅ Automatic HTTPS
+   ✅ Global CDN
+   ✅ Proper auth redirects
+   ✅ Professional URL
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🚀 LET'S DO IT!
+

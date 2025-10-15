@@ -16,9 +16,13 @@ interface ProcessAssessmentPayload {
 }
 
 // Z.AI API Integration (GLM-4.6) - Coding Subscription
-async function analyzeWithZAI(assessmentContext: any, aiConfig: any, supabase: any) {
-  // Retrieve API key from Supabase using the by_type function
-  const { data: apiKeyData, error: keyError } = await supabase.rpc('get_provider_api_key_by_type', { p_provider_type: 'zai' });
+async function analyzeWithZAI(assessmentContext: Record<string, unknown>, aiConfig: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
+  // Retrieve API key directly from provider_api_keys table
+  const { data: apiKeyData, error: keyError } = await supabase
+    .from('provider_api_keys')
+    .select('api_key, encrypted')
+    .eq('provider_id', '9415e5a1-4fcf-4aaa-98f8-44a5e9be1df8') // Z.ai provider ID
+    .single();
   
   if (keyError) {
     console.error('Error retrieving Z.AI API key:', keyError);
@@ -29,7 +33,19 @@ async function analyzeWithZAI(assessmentContext: any, aiConfig: any, supabase: a
     throw new Error('Z.AI API key not configured. Please add your Z.ai API key in the admin panel.');
   }
 
-  const zaiApiKey = apiKeyData;
+  // Decrypt API key if needed
+  let zaiApiKey = apiKeyData.api_key;
+  if (apiKeyData.encrypted) {
+    try {
+      // Simple decryption (in production, use proper encryption)
+      const decoded = atob(apiKeyData.api_key);
+      zaiApiKey = decoded.split('_encrypted_')[0];
+      console.log('API key decrypted successfully');
+    } catch (decryptError) {
+      console.error('Failed to decrypt API key:', decryptError);
+      throw new Error('API key decryption failed');
+    }
+  }
   const zaiBaseUrl = aiConfig.api_base_url || 'https://api.z.ai/api/coding/paas/v4';
   const zaiModel = aiConfig.model_name || 'GLM-4.6';
 
@@ -64,6 +80,12 @@ Passing Score: ${assessmentContext.passingScore}
 
 Provide a comprehensive analysis with score, feedback, insights, and recommendations. Return ONLY valid JSON.`;
 
+  console.log('Making request to Z.ai API:', {
+    url: `${zaiBaseUrl}/chat/completions`,
+    model: zaiModel,
+    apiKeyLength: zaiApiKey.length
+  });
+
   const response = await fetch(`${zaiBaseUrl}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -90,9 +112,12 @@ Provide a comprehensive analysis with score, feedback, insights, and recommendat
     })
   });
 
+  console.log('Z.ai API response status:', response.status);
+
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Z.AI API error: ${errorText}`);
+    console.error('Z.ai API error response:', errorText);
+    throw new Error(`Z.AI API error (${response.status}): ${errorText}`);
   }
 
   const result = await response.json();

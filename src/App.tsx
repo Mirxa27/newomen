@@ -1,59 +1,60 @@
 import React, { lazy, Suspense, useEffect } from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/shared/ui/toaster";
+import { Toaster as Sonner } from "@/components/shared/ui/sonner";
+import { TooltipProvider } from "@/components/shared/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./hooks/useAuth";
-import { ProtectedRoute } from "./components/ProtectedRoute";
-import { AdminRoute } from "./components/AdminRoute";
-import MainLayout from "./components/layout/MainLayout";
-import MobileOptimizedLayout from "./components/mobile/MobileOptimizedLayout";
-import AdminLayout from "./components/layout/AdminLayout";
-import { MobileUtils } from "./utils/MobileUtils";
-import { CapacitorUtils } from "./utils/CapacitorUtils";
+import { AuthProvider } from "./hooks/features/auth/useAuth";
+import { ProtectedRoute } from "./components/features/auth/ProtectedRoute";
+import { AdminRoute } from "./components/features/admin/AdminRoute";
+import MainLayout from "./components/shared/layout/MainLayout";
+import MobileOptimizedLayout from "./components/shared/layout/MobileOptimizedLayout";
+import AdminLayout from "./components/shared/layout/AdminLayout";
+import { MobileUtils } from "./utils/features/mobile/MobileUtils";
+import { CapacitorUtils } from "./utils/features/mobile/CapacitorUtils";
 
-const Landing = lazy(() => import("./pages/Landing"));
-const Auth = lazy(() => import("./pages/Auth"));
-const Onboarding = lazy(() => import("./pages/Onboarding"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const MobileDashboard = lazy(() => import("./pages/mobile/MobileDashboard"));
-const Chat = lazy(() => import("./pages/Chat"));
-const CouplesChallenge = lazy(() => import("./pages/CouplesChallenge"));
-const CouplesChallengeChat = lazy(() => import("./pages/CouplesChallengeChat"));
-const CouplesChallengeJoin = lazy(() => import("./pages/CouplesChallengeJoin"));
-const NotFound = lazy(() => import("./pages/NotFound"));
-const Profile = lazy(() => import("./pages/Profile"));
-const WellnessLibrary = lazy(() => import("./pages/WellnessLibrary"));
-const Community = lazy(() => import("./pages/Community"));
-const AccountSettings = lazy(() => import("./pages/AccountSettings"));
-const AboutUs = lazy(() => import("./pages/AboutUs"));
-const Pricing = lazy(() => import("./pages/Pricing"));
-const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
-const TermsOfService = lazy(() => import("./pages/TermsOfService"));
-const NarrativeIdentityExploration = lazy(() => import("./pages/NarrativeIdentityExploration"));
-const FeatureTests = lazy(() => import("./pages/FeatureTests"));
-const PublicAssessments = lazy(() => import("./pages/PublicAssessments"));
-const MemberAssessments = lazy(() => import("./pages/MemberAssessments"));
-const Assessment = lazy(() => import("./pages/Assessment"));
+const Landing = lazy(() => import("./pages/shared/public/Landing"));
+const Auth = lazy(() => import("./pages/features/auth/Auth"));
+const Onboarding = lazy(() => import("./pages/features/auth/Onboarding"));
+const Dashboard = lazy(() => import("./pages/features/dashboard/Dashboard"));
+const MobileDashboard = lazy(() => import("./pages/shared/mobile/MobileDashboard"));
+const Chat = lazy(() => import("./pages/features/ai/Chat"));
+const CouplesChallenge = lazy(() => import("./pages/features/community/CouplesChallenge"));
+const CouplesChallengeChat = lazy(() => import("./pages/features/community/CouplesChallengeChat"));
+const CouplesChallengeJoin = lazy(() => import("./pages/features/community/CouplesChallengeJoin"));
+const NotFound = lazy(() => import("./pages/shared/public/NotFound"));
+const Profile = lazy(() => import("./pages/features/dashboard/Profile"));
+const WellnessLibrary = lazy(() => import("./pages/features/dashboard/WellnessLibrary"));
+const Community = lazy(() => import("./pages/features/community/Community"));
+const AccountSettings = lazy(() => import("./pages/features/dashboard/AccountSettings"));
+const AboutUs = lazy(() => import("./pages/shared/public/AboutUs"));
+const Pricing = lazy(() => import("./pages/features/payment/Pricing"));
+const PrivacyPolicy = lazy(() => import("./pages/shared/public/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/shared/public/TermsOfService"));
+const NarrativeIdentityExploration = lazy(() => import("./pages/features/ai/NarrativeIdentityExploration"));
+const FeatureTests = lazy(() => import("./pages/features/ai/FeatureTests"));
+const PublicAssessments = lazy(() => import("./pages/features/assessment/PublicAssessments"));
+const MemberAssessments = lazy(() => import("./pages/features/assessment/MemberAssessments"));
+const Assessment = lazy(() => import("./pages/features/assessment/Assessment"));
+const AIAgentBrowserPage = lazy(() => import("./pages/features/ai/AIAgentBrowserPage"));
 
 // Admin Pages
-const AdminAnalytics = lazy(() => import("./pages/admin/Analytics"));
-const Agents = lazy(() => import("./pages/admin/Agents"));
-const AIProviderManagement = lazy(() => import("./pages/admin/AIProviderManagement"));
-const AIConfigurationManager = lazy(() => import("./pages/admin/AIConfigurationManager"));
-const AIPrompting = lazy(() => import("./pages/admin/AIPrompting"));
-const AIAssessmentManagement = lazy(() => import("./pages/admin/AIAssessmentManagement"));
-const VoiceTraining = lazy(() => import("./pages/admin/VoiceTraining"));
-const SessionsLive = lazy(() => import("./pages/admin/SessionsLive"));
-const SessionsHistory = lazy(() => import("./pages/admin/SessionsHistory"));
-const UserManagement = lazy(() => import("./pages/admin/UserManagement"));
-const WellnessLibraryManagement = lazy(() => import("./pages/admin/WellnessLibraryManagement"));
-const ContentManagement = lazy(() => import("./pages/admin/ContentManagement"));
-const GamificationSettings = lazy(() => import("./pages/admin/GamificationSettings"));
-const BrandingAssetManagement = lazy(() => import("./pages/admin/BrandingAssetManagement"));
-const APISettings = lazy(() => import("./pages/admin/APISettings"));
-const AdminAnnouncements = lazy(() => import("./pages/admin/AdminAnnouncements"));
+const AdminAnalytics = lazy(() => import("./pages/features/admin/Analytics"));
+const Agents = lazy(() => import("./pages/features/admin/Agents"));
+const AIProviderManagement = lazy(() => import("./pages/features/admin/AIProviderManagement"));
+const UnifiedAIManagement = lazy(() => import("./pages/features/admin/UnifiedAIManagement"));
+const AIPrompting = lazy(() => import("./pages/features/admin/AIPrompting"));
+const AIAssessmentManagement = lazy(() => import("./pages/features/admin/AIAssessmentManagement"));
+const VoiceTraining = lazy(() => import("./pages/features/admin/VoiceTraining"));
+const SessionsLive = lazy(() => import("./pages/features/admin/SessionsLive"));
+const SessionsHistory = lazy(() => import("./pages/features/admin/SessionsHistory"));
+const UserManagement = lazy(() => import("./pages/features/admin/UserManagement"));
+const WellnessLibraryManagement = lazy(() => import("./pages/features/admin/WellnessLibraryManagement"));
+const ContentManagement = lazy(() => import("./pages/features/admin/ContentManagement"));
+const GamificationSettings = lazy(() => import("./pages/features/admin/GamificationSettings"));
+const BrandingAssetManagement = lazy(() => import("./pages/features/admin/BrandingAssetManagement"));
+const APISettings = lazy(() => import("./pages/features/admin/APISettings"));
+const AdminAnnouncements = lazy(() => import("./pages/features/admin/AdminAnnouncements"));
 
 const queryClient = new QueryClient();
 
@@ -165,7 +166,7 @@ const App = () => {
             <Route path="analytics" element={<AdminAnalytics />} />
             <Route path="agents" element={<Agents />} />
             <Route path="ai-providers" element={<AIProviderManagement />} />
-            <Route path="ai-config" element={<AIConfigurationManager />} />
+            <Route path="ai-config" element={<UnifiedAIManagement />} />
             <Route path="ai-prompts" element={<AIPrompting />} />
             <Route path="ai-assessments" element={<AIAssessmentManagement />} />
             <Route path="voice-training" element={<VoiceTraining />} />
@@ -187,6 +188,11 @@ const App = () => {
           <Route path="/feature-tests" element={
             <ProtectedRoute>
               <MainLayout><FeatureTests /></MainLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/ai-browser" element={
+            <ProtectedRoute>
+              <MainLayout><AIAgentBrowserPage /></MainLayout>
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

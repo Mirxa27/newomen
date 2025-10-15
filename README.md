@@ -1,326 +1,215 @@
-# 🌟 Newomen - AI-Powered Personal Growth Platform
+# Newomen - AI-Powered Personal Growth Platform
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black)](https://newomen.me)
-[![Built with React](https://img.shields.io/badge/Built%20with-React-61DAFB)](https://reactjs.org/)
-[![Powered by Supabase](https://img.shields.io/badge/Powered%20by-Supabase-3ECF8E)](https://supabase.com/)
-[![Production Ready](https://img.shields.io/badge/Status-Production%20Ready-success)](https://github.com/Mirxa27/new-mind-nexus)
+A comprehensive React + TypeScript application built with Vite, featuring AI-powered assessments, community features, and mobile support via Capacitor.
 
-Transform your life with **Newomen**, an emotionally intelligent AI companion designed for personal growth, meaningful connections, and lasting transformation.
+## Project Structure
 
-🌐 **Live Site**: [newomen.me](https://newomen.me)
+### Root Directory
+```
+├── src/                    # Source code
+├── public/                 # Static assets
+├── ios/                    # iOS app configuration
+├── supabase/              # Database configuration and migrations
+├── database/              # Database scripts and migrations
+├── deployment/            # Deployment scripts and configurations
+├── tests/                 # Test files organized by type
+├── config/                # Configuration files
+├── docs/                  # Documentation
+└── scripts/               # Build and utility scripts
+```
 
----
+### Source Code Organization (`src/`)
 
-## ✨ Features
+#### Components (`src/components/`)
+Organized by feature and shared components:
+```
+├── features/
+│   ├── ai/                # AI-related components (chat, voice, agents)
+│   ├── auth/              # Authentication and onboarding
+│   ├── admin/             # Admin panel components
+│   ├── assessment/        # Assessment and evaluation components
+│   ├── community/         # Community and social features
+│   └── payment/           # Payment and subscription components
+└── shared/
+    ├── ui/                # Reusable UI components
+    ├── layout/            # Layout components
+    └── forms/             # Form components
+```
 
-### 🎯 Core Features
-- **AI Voice Conversations**: Real-time voice chat with emotionally intelligent AI using OpenAI Realtime API
-- **Personality Assessments**: Deep personality insights with Big Five, MBTI-style, and narrative assessments
-- **Narrative Identity Exploration**: Unique AI-powered journey to discover your authentic self through storytelling
-- **Progress Tracking**: Visual dashboards showing your personal growth journey
-- **Gamification System**: Earn crystals, unlock achievements, and level up as you grow
+#### Pages (`src/pages/`)
+Organized by feature and page type:
+```
+├── features/
+│   ├── ai/                # AI-related pages
+│   ├── auth/              # Authentication pages
+│   ├── admin/             # Admin panel pages
+│   ├── assessment/        # Assessment pages
+│   ├── community/         # Community pages
+│   ├── dashboard/         # Dashboard and profile pages
+│   └── payment/           # Payment pages
+└── shared/
+    ├── public/            # Public pages (landing, about, etc.)
+    └── mobile/            # Mobile-specific pages
+```
 
-### 🤝 Community Features
-- **Connection Hub**: Find and connect with like-minded individuals
-- **Couples Challenge**: Interactive assessment for couples with AI compatibility analysis
-- **Wellness Library**: Curated collection of meditation, affirmations, and breathing exercises with **real audio playback**
+#### Services (`src/services/`)
+Business logic organized by feature:
+```
+├── features/
+│   ├── ai/                # AI services
+│   ├── auth/              # Authentication services
+│   ├── admin/             # Admin services
+│   ├── assessment/        # Assessment services
+│   ├── community/         # Community services
+│   └── payment/           # Payment services
+└── shared/
+    ├── core/              # Core services
+    └── integrations/      # Third-party integrations
+```
 
-### 💳 Subscription & Payments
-- **PayPal Integration**: Secure payment processing for subscription plans
-- **Growth Plan**: $22 for 100 conversation minutes
-- **Transformation Plan**: $222 for 1000 conversation minutes
-- **Real-time subscription management**: Upgrade, cancel, view usage
+#### Hooks (`src/hooks/`)
+Custom React hooks organized by feature:
+```
+├── features/
+│   ├── ai/                # AI-related hooks
+│   ├── auth/              # Authentication hooks
+│   ├── admin/             # Admin hooks
+│   ├── community/         # Community hooks
+│   └── assessment/        # Assessment hooks
+└── shared/
+    ├── ui/                # UI-related hooks
+    └── core/              # Core utility hooks
+```
 
-### 👤 User Experience
-- **Glassmorphism UI**: Modern, elegant design with liquid glass effects
-- **Mobile-First**: Responsive design with floating claymorphism navigation
-- **Secure Authentication**: Powered by Supabase Auth with row-level security
-- **Profile Customization**: Avatar uploads, bio, interests, and progress tracking
-- **Data Export**: GDPR-compliant data export functionality
+#### Library (`src/lib/`)
+Utility functions and configurations:
+```
+├── features/
+│   ├── ai/                # AI utilities
+│   ├── auth/              # Authentication utilities
+│   └── assessment/        # Assessment utilities
+└── shared/
+    ├── core/              # Core utilities
+    ├── utils/              # General utilities
+    ├── types/              # Type definitions
+    └── validation/         # Validation schemas
+```
 
-### 🛡️ Admin Features
-- **Content Management**: Manage affirmations, challenges, assessments
-- **AI Configuration**: Sync providers, manage models and voices
-- **Analytics Dashboard**: Monitor platform usage and user engagement
-- **Session Management**: Live session monitoring with mute controls
+#### Types (`src/types/`)
+TypeScript type definitions:
+```
+├── features/
+│   ├── ai/                # AI-related types
+│   └── assessment/        # Assessment types
+└── shared/
+    └── core/              # Core types
+```
 
----
+#### Utils (`src/utils/`)
+Utility functions:
+```
+├── features/
+│   └── mobile/            # Mobile-specific utilities
+└── shared/
+    └── core/              # Core utilities
+```
 
-## 🚀 Tech Stack
+### Database (`database/`)
+```
+├── migrations/            # Database migration scripts
+├── scripts/               # Database setup and utility scripts
+├── seeds/                 # Database seed data
+└── tests/                 # Database tests
+```
 
-### Frontend
-- **React 18** with TypeScript
-- **Vite** for lightning-fast builds
-- **TailwindCSS** for styling
-- **Shadcn/ui** component library
-- **React Router** for navigation
-- **Recharts** for data visualization
-- **React Query** for data fetching
+### Deployment (`deployment/`)
+```
+├── scripts/               # Deployment scripts
+└── configs/               # Deployment configurations
+```
 
-### Backend
-- **Supabase** for database, authentication, and real-time features
-- **PostgreSQL** with Row Level Security (RLS)
-- **Supabase Edge Functions** (Deno) for serverless API endpoints
+### Tests (`tests/`)
+```
+├── unit/                  # Unit tests
+├── integration/           # Integration tests
+└── e2e/                   # End-to-end tests
+```
 
-### AI Integration
-- **OpenAI Realtime API** for voice conversations
-- **OpenAI GPT-4o** for content generation and analysis
-- **ElevenLabs** for voice synthesis (optional)
+### Configuration (`config/`)
+```
+├── environment/           # Environment configurations
+└── build/                 # Build configurations
+```
 
-### Payment Processing
-- **PayPal SDK** for subscription payments
-- **Custom Edge Functions** for payment handling
+## Key Features
 
----
+- **AI-Powered Assessments**: Comprehensive personality and wellness assessments
+- **Community Features**: Social interactions and challenges
+- **Mobile Support**: iOS and Android apps via Capacitor
+- **Admin Panel**: Complete administrative interface
+- **Payment Integration**: PayPal and subscription management
+- **Real-time Features**: Live chat and notifications
 
-## 🛠️ Development
+## Technology Stack
 
-### Prerequisites
-- Node.js 18+ and npm
-- Supabase account
-- OpenAI API key
-- PayPal Developer account (optional, for payments)
+- **Frontend**: React 18, TypeScript, Vite
+- **UI Framework**: Radix UI, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL, Auth, Real-time)
+- **Mobile**: Capacitor
+- **State Management**: TanStack Query
+- **Routing**: React Router v6
+- **Forms**: React Hook Form + Zod validation
+- **AI Integration**: Multiple AI providers
 
-### Installation
+## Development
 
 ```bash
-# Clone the repository
-git clone https://github.com/Mirxa27/new-mind-nexus.git
-cd new-mind-nexus
-
 # Install dependencies
 npm install
 
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your credentials
-
-# Run development server
+# Start development server
 npm run dev
-```
 
-### Environment Variables
-
-Create a `.env` file with:
-
-```env
-# Required
-VITE_SUPABASE_PROJECT_ID=your-project-id
-VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
-VITE_SUPABASE_URL=https://your-project.supabase.co
-
-# Optional - for PayPal payments
-VITE_PAYPAL_CLIENT_ID=your-paypal-client-id
-```
-
-See `.env.example` for complete list.
-
-### Database Setup
-
-```bash
-# Install Supabase CLI
-npm i supabase --save-dev
-
-# Link to your project
-npx supabase link --project-ref your_project_ref
-
-# Push migrations
-npx supabase db push
-
-# Create storage buckets
-npx supabase storage create avatars --public
-```
-
-### Edge Functions Setup
-
-Configure secrets in Supabase Dashboard:
-
-```bash
-# Required for AI features
-OPENAI_API_KEY=sk-...
-
-# Optional for payments
-PAYPAL_CLIENT_ID=your-client-id
-PAYPAL_SECRET=your-secret
-PAYPAL_MODE=sandbox  # or 'live' for production
-```
-
-Deploy functions:
-
-```bash
-supabase functions deploy ai-content-builder
-supabase functions deploy provider-discovery
-supabase functions deploy realtime-token
-supabase functions deploy paypal-create-order
-supabase functions deploy paypal-capture-order
-```
-
----
-
-## 📦 Deployment
-
-### Quick Deploy to Vercel
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Mirxa27/new-mind-nexus)
-
-### Manual Deployment
-
-```bash
 # Build for production
 npm run build
 
-# Preview build locally
-npm run preview
+# Run tests
+npm test
 
-# Deploy with Vercel CLI
-vercel --prod
+# Lint code
+npm run lint
 ```
 
-See `DEPLOYMENT_PRODUCTION.md` for complete deployment guide.
+## Mobile Development
 
----
+```bash
+# Sync with mobile platforms
+npm run cap:sync
 
-## 🗂️ Project Structure
+# Open iOS project
+npm run ios:build
 
-```
-new-mind-nexus/
-├── src/
-│   ├── components/       # Reusable UI components
-│   │   ├── layout/       # Header, Footer, MainLayout
-│   │   ├── chat/         # Chat interface components
-│   │   ├── ui/           # Shadcn/ui components
-│   │   └── PayPalButton.tsx  # ✨ NEW: PayPal integration
-│   ├── pages/            # Route pages
-│   │   ├── Landing.tsx
-│   │   ├── Dashboard.tsx
-│   │   ├── Chat.tsx
-│   │   ├── Profile.tsx
-│   │   ├── WellnessLibrary.tsx  # ✨ Real audio resources
-│   │   ├── AccountSettings.tsx  # ✨ PayPal integration
-│   │   ├── NarrativeIdentityExploration.tsx
-│   │   └── admin/        # Admin pages
-│   │       ├── ContentManagement.tsx  # ✨ Affirmations & Challenges
-│   │       ├── AIConfiguration.tsx    # ✨ Provider sync
-│   │       └── SessionsLive.tsx       # ✨ Session mute
-│   ├── hooks/            # Custom React hooks
-│   ├── utils/            # Utility functions
-│   ├── integrations/     # Supabase integration
-│   └── data/             # Static data and assessments
-├── supabase/
-│   ├── migrations/       # Database migrations
-│   └── functions/        # Edge functions
-│       ├── ai-content-builder/
-│       ├── provider-discovery/
-│       ├── realtime-token/
-│       ├── paypal-create-order/    # ✨ NEW
-│       └── paypal-capture-order/   # ✨ NEW
-├── public/               # Static assets
-├── dist/                 # Build output
-├── FEATURES_COMPLETED.md      # ✨ Implementation report
-├── PAYPAL_SETUP.md           # ✨ PayPal guide
-└── DEPLOYMENT_PRODUCTION.md  # ✨ Deployment guide
+# Open Android project
+npm run android:build
 ```
 
----
+## Database Management
 
-## 📚 Documentation
+```bash
+# Check database status
+npm run db:status
 
-- **[FEATURES_COMPLETED.md](FEATURES_COMPLETED.md)** - Complete list of implemented features
-- **[PAYPAL_SETUP.md](PAYPAL_SETUP.md)** - PayPal integration setup guide
-- **[DEPLOYMENT_PRODUCTION.md](DEPLOYMENT_PRODUCTION.md)** - Production deployment guide
-- **[.env.example](.env.example)** - Environment variables reference
+# Run database tests
+npm run db:test
+```
 
----
+## Architecture Principles
 
-## 🎨 Design System
-
-### Color Palette
-- **Primary**: Liquid glass gradients (purple to pink)
-- **Secondary**: Warm earth tones for claymorphism
-- **Accent**: Crystal blue highlights
-
-### Typography
-- **Headings**: System font stack with gradient effects
-- **Body**: Inter/SF Pro for optimal readability
-
-### Effects
-- **Glassmorphism**: Translucent cards with backdrop blur
-- **Claymorphism**: Soft, tactile mobile UI elements
-- **Animations**: Smooth transitions and micro-interactions
-
----
-
-## 📝 Database Schema
-
-### Core Tables
-- `user_profiles` - User profile information
-- `user_memory_profiles` - AI conversation memory
-- `sessions` - Voice chat sessions
-- `messages` - Conversation messages
-- `assessments` - Personality assessments
-- `assessment_results` - User assessment responses
-- `achievements` - Gamification achievements
-- `crystal_transactions` - Reward system
-
-### Admin Tables
-- `providers` - AI service providers
-- `models` - AI models configuration
-- `voices` - Voice synthesis options
-- `agents` - AI agent configurations
-
----
-
-## 🔒 Security
-
-- **Row Level Security (RLS)**: All tables protected with PostgreSQL RLS policies
-- **Authentication**: Secure JWT-based auth via Supabase
-- **API Keys**: Environment variables for sensitive credentials
-- **Admin Access**: Email-based admin authorization (`admin@newomen.me`)
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
-
-## 📄 License
-
-This project is proprietary software. All rights reserved.
-
----
-
-## 👥 Team
-
-**Founder & Creator**: Katrina  
-**Platform**: Newomen AI Personal Growth  
-**Contact**: admin@newomen.me
-
----
-
-## 🌐 Links
-
-- **Website**: [newomen.me](https://newomen.me)
-- **Documentation**: Coming soon
-- **Support**: admin@newomen.me
-
----
-
-## 🙏 Acknowledgments
-
-- **Supabase** for the amazing backend platform
-- **OpenAI** for cutting-edge AI capabilities
-- **Vercel** for seamless deployment
-- **Shadcn/ui** for beautiful component library
-- **TailwindCSS** for flexible styling
-
----
-
-**Made with 💜 by the Newomen Team**
+1. **Feature-Based Organization**: Code is organized by business features rather than technical layers
+2. **Separation of Concerns**: Clear separation between UI, business logic, and data layers
+3. **Reusability**: Shared components and utilities are clearly identified
+4. **Scalability**: Structure supports easy addition of new features
+5. **Maintainability**: Clear naming conventions and logical grouping
+6. **Type Safety**: Comprehensive TypeScript usage throughout
+7. **Testing**: Organized test structure supporting different test types
+8. **Documentation**: Clear documentation and README files

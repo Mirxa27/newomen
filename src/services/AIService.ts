@@ -1,13 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
 import { NEWME_SYSTEM_PROMPT, NEWME_GREETING_TEMPLATES } from "@/config/newme-system-prompt";
-import { newMeMemoryService } from "@/services/NewMeMemoryService";
+import { newMeMemoryService } from "@/services/features/ai/NewMeMemoryService";
 import type {
   AssessmentAnswers,
   QuizAnswers,
   ProgressData,
   AssessmentResponseData,
   QuizResponseData
-} from "@/types/ai-types";
+} from "@/types/features/ai/ai-types";
 
 export interface AIConfiguration {
   id: string;
