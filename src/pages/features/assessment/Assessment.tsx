@@ -22,7 +22,8 @@ import {
   Send,
   Sparkles,
   Lightbulb,
-  TrendingUp
+  TrendingUp,
+  Info
 } from "lucide-react";
 import { useToast } from "@/hooks/shared/ui/use-toast";
 import { trackAssessmentCompletion } from "@/lib/features/assessment/gamification-events";
@@ -840,49 +841,72 @@ export default function Assessment() {
 
         {/* AI Answer Options */}
         {requiresAI && currentQuestion && aiAnswerOptions[currentQuestion.id] && (
-          <Card className="bg-gradient-to-r from-green-50 to-blue-50 border-green-200 mt-4">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-green-700">
-                <Lightbulb className="w-5 h-5" />
+          <Card className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 border-2 border-green-300 mt-4 shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-green-800 text-lg">
+                <Lightbulb className="w-6 h-6 text-green-600" />
                 AI Answer Suggestions
               </CardTitle>
-              <CardDescription>
-                Here are some example answers to help you understand what kind of response is expected:
+              <CardDescription className="text-gray-700 font-medium">
+                Click on any example answer below to use it as your response:
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="bg-white/50 p-4 rounded-lg">
-                <h4 className="font-semibold mb-2">Question Analysis</h4>
-                <p className="text-sm text-muted-foreground">
+              {/* Question Analysis */}
+              <div className="bg-white p-4 rounded-lg border-2 border-green-200 shadow-sm">
+                <h4 className="font-bold mb-2 text-gray-900 flex items-center gap-2">
+                  <Brain className="w-4 h-4 text-green-600" />
+                  Question Analysis
+                </h4>
+                <p className="text-sm text-gray-800 leading-relaxed">
                   {aiAnswerOptions[currentQuestion.id].question_analysis}
                 </p>
               </div>
               
+              {/* Example Answers - Clickable */}
               <div className="space-y-3">
-                <h4 className="font-semibold">Example Answers:</h4>
+                <h4 className="font-bold text-gray-900 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-green-600" />
+                  Example Answers (Click to Use):
+                </h4>
                 {aiAnswerOptions[currentQuestion.id].answer_options?.map((option: AIAnswerOption, index: number) => (
-                  <div key={index} className="bg-white/70 p-3 rounded-lg border border-green-200">
-                    <div className="font-medium text-sm mb-1">{option.option_text}</div>
-                    <div className="text-xs text-muted-foreground mb-1">
-                      <span className="font-medium">Why this works:</span> {option.explanation}
+                  <button
+                    key={index}
+                    onClick={() => handleResponseChange(currentQuestion.id, option.option_text)}
+                    className="w-full text-left bg-white hover:bg-green-50 active:bg-green-100 p-4 rounded-lg border-2 border-green-300 hover:border-green-500 transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer group"
+                  >
+                    <div className="font-semibold text-gray-900 mb-2 group-hover:text-green-700 flex items-center gap-2">
+                      <span className="flex-1">{option.option_text}</span>
+                      <ArrowRight className="w-4 h-4 text-green-600 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
-                    <div className="text-xs text-green-600">
-                      <span className="font-medium">Tone:</span> {option.tone}
+                    <div className="text-sm text-gray-700 mb-2">
+                      <span className="font-semibold text-gray-900">Why this works:</span> {option.explanation}
                     </div>
-                  </div>
+                    <div className="text-sm text-green-700 font-medium">
+                      <span className="font-semibold">Tone:</span> {option.tone}
+                    </div>
+                  </button>
                 ))}
               </div>
 
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <h4 className="font-semibold mb-2 text-blue-700">Guidance</h4>
-                <p className="text-sm text-blue-600">
+              {/* Guidance */}
+              <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-300 shadow-sm">
+                <h4 className="font-bold mb-2 text-blue-900 flex items-center gap-2">
+                  <Info className="w-4 h-4 text-blue-600" />
+                  Guidance
+                </h4>
+                <p className="text-sm text-blue-900 leading-relaxed">
                   {aiAnswerOptions[currentQuestion.id].guidance}
                 </p>
               </div>
 
-              <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                <h4 className="font-semibold mb-2 text-yellow-700">What to Avoid</h4>
-                <p className="text-sm text-yellow-600">
+              {/* What to Avoid */}
+              <div className="bg-yellow-50 p-4 rounded-lg border-2 border-yellow-300 shadow-sm">
+                <h4 className="font-bold mb-2 text-yellow-900 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-yellow-600" />
+                  What to Avoid
+                </h4>
+                <p className="text-sm text-yellow-900 leading-relaxed">
                   {aiAnswerOptions[currentQuestion.id].common_pitfalls}
                 </p>
               </div>
