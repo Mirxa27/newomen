@@ -523,3 +523,22 @@ export const logger = StructuredLogger.getInstance({
 // Export utilities
 export const requestLogger = RequestLogger;
 export const performanceLogger = PerformanceLogger;
+
+// Export convenience functions for logging
+export const logTrace = (message: string, context?: Record<string, unknown>, error?: Error) =>
+  logger.trace(message, context, error);
+
+export const logDebug = (message: string, context?: Record<string, unknown>, error?: Error) =>
+  logger.debug(message, context, error);
+
+export const logInfo = (message: string, context?: Record<string, unknown>, error?: Error) =>
+  logger.info(message, context, error);
+
+export const logWarn = (message: string, context?: Record<string, unknown>, error?: Error) =>
+  logger.warn(message, context, error);
+
+export const logError = (message: string, context?: Record<string, unknown>, error?: Error) =>
+  logger.error(message, context, error);
+
+export const logFatal = (message: string, context?: Record<string, unknown>, error?: Error) =>
+  logger.fatal(message, context, error);

@@ -37,6 +37,11 @@ const PublicAssessments = lazy(() => import("./pages/features/assessment/PublicA
 const MemberAssessments = lazy(() => import("./pages/features/assessment/MemberAssessments"));
 const Assessment = lazy(() => import("./pages/features/assessment/Assessment"));
 const AIAgentBrowserPage = lazy(() => import("./pages/features/ai/AIAgentBrowserPage"));
+const WellnessHub = lazy(() => import("./pages/features/wellness/WellnessHub"));
+const PodcastHub = lazy(() => import("./pages/features/wellness/PodcastHub"));
+const SubscriptionManager = lazy(() => import("./pages/features/payment/SubscriptionManager"));
+const BuddyHub = lazy(() => import("./pages/features/wellness/BuddyHub"));
+const NotificationsCenter = lazy(() => import("./pages/features/wellness/NotificationsCenter"));
 
 // Admin Pages
 const AdminAnalytics = lazy(() => import("./pages/features/admin/Analytics"));
@@ -153,6 +158,31 @@ const App = () => {
           <Route path="/assessment/:id" element={
             <ProtectedRoute>
               <MainLayout><Assessment /></MainLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/wellness-hub" element={
+            <ProtectedRoute>
+              <MainLayout><WellnessHub /></MainLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/podcasts" element={
+            <ProtectedRoute>
+              <MainLayout><PodcastHub /></MainLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/subscription" element={
+            <ProtectedRoute>
+              <MainLayout><SubscriptionManager /></MainLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/buddy" element={
+            <ProtectedRoute>
+              <MainLayout><BuddyHub /></MainLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/notifications" element={
+            <ProtectedRoute>
+              <MainLayout><NotificationsCenter /></MainLayout>
             </ProtectedRoute>
           } />
           <Route path="/admin" element={
