@@ -118,10 +118,10 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Get assessment details
+    // Get assessment details (without join - relationship doesn't exist)
     const { data: assessment, error: assessmentError } = await supabase
       .from('assessments_enhanced')
-      .select('*, ai_assessment_configs(*)')
+      .select('*')
       .eq('id', assessmentId)
       .single();
 
@@ -129,22 +129,43 @@ serve(async (req) => {
       throw new Error('Assessment not found');
     }
 
-    // Get AI configuration
-    let aiConfig = assessment.ai_assessment_configs;
+    // Get AI configuration separately
+    let aiConfig = null;
     
+    // Try to get assessment-specific config if ai_config_id exists
+    if (assessment.ai_config_id) {
+      const { data: specificConfig } = await supabase
+        .from('assessment_ai_configs')
+        .select('*')
+        .eq('assessment_id', assessmentId)
+        .single();
+      
+      aiConfig = specificConfig;
+    }
+    
+    // Fall back to default active config
     if (!aiConfig) {
       const { data: defaultConfig } = await supabase
-        .from('ai_assessment_configs')
+        .from('assessment_ai_configs')
         .select('*')
         .eq('is_active', true)
         .limit(1)
-        .single();
+        .maybeSingle();
       
       aiConfig = defaultConfig;
     }
 
+    // If still no config, use hardcoded defaults for Z.AI
     if (!aiConfig) {
-      throw new Error('No AI configuration found');
+      aiConfig = {
+        id: 'default',
+        model_name: 'GLM-4.6',
+        api_base_url: 'https://api.z.ai/api/coding/paas/v4',
+        temperature: 0.7,
+        max_tokens: 2000,
+        is_active: true
+      };
+      console.log('Using default Z.AI configuration');
     }
 
     // Prepare assessment context
