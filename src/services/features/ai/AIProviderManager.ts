@@ -6,6 +6,7 @@ import { ElevenLabsProviderService } from './providers/ElevenLabsProvider';
 import { CartesiaProviderService } from './providers/CartesiaProvider';
 import { DeepgramProviderService } from './providers/DeepgramProvider';
 import { HumeProviderService } from './providers/HumeProvider';
+import { ZaiProviderService } from './providers/ZaiProvider';
 import { BaseProviderService } from './providers/BaseProviderService';
 import type { 
   AIProvider, 
@@ -76,7 +77,17 @@ export class AIProviderManager {
       const lowerBaseUrl = providerData.baseUrl?.toLowerCase() || '';
       const lowerType = providerData.type.toLowerCase();
 
-      if (lowerName.includes('anthropic') || lowerBaseUrl.includes('anthropic') || lowerType.includes('anthropic')) {
+      if (lowerName.includes('z.ai') || lowerBaseUrl.includes('z.ai') || lowerType === 'zai') {
+        // Z.AI Provider
+        ProviderServiceClass = ZaiProviderService;
+        endpoints = this.getOpenAIEndpoints(providerData.baseUrl || 'https://api.z.ai/api/coding/paas/v4');
+        options = {
+          rateLimits: {
+            requestsPerMinute: 60,
+            tokensPerMinute: 90000
+          }
+        };
+      } else if (lowerName.includes('anthropic') || lowerBaseUrl.includes('anthropic') || lowerType.includes('anthropic')) {
         ProviderServiceClass = AnthropicProviderService;
         endpoints = this.getAnthropicEndpoints();
         options = {

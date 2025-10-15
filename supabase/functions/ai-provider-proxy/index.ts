@@ -169,6 +169,16 @@ serve(async (req) => {
       case 'elevenlabs':
         providerHeaders['xi-api-key'] = apiKey
         break
+      case 'zai':
+      case 'z.ai':
+        // Z.AI uses Authorization header with the token directly
+        providerHeaders['Authorization'] = apiKey
+        break
+      case 'llm':
+      case 'gemini':
+        // Gemini uses x-goog-api-key header
+        providerHeaders['x-goog-api-key'] = apiKey
+        break
       default:
         providerHeaders['Authorization'] = `Bearer ${apiKey}`
     }
