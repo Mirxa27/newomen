@@ -75,8 +75,9 @@ async function callZAI(prompt: string, systemPrompt: string, supabase: any) {
           content: prompt
         }
       ],
-      temperature: 0.7,
-      max_tokens: 1500,
+      temperature: 0.6,
+      max_tokens: 800,
+      top_p: 0.9,
       stream: false,
       response_format: { type: 'json_object' }
     })
@@ -220,38 +221,22 @@ Provide insights to help users understand and answer these questions effectively
         throw new Error('Question text and type are required for answer generation');
       }
 
-      const systemPrompt = `You are an expert assessment helper. Generate 3-4 thoughtful answer options for assessment questions to help users understand what kinds of responses are expected.
+      const systemPrompt = `You are an expert assessment helper. Generate 2-3 concise answer options to help users understand expected responses.
 
-Your response must be a valid JSON object with this structure:
+Respond ONLY with valid JSON (no markdown, no extra text):
 {
-  "question_analysis": "<brief analysis of what this question is asking>",
+  "question_analysis": "<brief analysis in 1 sentence>",
   "answer_options": [
-    {
-      "option_text": "<example answer option 1>",
-      "explanation": "<why this is a good example>",
-      "tone": "<the tone/style of this answer>"
-    },
-    {
-      "option_text": "<example answer option 2>",
-      "explanation": "<why this is a good example>",
-      "tone": "<the tone/style of this answer>"
-    },
-    {
-      "option_text": "<example answer option 3>",
-      "explanation": "<why this is a good example>",
-      "tone": "<the tone/style of this answer>"
-    }
+    {"option_text": "<answer>", "explanation": "<why good>", "tone": "<tone>"},
+    {"option_text": "<answer>", "explanation": "<why good>", "tone": "<tone>"}
   ],
-  "guidance": "<specific guidance for answering this question>",
-  "common_pitfalls": "<what to avoid when answering>"
+  "guidance": "<1-2 sentence guidance>",
+  "common_pitfalls": "<what to avoid>"
 }`;
 
-      const userPrompt = `Generate helpful answer examples for this assessment question:
+      const userPrompt = `Question (${questionType}): ${questionText}
 
-Question: ${questionText}
-Type: ${questionType}
-
-Create 3-4 example answers that show different approaches and help users understand what kind of response is expected.`;
+Generate 2-3 example answers that demonstrate good responses to this question.`;
 
       const aiResult = await callZAI(userPrompt, systemPrompt, supabase);
       let answerOptions;

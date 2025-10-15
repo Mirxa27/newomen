@@ -800,6 +800,21 @@ export default function Assessment() {
               </RadioGroup>
             )}
 
+            {/* Handle multiple-choice variant (hyphenated) */}
+            {currentQuestion?.type === 'multiple-choice' && (
+              <RadioGroup
+                value={responses[currentQuestion.id] as string || ''}
+                onValueChange={(value) => handleResponseChange(currentQuestion.id, value)}
+              >
+                {currentQuestion.options?.map((option, index) => (
+                  <div key={index} className="flex items-center space-x-2">
+                    <RadioGroupItem value={option} id={`${currentQuestion.id}-${index}`} />
+                    <Label htmlFor={`${currentQuestion.id}-${index}`}>{option}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            )}
+
             {currentQuestion?.type === 'text' && (
               <Textarea
                 value={responses[currentQuestion.id] as string || ''}
@@ -810,6 +825,24 @@ export default function Assessment() {
             )}
 
             {currentQuestion?.type === 'rating' && (
+              <div className="space-y-2">
+                <Label>Rate from 1 to 5:</Label>
+                <RadioGroup
+                  value={responses[currentQuestion.id] as string || ''}
+                  onValueChange={(value) => handleResponseChange(currentQuestion.id, value)}
+                >
+                  {[1, 2, 3, 4, 5].map((rating) => (
+                    <div key={rating} className="flex items-center space-x-2">
+                      <RadioGroupItem value={rating.toString()} id={`${currentQuestion.id}-${rating}`} />
+                      <Label htmlFor={`${currentQuestion.id}-${rating}`}>{rating}</Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+            )}
+
+            {/* Handle scale type (same as rating) */}
+            {currentQuestion?.type === 'scale' && (
               <div className="space-y-2">
                 <Label>Rate from 1 to 5:</Label>
                 <RadioGroup
@@ -838,6 +871,23 @@ export default function Assessment() {
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="false" id={`${currentQuestion.id}-false`} />
                   <Label htmlFor={`${currentQuestion.id}-false`}>No</Label>
+                </div>
+              </RadioGroup>
+            )}
+
+            {/* Handle yes_no type variant (same as boolean) */}
+            {currentQuestion?.type === 'yes_no' && (
+              <RadioGroup
+                value={responses[currentQuestion.id] as string || ''}
+                onValueChange={(value) => handleResponseChange(currentQuestion.id, value)}
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="yes" id={`${currentQuestion.id}-yes`} />
+                  <Label htmlFor={`${currentQuestion.id}-yes`}>Yes</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="no" id={`${currentQuestion.id}-no`} />
+                  <Label htmlFor={`${currentQuestion.id}-no`}>No</Label>
                 </div>
               </RadioGroup>
             )}
