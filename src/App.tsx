@@ -63,6 +63,7 @@ const AdminAnnouncements = lazy(() => import("./pages/features/admin/AdminAnnoun
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const ContentModeration = lazy(() => import("./pages/admin/ContentModeration"));
 const SystemHealth = lazy(() => import("./pages/admin/SystemHealth"));
+const UserAnalytics = lazy(() => import("./pages/admin/UserAnalytics"));
 
 const queryClient = new QueryClient();
 
@@ -225,6 +226,11 @@ const App = () => {
             <Route path="system-health" element={
               <AdminRoute>
                 <MainLayout><SystemHealth /></MainLayout>
+              </AdminRoute>
+            } />
+            <Route path="user-analytics" element={
+              <AdminRoute>
+                <MainLayout><UserAnalytics /></MainLayout>
               </AdminRoute>
             } />
           </Route>
