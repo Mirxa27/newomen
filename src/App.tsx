@@ -62,6 +62,7 @@ const APISettings = lazy(() => import("./pages/features/admin/APISettings"));
 const AdminAnnouncements = lazy(() => import("./pages/features/admin/AdminAnnouncements"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const ContentModeration = lazy(() => import("./pages/admin/ContentModeration"));
+const SystemHealth = lazy(() => import("./pages/admin/SystemHealth"));
 
 const queryClient = new QueryClient();
 
@@ -219,6 +220,11 @@ const App = () => {
             <Route path="moderation" element={
               <AdminRoute>
                 <MainLayout><ContentModeration /></MainLayout>
+              </AdminRoute>
+            } />
+            <Route path="system-health" element={
+              <AdminRoute>
+                <MainLayout><SystemHealth /></MainLayout>
               </AdminRoute>
             } />
           </Route>
