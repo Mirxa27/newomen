@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ConfirmationDialog } from "@/components/shared/ui/ConfirmationDialog";
 import { toast } from "sonner";
 import { Loader2, Edit, Search, Users, Shield, Crown } from "lucide-react";
+import AdminAccessService from "@/services/features/admin/AdminAccessService";
 
 interface UserProfile {
   id: string;
@@ -49,8 +50,11 @@ export default function AdminUserManagement() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [grantingAccess, setGrantingAccess] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [grantAccessDialogOpen, setGrantAccessDialogOpen] = useState(false);
+  const [grantAccessEmail, setGrantAccessEmail] = useState("");
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [formData, setFormData] = useState<EditUserForm>({
     role: 'user',
@@ -120,6 +124,30 @@ export default function AdminUserManagement() {
       toast.error(`Update failed: ${message}`);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleGrantAdminAccess = async () => {
+    if (!grantAccessEmail.trim()) {
+      toast.error('Please enter an email address');
+      return;
+    }
+
+    setGrantingAccess(true);
+    try {
+      const result = await AdminAccessService.grantAdminAccess(grantAccessEmail);
+      
+      if (result.success) {
+        toast.success(result.message);
+        setGrantAccessEmail('');
+        setGrantAccessDialogOpen(false);
+        // Reload users to show updated role
+        void loadUsers();
+      } else {
+        toast.error(result.message);
+      }
+    } finally {
+      setGrantingAccess(false);
     }
   };
 
@@ -265,6 +293,28 @@ export default function AdminUserManagement() {
         </CardContent>
       </Card>
 
+      {/* Grant Admin Access Section */}
+      <Card className="glass-card border-amber-500/20 bg-amber-500/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Crown className="w-5 h-5 text-amber-600" />
+            Grant Admin Access
+          </CardTitle>
+          <CardDescription>
+            Promote a user to admin role with full moderation and management capabilities.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            onClick={() => setGrantAccessDialogOpen(true)}
+            className="bg-amber-600 hover:bg-amber-700"
+          >
+            <Crown className="w-4 h-4 mr-2" />
+            Grant Admin Access
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Edit User Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="glass-card max-w-md">
@@ -356,6 +406,59 @@ export default function AdminUserManagement() {
             <Button onClick={handleSave} disabled={saving}>
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Grant Admin Access Dialog */}
+      <Dialog open={grantAccessDialogOpen} onOpenChange={setGrantAccessDialogOpen}>
+        <DialogContent className="glass-card max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Crown className="w-5 h-5 text-amber-600" />
+              Grant Admin Access
+            </DialogTitle>
+            <DialogDescription>
+              Enter the email address of the user you want to promote to admin role.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="admin_email">User Email</Label>
+              <Input
+                id="admin_email"
+                type="email"
+                value={grantAccessEmail}
+                onChange={(e) => setGrantAccessEmail(e.target.value)}
+                placeholder="e.g., katrina@newomen.me"
+                disabled={grantingAccess}
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                The user must already have an account in the system.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setGrantAccessDialogOpen(false);
+                setGrantAccessEmail('');
+              }}
+              disabled={grantingAccess}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleGrantAdminAccess} 
+              disabled={grantingAccess || !grantAccessEmail.trim()}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              {grantingAccess && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Grant Admin Access
             </Button>
           </div>
         </DialogContent>
