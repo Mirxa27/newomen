@@ -4,6 +4,20 @@ const config: CapacitorConfig = {
   appId: 'me.newomen.app',
   appName: 'Newomen',
   webDir: 'dist',
+  icon: {
+    iconName: 'newomen-icon',
+    iconBackgroundColor: '#1a1428',
+    backgroundColor: '#1a1428',
+    splashImageName: 'splash',
+    imageFileName: 'newomen-icon',
+    images: [
+      {
+        name: 'newomen-icon.png',
+        width: 1024,
+        height: 1024,
+      }
+    ]
+  },
   server: {
     androidScheme: 'https'
   },

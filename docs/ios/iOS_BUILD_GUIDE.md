@@ -1,12 +1,14 @@
-# Newomen iOS App - Complete Build & Deployment Guide
+# Newomen iOS Build Guide
+
+This guide covers the complete iOS build and deployment process for the Newomen app.
 
 ## 📱 iOS App Overview
 
-**App Name:** Newomen  
-**Bundle ID:** com.newomen.app  
-**Minimum iOS Version:** 14.0  
-**Target iOS Version:** 17.0+  
-**Supported Devices:** iPhone (All models), iPad  
+**App Name:** Newomen
+**Bundle ID:** me.newomen.app
+**Minimum iOS Version:** 14.0
+**Target iOS Version:** 17.0+
+**Supported Devices:** iPhone (All models), iPad
 **Orientations:** Portrait, Landscape
 
 ---
