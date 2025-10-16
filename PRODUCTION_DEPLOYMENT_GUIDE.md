@@ -1,435 +1,624 @@
-# 🚀 PRODUCTION DEPLOYMENT GUIDE - Newomen + AB.MONEY Integration
+# 🚀 Newomen Production Deployment Guide
 
-**Status**: ✅ READY FOR LIVE DEPLOYMENT  
 **Version**: 1.0.0  
-**Date**: October 15, 2025  
-**Environment**: Supabase Production
+**Last Updated**: October 16, 2025  
+**Status**: ✅ PRODUCTION READY  
 
 ---
 
-## 📋 Pre-Deployment Checklist
+## 📋 Table of Contents
 
-### ✅ Database Setup (COMPLETE)
-- [x] 90+ tables created and configured
-- [x] RLS policies implemented on all tables
-- [x] 59 migrations successfully applied
-- [x] TypeScript types generated
-- [x] All extensions enabled (pg_graphql, pg_net, supabase_vault, etc.)
-
-### ✅ API Configuration (COMPLETE)
-- [x] Project URL: `https://fkikaozubngmzcrnhkqe.supabase.co`
-- [x] Anon Key: Generated and secure
-- [x] Service Role Key: Available in Supabase dashboard
-- [x] API rate limiting configured
-- [x] CORS policies set
-
-### ✅ Backend Services (COMPLETE)
-- [x] AI configurations (12 configurations)
-- [x] AI providers (4: OpenAI, Anthropic, Google, Azure)
-- [x] AI models (107+ models available)
-- [x] Voice configurations (6+ voices)
-- [x] Edge functions ready for deployment
-- [x] Real-time capabilities enabled
-
-### ✅ Frontend Setup (COMPLETE)
-- [x] React components (100+ components)
-- [x] TypeScript configuration
-- [x] Tailwind CSS setup
-- [x] Responsive design implemented
-- [x] Mobile optimization complete
-- [x] PWA support configured
-
-### ✅ Security (COMPLETE)
-- [x] Row-Level Security on all tables
-- [x] API key encryption configured
-- [x] Environment variables setup
-- [x] API rate limiting
-- [x] CORS configuration
+1. [Pre-Deployment Checklist](#pre-deployment-checklist)
+2. [Environment Setup](#environment-setup)
+3. [Database Configuration](#database-configuration)
+4. [Web Application Deployment](#web-application-deployment)
+5. [iOS App Deployment](#ios-app-deployment)
+6. [Android App Deployment](#android-app-deployment)
+7. [Monitoring & Logging](#monitoring--logging)
+8. [Security Hardening](#security-hardening)
+9. [Performance Optimization](#performance-optimization)
+10. [Rollback Procedures](#rollback-procedures)
+11. [Support & Troubleshooting](#support--troubleshooting)
 
 ---
 
-## 🔧 Environment Configuration
+## ✅ Pre-Deployment Checklist
 
-### Production Environment Variables
+### Code Quality
+- [ ] All tests passing: `npm test`
+- [ ] Build succeeds: `npm run build`
+- [ ] No linting errors: `npm run lint`
+- [ ] TypeScript compilation: `npx tsc --noEmit`
+- [ ] All changes committed to git
+- [ ] All branches merged to main
+- [ ] Production build size verified (< 2MB gzipped)
+
+### Security Review
+- [ ] Row-level security (RLS) policies reviewed
+- [ ] API keys and secrets in environment variables
+- [ ] CORS policies configured correctly
+- [ ] Rate limiting enabled
+- [ ] SSL/TLS certificates ready
+- [ ] OAuth providers configured
+- [ ] Database backups configured
+
+### Feature Verification
+- [ ] All wellness features tested
+- [ ] AI integrations tested with real API keys
+- [ ] Payment system tested (if applicable)
+- [ ] Community features working
+- [ ] Admin panel accessible
+- [ ] Mobile responsiveness verified
+- [ ] Dark mode working correctly
+- [ ] Error pages configured
+
+### Performance Testing
+- [ ] Lighthouse score > 80
+- [ ] First Contentful Paint < 2s
+- [ ] Largest Contentful Paint < 3s
+- [ ] Cumulative Layout Shift < 0.1
+- [ ] Database queries optimized
+- [ ] Images optimized and cached
+- [ ] JavaScript bundles code-split
+
+---
+
+## 🔧 Environment Setup
+
+### Required Environment Variables
 
 ```bash
-# .env.production
-VITE_SUPABASE_URL=https://fkikaozubngmzcrnhkqe.supabase.co
-VITE_SUPABASE_ANON_KEY=<your-anon-key>
-VITE_API_URL=https://fkikaozubngmzcrnhkqe.supabase.co
-VITE_SERVICE_ROLE_KEY=<your-service-role-key>
+# Supabase Configuration
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
 
-# AI Provider Configuration
-VITE_OPENAI_API_KEY=<production-openai-key>
-VITE_ANTHROPIC_API_KEY=<production-anthropic-key>
-VITE_GOOGLE_API_KEY=<production-google-key>
+# AI Provider Keys
+VITE_OPENAI_API_KEY=sk-...
+VITE_ANTHROPIC_API_KEY=sk-ant-...
+VITE_GOOGLE_GEMINI_KEY=...
+VITE_ZAI_API_KEY=...
 
-# Payment Gateway
-VITE_PAYPAL_CLIENT_ID=<production-paypal-client-id>
-VITE_PAYPAL_SANDBOX_MODE=false
+# Payment Integration
+VITE_PAYPAL_CLIENT_ID=...
+VITE_STRIPE_PUBLIC_KEY=... (if using Stripe)
 
-# Analytics
-VITE_ANALYTICS_ID=<analytics-tracking-id>
-VITE_SENTRY_DSN=<sentry-error-tracking-dsn>
+# URLs
+VITE_APP_URL=https://newomen.com
+VITE_API_URL=https://api.newomen.com
 
 # Feature Flags
-VITE_ENABLE_BETA_FEATURES=false
-VITE_ENABLE_ANALYTICS=true
-VITE_ENABLE_ERROR_REPORTING=true
+VITE_ENABLE_AI_FEATURES=true
+VITE_ENABLE_PAYMENTS=true
+VITE_ENABLE_COMMUNITY=true
+VITE_ENABLE_ADMIN_PANEL=true
+
+# Analytics
+VITE_SENTRY_DSN=...
+VITE_ANALYTICS_ID=...
+```
+
+### Production Environment Files
+
+```bash
+# Create production environment file
+cp .env.example .env.production
+
+# Edit with production values
+nano .env.production
+
+# For local testing with production config
+cp .env.production .env.local
 ```
 
 ---
 
-## 📦 Deployment Steps
+## 🗄️ Database Configuration
 
-### Step 1: Database Preparation
+### Initial Setup
+
+```bash
+# 1. Apply all migrations
+npx supabase db push
+
+# 2. Verify migrations applied
+npx supabase db status
+
+# 3. Seed initial data (if needed)
+npx supabase db remote commit
+
+# 4. Enable RLS on all tables
+# This is automatic with migrations, verify with:
+psql -h your-db-host -U postgres -d your_db -c \
+  "SELECT tablename FROM pg_tables \
+   WHERE schemaname = 'public' AND rowsecurity = false;"
+```
+
+### Database Backups
+
+```bash
+# Daily automated backups via Supabase
+# Check backup schedule in Supabase Dashboard:
+# 1. Go to Database > Backups
+# 2. Verify daily backup enabled
+# 3. Set backup window to off-peak hours
+
+# Manual backup
+npx supabase db pull > backup-$(date +%Y%m%d-%H%M%S).sql
+```
+
+### Connection Pooling
 
 ```sql
--- Verify all migrations applied
-SELECT * FROM supabase_migrations_list();
-
--- Check RLS policies
-SELECT * FROM information_schema.table_constraints 
-WHERE constraint_type = 'FOREIGN KEY';
-
--- Verify key tables exist
-SELECT tablename FROM pg_tables 
-WHERE schemaname = 'public' 
-ORDER BY tablename;
+-- Enable PgBouncer in Supabase
+-- Dashboard > Project Settings > Database > Connection Pooling
+-- Set pool mode to "Transaction" for best compatibility
 ```
 
-### Step 2: Backend Deployment
+---
+
+## 🌐 Web Application Deployment
+
+### Option 1: Vercel (Recommended)
 
 ```bash
-# Deploy Edge Functions
-supabase functions deploy
+# 1. Install Vercel CLI
+npm install -g vercel
 
-# Verify function deployment
-supabase functions list
+# 2. Login to Vercel
+vercel login
 
-# Test Edge Function connectivity
-curl -X POST https://fkikaozubngmzcrnhkqe.supabase.co/functions/v1/health \
-  -H "Authorization: Bearer <ANON_KEY>" \
-  -H "Content-Type: application/json"
+# 3. Deploy to production
+vercel deploy --prod
+
+# 4. Set environment variables
+vercel env add VITE_SUPABASE_URL
+vercel env add VITE_SUPABASE_ANON_KEY
+# ... add all environment variables
+
+# 5. Trigger redeploy with new variables
+vercel deploy --prod
 ```
 
-### Step 3: Frontend Deployment
+### Option 2: Docker Deployment
 
 ```bash
-# Build for production
+# 1. Build Docker image
+docker build -t newomen:latest .
+
+# 2. Tag for registry (e.g., Docker Hub, ECR)
+docker tag newomen:latest yourregistry/newomen:latest
+
+# 3. Push to registry
+docker push yourregistry/newomen:latest
+
+# 4. Deploy to server
+docker run -d \
+  -e VITE_SUPABASE_URL=$SUPABASE_URL \
+  -e VITE_SUPABASE_ANON_KEY=$SUPABASE_KEY \
+  -p 80:3000 \
+  yourregistry/newomen:latest
+
+# 5. Setup reverse proxy (nginx)
+# See nginx-config.conf
+```
+
+### Option 3: Custom Server (Node.js)
+
+```bash
+# 1. Build application
 npm run build
 
-# Optimize bundle
-npm run build:analyze
+# 2. Copy to server
+scp -r dist/* user@server:/var/www/newomen/
 
-# Deploy to Vercel/Netlify
-npm run deploy:production
+# 3. Setup nginx reverse proxy
+sudo cp nginx-config.conf /etc/nginx/sites-available/newomen
+sudo ln -s /etc/nginx/sites-available/newomen /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
 
-# Verify deployment
-curl https://newomen.app/health
+# 4. Setup SSL with Let's Encrypt
+sudo certbot certonly --webroot -w /var/www/newomen \
+  -d newomen.com -d www.newomen.com
+
+# 5. Update nginx config with SSL certificates
+# Update nginx-config.conf with certificate paths
 ```
 
-### Step 4: Security Verification
+### Dockerfile Example
+
+```dockerfile
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine
+WORKDIR /app
+RUN npm install -g serve
+COPY --from=builder /app/dist ./dist
+EXPOSE 3000
+CMD ["serve", "-s", "dist", "-l", "3000"]
+```
+
+---
+
+## 📱 iOS App Deployment
+
+### TestFlight Distribution (Beta Testing)
 
 ```bash
-# Test RLS policies
-psql postgresql://user:password@host:port/database <<EOF
--- Test user profile access
-SELECT * FROM user_profiles LIMIT 1;
+# 1. Build for iOS
+npm run ios:build
 
--- Test admin access
-SELECT * FROM ai_configurations;
-EOF
+# 2. In Xcode
+# - Select "Any iOS Device (arm64)"
+# - Product > Archive
+# - Window > Organizer
+# - Select Archive > Validate App
+# - Distribute App > TestFlight
 
-# Verify API key encryption
-SELECT COUNT(*) FROM provider_api_keys WHERE encrypted = true;
+# 3. In App Store Connect
+# - Add test users
+# - Configure test notes
+# - Submit for beta review
 ```
 
----
-
-## 🔍 Production Health Checks
-
-### Health Check Endpoints
-
-```javascript
-// Check Database Connectivity
-GET https://fkikaozubngmzcrnhkqe.supabase.co/rest/v1/health
-
-// Check Auth System
-GET https://fkikaozubngmzcrnhkqe.supabase.co/auth/v1/health
-
-// Check Real-time
-GET https://fkikaozubngmzcrnhkqe.supabase.co/realtime/v1/health
-
-// Check Storage
-GET https://fkikaozubngmzcrnhkqe.supabase.co/storage/v1/health
-```
-
-### Monitoring Queries
-
-```sql
--- Database connections
-SELECT count(*) FROM pg_stat_activity;
-
--- Table sizes
-SELECT 
-    schemaname,
-    tablename,
-    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) 
-FROM pg_tables 
-WHERE schemaname = 'public' 
-ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
-
--- Query performance
-SELECT 
-    query,
-    calls,
-    total_time,
-    mean_time 
-FROM pg_stat_statements 
-ORDER BY total_time DESC 
-LIMIT 10;
-
--- Index usage
-SELECT 
-    schemaname,
-    tablename,
-    indexname,
-    idx_scan 
-FROM pg_stat_user_indexes 
-ORDER BY idx_scan DESC;
-```
-
----
-
-## 📊 Performance Targets
-
-| Metric | Target | Current |
-|--------|--------|---------|
-| First Contentful Paint (FCP) | < 1.8s | ✅ |
-| Largest Contentful Paint (LCP) | < 2.5s | ✅ |
-| Cumulative Layout Shift (CLS) | < 0.1 | ✅ |
-| First Input Delay (FID) | < 100ms | ✅ |
-| Time to Interactive (TTI) | < 3.5s | ✅ |
-| Database Query Time | < 100ms | ✅ |
-| API Response Time | < 200ms | ✅ |
-
----
-
-## 🔐 Security Checklist
-
-- [x] All API keys encrypted in transit (HTTPS)
-- [x] Row-level security enabled on all tables
-- [x] Rate limiting configured (100 req/min per user)
-- [x] CORS configured for production domains
-- [x] API key rotation enabled
-- [x] Audit logging enabled
-- [x] Backups configured (daily)
-- [x] SSL certificate valid
-- [x] Password hashing enabled (bcrypt)
-- [x] Session timeout configured (30 mins)
-- [x] MFA ready for deployment
-- [x] Admin role protection enabled
-
----
-
-## 🚨 Rollback Plan
-
-### If Deployment Fails
+### App Store Submission
 
 ```bash
-# 1. Revert to previous database state
-supabase db reset
+# 1. Complete app setup
+# - App name, description, keywords
+# - Screenshots for all device sizes
+# - App preview video
+# - Rating questionnaire
+# - Privacy policy URL
 
-# 2. Restore from backup
-pg_restore -U postgres -d newomen backup.dump
+# 2. Build and submit
+npm run ios:build
 
-# 3. Revert frontend to previous version
-git revert <commit-hash>
-npm run deploy:production
+# 3. In Xcode
+# - Product > Archive
+# - Window > Organizer
+# - Select Archive > Validate App
+# - Distribute App > App Store Connect
 
-# 4. Clear cache
-cloudflare purge-cache
+# 4. Submit for review
+# - In App Store Connect dashboard
+# - Click "Submit for Review"
+# - Provide beta test feedback form
+# - Review requirements
 
-# 5. Verify rollback
-npm run test:e2e
+# 5. Approval and release
+# - Wait for Apple review (typically 24-48 hours)
+# - Approve when ready to release
+# - Set release date or release immediately
+```
+
+### Code Signing Setup
+
+```bash
+# 1. Create certificate signing request (CSR)
+# - In Xcode: Xcode > Preferences > Accounts
+# - Select team > Download Manual Profiles
+
+# 2. Create development and distribution certificates
+# - In Apple Developer Portal: Certificates, IDs & Profiles
+# - Create iOS App Development certificate
+# - Create iOS Distribution certificate (App Store)
+
+# 3. Create provisioning profiles
+# - App ID for com.newomen.app
+# - Development provisioning profile
+# - Distribution provisioning profile (App Store)
+
+# 4. Download and install certificates
+# - Double-click .cer files to install
+# - Import into Xcode
+
+# 5. Configure in Xcode
+# - Project Settings > Signing & Capabilities
+# - Set Team ID
+# - Enable automatic code signing
 ```
 
 ---
 
-## 📈 Monitoring & Analytics
+## 🤖 Android App Deployment
 
-### Key Metrics to Track
+### Build for Play Store
 
-1. **User Metrics**
-   - Daily Active Users (DAU)
-   - Monthly Active Users (MAU)
-   - User retention rate
-   - Churn rate
+```bash
+# 1. Generate production keystore
+keytool -genkey -v -keystore newomen-release-key.keystore \
+  -keyalg RSA -keysize 2048 -validity 10000 \
+  -alias newomen-key
 
-2. **Performance Metrics**
-   - API response time
-   - Database query time
-   - Error rate
-   - System uptime
+# 2. Build AAB (Android App Bundle)
+npm run android:build
 
-3. **Business Metrics**
-   - Subscription conversion rate
-   - Revenue per user
-   - Customer acquisition cost
-   - Lifetime value
+# 3. In Android Studio
+# - Build > Generate Signed Bundle/APK
+# - Select "Android App Bundle (AAB)"
+# - Select keystore and signing key
+# - Build for release
 
-### Monitoring Tools Setup
+# 4. Upload to Google Play Console
+# - Select app > Release > Production
+# - Upload AAB file
+# - Fill app details and screenshots
+# - Submit for review
+```
 
-```javascript
-// Sentry Error Tracking
+---
+
+## 📊 Monitoring & Logging
+
+### Application Monitoring
+
+```bash
+# 1. Setup Sentry for error tracking
+npm install @sentry/react @sentry/tracing
+
+# 2. Initialize in main.tsx
 import * as Sentry from "@sentry/react";
-
 Sentry.init({
   dsn: process.env.VITE_SENTRY_DSN,
-  environment: "production",
+  environment: process.env.NODE_ENV,
   tracesSampleRate: 0.1,
 });
+```
 
-// Analytics Tracking
-import { analytics } from '@/services/analytics';
+### Database Monitoring
 
-analytics.track('User Action', {
-  user_id: user.id,
-  action: 'meditation_started',
-  duration: 300
-});
+```bash
+# Supabase automatically monitors:
+# - Query performance
+# - Connection health
+# - Storage usage
 
-// Performance Monitoring
-import { performance } from '@/utils/performance';
+# Access via Dashboard:
+# - Project > Monitoring
+# - Monitor real-time metrics
+# - Check slow queries
+# - Review database size
+```
 
-performance.measure('meditation_load', () => {
-  return fetchMeditation(meditationId);
-});
+### Log Aggregation
+
+```bash
+# Option 1: Supabase Logs
+# - Dashboard > Logs
+# - View API logs, database logs, function logs
+
+# Option 2: Third-party services
+# - CloudFlare Workers Analytics
+# - Datadog APM
+# - New Relic
+# - LogRocket
 ```
 
 ---
 
-## 🔄 Continuous Integration/Deployment
+## 🔒 Security Hardening
 
-### CI/CD Pipeline (GitHub Actions)
+### SSL/TLS Configuration
 
-```yaml
-name: Production Deployment
+```bash
+# 1. Setup HTTPS (all deployments)
+# - Obtain SSL certificate (Let's Encrypt, Cloudflare, AWS)
+# - Configure in web server/reverse proxy
+# - Enable HSTS headers
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+# 2. Nginx HSTS configuration
+add_header Strict-Transport-Security \
+  "max-age=31536000; includeSubDomains" always;
+```
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run test
-      - run: npm run test:e2e
+### API Security
 
-  build:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-      - run: npm ci
-      - run: npm run build
-      - name: Upload artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: build
-          path: dist/
+```typescript
+// 1. Rate Limiting (configured in Supabase)
+// Project Settings > API > Rate Limiting
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v3
-      - name: Deploy to Vercel
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: vercel --prod
+// 2. CORS Configuration
+// Verify CORS headers in vercel.json or nginx config
+
+// 3. API Key Rotation
+// Monthly rotation recommended for AI provider keys
+
+// 4. Request Signing
+// All sensitive requests should be signed
+```
+
+### Environment Variable Security
+
+```bash
+# 1. Never commit .env files
+echo ".env*" >> .gitignore
+echo ".env.local" >> .gitignore
+
+# 2. Use deployment platform's secret management
+# - Vercel: Environment Variables
+# - Docker: Secrets
+# - Kubernetes: Secrets
+# - AWS: Secrets Manager
+
+# 3. Rotate keys regularly
+# - Set rotation schedule (quarterly recommended)
+# - Update in all environments
+# - Log key rotation events
 ```
 
 ---
 
-## 📞 Support & Escalation
+## ⚡ Performance Optimization
 
-### Critical Issues (P1)
-- Response Time: 15 minutes
-- Escalate to: Engineering Lead
-- Contact: critical-issues@newomen.app
+### Build Optimization
 
-### High Priority (P2)
-- Response Time: 1 hour
-- Escalate to: Senior Developer
-- Contact: support@newomen.app
+```bash
+# 1. Analyze bundle size
+npm run build -- --analyze
 
-### Medium Priority (P3)
-- Response Time: 4 hours
-- Escalate to: Support Team
-- Contact: help@newomen.app
+# 2. Code splitting
+# Already configured in vite.config.ts
+# Routes are lazy-loaded automatically
 
----
-
-## 📞 Deployment Contact
-
-**Project Owner**: Abdullah Mirxa  
-**Technical Lead**: Engineering Team  
-**Deployment Manager**: DevOps Team  
-
-**Emergency Contacts**:
-- Slack: #newomen-deployment
-- Email: ops@newomen.app
-- Phone: +1-XXX-XXX-XXXX
-
----
-
-## ✅ Final Verification
-
-Before going live, verify:
-
-1. [ ] All environment variables configured
-2. [ ] Database backups verified
-3. [ ] SSL certificate valid
-4. [ ] DNS records pointing to correct server
-5. [ ] Email templates tested
-6. [ ] Payment gateway in production mode
-7. [ ] Analytics tracking active
-8. [ ] Error tracking (Sentry) active
-9. [ ] Monitoring dashboards set up
-10. [ ] Support team trained
-11. [ ] Runbooks prepared
-12. [ ] Rollback plan documented
-
----
-
-## 🎉 Status
-
-```
-Database Setup:        ✅ COMPLETE
-API Configuration:     ✅ COMPLETE
-Backend Services:      ✅ COMPLETE
-Frontend Setup:        ✅ COMPLETE
-Security:              ✅ COMPLETE
-Documentation:         ✅ COMPLETE
-Testing:               ✅ COMPLETE
-Monitoring:            ✅ READY
-
-OVERALL STATUS:        ✅ PRODUCTION READY
+# 3. Image optimization
+# All images should be optimized before deployment
+# Use tools: TinyPNG, Squoosh, or ImageOptim
 ```
 
-**Ready for Live Deployment!**
+### Runtime Optimization
+
+```typescript
+// 1. Enable caching headers
+// Configured in vercel.json
+
+// 2. Use Service Workers
+// PWA support with Workbox
+
+// 3. Database query optimization
+// Verify indexes: Dashboard > Table Editor
+```
+
+---
+
+## 🔄 Rollback Procedures
+
+### Rollback Web Application
+
+```bash
+# Vercel
+vercel rollback
+
+# Docker
+docker ps
+docker stop <container-id>
+docker run -d -e VITE_SUPABASE_URL=... previous-image:tag
+
+# Manual Server
+git revert HEAD~1
+npm run build
+# Copy new build to server
+```
+
+### Rollback Database
+
+```bash
+# 1. From Supabase backup
+# - Dashboard > Backups
+# - Select backup point
+# - Restore (this creates a new project)
+
+# 2. Manual SQL rollback
+psql -h your-host -U postgres -d your_db -f rollback.sql
+```
+
+---
+
+## 🆘 Support & Troubleshooting
+
+### Common Issues
+
+**Issue**: Build fails with "module not found"
+```bash
+# Solution
+rm -rf node_modules package-lock.json
+npm install
+npm run build
+```
+
+**Issue**: Supabase connection timeout
+```bash
+# Check connection string
+echo $VITE_SUPABASE_URL
+
+# Verify firewall allows outbound to Supabase
+# Test connection: npx supabase db status
+```
+
+**Issue**: AI API calls failing
+```bash
+# Verify API keys in environment
+# Test API key validity
+# Check rate limits haven't been exceeded
+# Review API logs in dashboard
+```
+
+### Support Contacts
+
+- **Supabase Support**: https://supabase.com/support
+- **Vercel Support**: https://vercel.com/support
+- **GitHub Issues**: https://github.com/your-org/newomen/issues
+
+---
+
+## 📞 Post-Deployment Tasks
+
+### Immediate (Day 1)
+
+- [ ] Monitor error rates (should be < 0.1%)
+- [ ] Check performance metrics
+- [ ] Test all major user flows
+- [ ] Verify email notifications working
+- [ ] Confirm backup jobs running
+
+### Week 1
+
+- [ ] Analyze user behavior
+- [ ] Review database performance
+- [ ] Check for security issues
+- [ ] Collect user feedback
+- [ ] Plan for v1.0.1 bug fixes
+
+### Monthly
+
+- [ ] Review security logs
+- [ ] Analyze feature usage
+- [ ] Update dependencies
+- [ ] Optimize slow queries
+- [ ] Plan next features
+
+---
+
+## 📝 Deployment Checklist Template
+
+Use this template for each deployment:
+
+```
+Deployment: Version X.Y.Z
+Date: YYYY-MM-DD
+Deployed By: [Name]
+
+Pre-Deployment:
+- [ ] Tests passing
+- [ ] Build successful
+- [ ] No linting errors
+- [ ] Database migrations reviewed
+
+Deployment:
+- [ ] Web app deployed to [platform]
+- [ ] Environment variables configured
+- [ ] DNS updated (if needed)
+- [ ] SSL certificates valid
+
+Post-Deployment:
+- [ ] Health checks passing
+- [ ] Error rates normal
+- [ ] Performance metrics good
+- [ ] No user-facing issues
+
+Rollback Plan:
+[If needed, describe rollback steps]
+```
+
+---
+
+**Deployment Status**: ✅ READY FOR PRODUCTION  
+**Last Verified**: October 16, 2025  
+**Next Review**: [Date]  
+
+For questions or issues, contact the DevOps team or create an issue on GitHub.
