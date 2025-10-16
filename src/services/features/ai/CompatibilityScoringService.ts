@@ -40,8 +40,8 @@ export interface ResponsePair {
   category?: string;
 }
 
-export class CompatibilityScor ingService {
-  private static instance: CompatibilityScor ingService;
+export class CompatibilityScoringService {
+  private static instance: CompatibilityScoringService;
 
   // Dimension weights (sum = 1.0)
   private readonly dimensionWeights = {
@@ -57,11 +57,11 @@ export class CompatibilityScor ingService {
 
   private constructor() {}
 
-  static getInstance(): CompatibilityScor ingService {
-    if (!CompatibilityScor ingService.instance) {
-      CompatibilityScor ingService.instance = new CompatibilityScor ingService();
+  static getInstance(): CompatibilityScoringService {
+    if (!CompatibilityScoringService.instance) {
+      CompatibilityScoringService.instance = new CompatibilityScoringService();
     }
-    return CompatibilityScor ingService.instance;
+    return CompatibilityScoringService.instance;
   }
 
   /**
@@ -1103,5 +1103,5 @@ export class CompatibilityScor ingService {
   }
 }
 
-export const compatibilityScor ingService = CompatibilityScor ingService.getInstance();
+export const compatibilityScoringService = CompatibilityScoringService.getInstance();
 

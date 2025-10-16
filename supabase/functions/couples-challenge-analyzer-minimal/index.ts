@@ -92,8 +92,8 @@ serve(async (req) => {
     console.log('Current question index:', challenge.current_question_index);
 
     // Count only human responses (exclude AI/system/announcement)
-    const userMessages = messages.filter((m: any) => m.sender === 'user' && typeof m.content === 'string' && !m.content.startsWith('Thank you both for completing'));
-    const partnerMessages = messages.filter((m: any) => m.sender === 'partner' && typeof m.content === 'string' && !m.content.startsWith('Thank you both for completing'));
+    const userMessages = messages.filter((m: Record<string, unknown>) => m.sender === 'user' && typeof m.content === 'string' && !String(m.content).startsWith('Thank you both for completing'));
+    const partnerMessages = messages.filter((m: Record<string, unknown>) => m.sender === 'partner' && typeof m.content === 'string' && !String(m.content).startsWith('Thank you both for completing'));
 
     console.log('User messages (filtered):', userMessages.length);
     console.log('Partner messages (filtered):', partnerMessages.length);

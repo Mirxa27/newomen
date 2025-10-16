@@ -23,8 +23,8 @@ export interface ConflictExercise {
     timeRequired: number;
     expectedOutcome: string;
   };
-  userResponse?: any;
-  partnerResponse?: any;
+  userResponse?: Record<string, unknown>;
+  partnerResponse?: Record<string, unknown>;
   effectivenessScore?: number;
   completedAt?: string;
 }
@@ -208,8 +208,8 @@ export class EnhancedConflictResolutionService {
    */
   async completeConflictExercise(
     exerciseId: string,
-    userResponse: any,
-    partnerResponse: any,
+    userResponse: Record<string, unknown>,
+    partnerResponse: Record<string, unknown>,
     effectivenessScore: number
   ): Promise<void> {
     try {

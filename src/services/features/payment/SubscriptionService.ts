@@ -487,11 +487,11 @@ class SubscriptionService {
   /**
    * Get cost per minute for a subscription plan
    */
-  getCostPerMinute(plan: SubscriptionPlan): number {
+  getCostPerMinute(plan: SubscriptionPlan & { minutes_included?: number }): number {
     if (plan.monthly_price === 0) return 0;
     // This needs to be updated based on the actual plan structure
     // For now, assuming plans have a minutes_included field
-    const minutesIncluded = (plan as any).minutes_included || 100;
+    const minutesIncluded = plan.minutes_included || 100;
     return plan.monthly_price / minutesIncluded;
   }
 

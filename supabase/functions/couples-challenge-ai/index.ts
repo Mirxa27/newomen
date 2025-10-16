@@ -1,4 +1,4 @@
-// @ts-ignore - Supabase Edge Runtime
+// @ts-expect-error - Supabase Edge Runtime type definitions
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // Type declarations for Deno Edge Runtime
@@ -442,7 +442,7 @@ Deno.serve(async (req: Request) => {
         break;
         
       default:
-        throw new Error(`Unsupported operation type: ${(operation as any).type}`);
+        throw new Error(`Unsupported operation type: ${(operation as Record<string, unknown>).type}`);
     }
 
     return new Response(

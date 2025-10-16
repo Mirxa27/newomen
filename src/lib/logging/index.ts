@@ -294,9 +294,11 @@ export class FileTransport implements LogTransport {
     if (typeof window === 'undefined') {
       // Node.js environment - dynamically import fs and path
       try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        // @ts-expect-error - require is available in Node.js environments
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const fs = require('fs');
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        // @ts-expect-error - require is available in Node.js environments  
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const path = require('path');
         
         const logDir = path.dirname(this.config.filePath);

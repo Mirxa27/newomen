@@ -7,7 +7,7 @@ const RETRY_DELAY_MS = 1000;
 
 // --- Custom Error for more detailed reporting ---
 class EdgeFunctionError extends Error {
-  constructor(message: string, public functionName: string, public originalError?: any) {
+  constructor(message: string, public functionName: string, public originalError?: Error | unknown) {
     super(message);
     this.name = 'EdgeFunctionError';
   }
@@ -92,11 +92,26 @@ export interface ConflictResolutionMetrics {
 }
 
 // --- Types for Edge Function Payloads ---
+interface ConflictMessage {
+  sender: string;
+  content: string;
+}
+
+interface PreviousExercise {
+  exerciseType: string;
+  effectiveness: number;
+}
+
+interface CompletedExercise {
+  exerciseType: string;
+  effectiveness: number;
+}
+
 type EdgeFunctionPayload =
-  | { type: 'analyzeConflictPattern'; payload: { messages: Array<{ sender: string; content: string }>; challengeContext: string } }
-  | { type: 'generateConflictResolutionSuggestion'; payload: { conflictAnalysis: ConflictAnalysis; previousExercises: Array<{ exerciseType: string; effectiveness: number }> } }
-  | { type: 'provideRealTimeConflictInsight'; payload: { recentMessages: Array<{ sender: string; content: string }>; conflictPatterns: ConflictAnalysis[] } }
-  | { type: 'assessConflictResolutionProgress'; payload: { challengeId: string; conflictPatterns: ConflictAnalysis[]; completedExercises: Array<{ exerciseType: string; effectiveness: number }> } }
+  | { type: 'analyzeConflictPattern'; payload: { messages: ConflictMessage[]; challengeContext: string } }
+  | { type: 'generateConflictResolutionSuggestion'; payload: { conflictAnalysis: ConflictAnalysis; previousExercises: PreviousExercise[] } }
+  | { type: 'provideRealTimeConflictInsight'; payload: { recentMessages: ConflictMessage[]; conflictPatterns: ConflictAnalysis[] } }
+  | { type: 'assessConflictResolutionProgress'; payload: { challengeId: string; conflictPatterns: ConflictAnalysis[]; completedExercises: CompletedExercise[] } }
   | { type: 'generatePersonalizedConflictAdvice'; payload: { userProfile: UserProfile; partnerProfile: UserProfile; currentConflict: ConflictAnalysis } };
 
 export class AIConflictResolutionService {
@@ -110,7 +125,7 @@ export class AIConflictResolutionService {
    * @throws {EdgeFunctionError} If the function call fails after retries.
    */
   private async callEdgeFunction<T>(functionName: string, payload: EdgeFunctionPayload): Promise<T> {
-    let lastError: any;
+    let lastError: Error | unknown;
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
@@ -137,24 +152,20 @@ export class AIConflictResolutionService {
         }
 
         this.retryCount = 0;
-        return data.data;
+        return data.data as T;
       } catch (error) {
         lastError = error;
         if (attempt === MAX_RETRIES - 1) {
           throw new EdgeFunctionError(
             `Failed to call edge function after ${MAX_RETRIES} attempts: ${functionName}`,
             functionName,
-            error
+            error instanceof Error ? error : new Error(String(error))
           );
         }
       }
     }
-
-    throw new EdgeFunctionError(
-      `Failed to call edge function: ${functionName}`,
-      functionName,
-      lastError
-    );
+    
+    throw lastError instanceof Error ? lastError : new Error(String(lastError));
   }
 
   /**

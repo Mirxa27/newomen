@@ -9,10 +9,10 @@ export interface ZAIConfig {
 
 export interface AIOperationRequest {
   type: string;
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
 }
 
-export interface AIOperationResponse<T = any> {
+export interface AIOperationResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -65,7 +65,7 @@ export class ZAIIntegrationService {
    * Call Z.AI assessment function
    */
   static async processAssessment(
-    assessmentData: any
+    assessmentData: Record<string, unknown>
   ): Promise<AIOperationResponse> {
     try {
       const { data, error } = await supabase.functions.invoke(
@@ -94,7 +94,7 @@ export class ZAIIntegrationService {
   /**
    * Generate dynamic question using GLM-4.5-Air
    */
-  static async generateDynamicQuestion(previousResponses: any, context: string): Promise<AIOperationResponse> {
+  static async generateDynamicQuestion(previousResponses: Record<string, unknown>, context: string): Promise<AIOperationResponse> {
     return this.processCouplesChallenge({
       type: 'generateDynamicQuestion',
       payload: {
@@ -109,8 +109,8 @@ export class ZAIIntegrationService {
    * Analyze partner qualities
    */
   static async analyzePartnerQualities(
-    userQualities: any,
-    partnerQualities: any
+    userQualities: Record<string, unknown>,
+    partnerQualities: Record<string, unknown>
   ): Promise<AIOperationResponse> {
     return this.processCouplesChallenge({
       type: 'analyzePartnerQualities',
@@ -124,7 +124,7 @@ export class ZAIIntegrationService {
   static async scoreAssessment(
     assessmentId: string,
     userId: string,
-    responses: Record<string, any>
+    responses: Record<string, unknown>
   ): Promise<AIOperationResponse> {
     return this.processAssessment({
       assessment_id: assessmentId,

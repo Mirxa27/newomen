@@ -14,7 +14,31 @@ const supabase = createClient(
 
 interface ConflictAnalysisRequest {
   type: 'analyzeConflictPattern' | 'generateConflictResolutionSuggestion' | 'provideRealTimeConflictInsight' | 'assessConflictResolutionProgress' | 'generatePersonalizedConflictAdvice';
-  payload: any;
+  payload: Record<string, unknown>;
+}
+
+interface ConflictMessage {
+  sender: string;
+  content: string;
+  timestamp?: string;
+}
+
+interface ConflictAnalysis {
+  patternType: string;
+  severity: number;
+  triggerPhrases: string[];
+  emotionalImpact: string;
+}
+
+interface UserProfile {
+  communicationStyle: string;
+  emotionalTendencies: string[];
+  conflictHistory: string[];
+}
+
+interface ExerciseRecord {
+  exerciseType: string;
+  effectiveness: number;
 }
 
 async function callZAI(systemPrompt: string, userPrompt: string, supabaseClient: ReturnType<typeof createClient>): Promise<string> {
@@ -157,7 +181,7 @@ Provide a comprehensive conflict analysis focusing on:
   }
 }
 
-async function generateConflictResolutionSuggestion(payload: { conflictAnalysis: any; previousExercises: Array<{ exerciseType: string; effectiveness: number }> }) {
+async function generateConflictResolutionSuggestion(payload: { conflictAnalysis: ConflictAnalysis; previousExercises: ExerciseRecord[] }) {
   const systemPrompt = `You are an expert relationship counselor specializing in conflict resolution exercises. Generate personalized conflict resolution suggestions based on the conflict analysis and previous exercise history.
 
 Your response must be a valid JSON object with this structure:
@@ -206,7 +230,7 @@ Recommend an appropriate exercise that:
   }
 }
 
-async function provideRealTimeConflictInsight(payload: { recentMessages: Array<{ sender: string; content: string; timestamp: string }>; conflictPatterns: any[] }) {
+async function provideRealTimeConflictInsight(payload: { recentMessages: ConflictMessage[]; conflictPatterns: ConflictAnalysis[] }) {
   const systemPrompt = `You are an expert relationship counselor providing real-time conflict insights. Analyze recent messages and provide immediate, actionable insights.
 
 Your response must be a valid JSON object with this structure:
@@ -254,7 +278,7 @@ Focus on:
   }
 }
 
-async function assessConflictResolutionProgress(payload: { challengeId: string; conflictPatterns: any[]; completedExercises: Array<{ exerciseType: string; effectiveness: number }> }) {
+async function assessConflictResolutionProgress(payload: { challengeId: string; conflictPatterns: ConflictAnalysis[]; completedExercises: Array<{ exerciseType: string; effectiveness: number }> }) {
   const systemPrompt = `You are an expert relationship counselor assessing conflict resolution progress. Analyze the couple's progress in resolving conflicts and improving communication.
 
 Your response must be a valid JSON object with this structure:
@@ -305,7 +329,7 @@ Provide an assessment of:
   }
 }
 
-async function generatePersonalizedConflictAdvice(payload: { userProfile: any; partnerProfile: any; currentConflict: any }) {
+async function generatePersonalizedConflictAdvice(payload: { userProfile: UserProfile; partnerProfile: UserProfile; currentConflict: ConflictAnalysis }) {
   const systemPrompt = `You are an expert relationship counselor providing personalized conflict advice. Generate tailored advice based on both partners' communication styles, emotional tendencies, and conflict history.
 
 Your response must be a valid JSON object with this structure:

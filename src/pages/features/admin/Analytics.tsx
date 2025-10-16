@@ -82,7 +82,7 @@ export default function Analytics() {
       const sessionRows = (sessionsData.data ?? []) as Array<Pick<SessionRow, "user_id" | "duration_seconds" | "cost_usd" | "start_ts" | "status">>;
       const newMeRows = (newMeData.data ?? []) as Array<{ user_id: string; duration_seconds?: number; started_at: string }>;
       const recentUserRows = (recentUsersData.data ?? []) as Array<Pick<UserProfileRow, "id" | "nickname" | "email" | "subscription_tier" | "created_at">>;
-      const recentSessionRows = (recentSessionsData.data ?? []) as any[];
+      const recentSessionRows = (recentSessionsData.data ?? []) as Array<Record<string, unknown>>;
 
       const totalUsers = userRows.length;
       const totalSessions = sessionRows.length + newMeRows.length;

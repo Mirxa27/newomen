@@ -495,7 +495,7 @@ export default function ContentManagement() {
                       <div className="space-y-2">
                         <p className="text-sm font-medium">Questions:</p>
                         <ul className="list-disc list-inside space-y-1">
-                          {Array.isArray(challenge.questions) ? (challenge.questions as any[]).map((question, idx) => <li key={`q-${idx}`} className="text-sm text-muted-foreground">{typeof question === 'string' ? question : question.question || question.text || 'Question'}</li>) : null}
+                          {Array.isArray(challenge.questions) ? (challenge.questions as Array<string | Record<string, unknown>>).map((question, idx) => <li key={`q-${idx}`} className="text-sm text-muted-foreground">{typeof question === 'string' ? question : (question as Record<string, unknown>).question || (question as Record<string, unknown>).text || 'Question'}</li>) : null}
                         </ul>
                       </div>
                     </CardContent>
