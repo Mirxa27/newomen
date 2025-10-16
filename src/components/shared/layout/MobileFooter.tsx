@@ -10,8 +10,8 @@ export default function MobileFooter() {
   const { isAdmin } = useAdmin();
   const { isOpen: isKeyboardOpen } = useKeyboard();
 
-  // Hide footer when keyboard is open or user is not logged in
-  if (!user || location.pathname === "/auth" || isKeyboardOpen) {
+  // Hide footer on chat pages, when keyboard is open, or user is not logged in
+  if (!user || location.pathname.includes("/chat") || location.pathname === "/auth" || isKeyboardOpen) {
     return null;
   }
 

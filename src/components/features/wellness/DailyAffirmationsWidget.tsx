@@ -60,12 +60,12 @@ export default function DailyAffirmationsWidget() {
   }
 
   return (
-    <Card className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-200">
+    <Card className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-200 glass clay-card">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-purple-500" />
-            <CardTitle>Today's Affirmation</CardTitle>
+            <CardTitle className="gradient-text">Today's Affirmation</CardTitle>
           </div>
         </div>
       </CardHeader>
@@ -88,7 +88,7 @@ export default function DailyAffirmationsWidget() {
                 variant="outline"
                 size="sm"
                 onClick={handleRefresh}
-                className="flex-1"
+                className="flex-1 glass clay-button hover:scale-102 transition-all duration-200"
               >
                 <RotateCw className="w-4 h-4 mr-2" />
                 Refresh
@@ -97,7 +97,7 @@ export default function DailyAffirmationsWidget() {
                 variant="outline"
                 size="sm"
                 onClick={handleShare}
-                className="flex-1"
+                className="flex-1 glass clay-button hover:scale-102 transition-all duration-200"
               >
                 <Share2 className="w-4 h-4 mr-2" />
                 Share
@@ -105,7 +105,7 @@ export default function DailyAffirmationsWidget() {
               <Button
                 variant="outline"
                 size="sm"
-                className="flex-1"
+                className="flex-1 glass clay-button hover:scale-102 transition-all duration-200"
               >
                 <Settings className="w-4 h-4" />
               </Button>

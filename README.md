@@ -1,215 +1,259 @@
-# Newomen - AI-Powered Personal Growth Platform
+# Newomen - AI-Powered Couples Relationship Platform
 
-A comprehensive React + TypeScript application built with Vite, featuring AI-powered assessments, community features, and mobile support via Capacitor.
+A comprehensive relationship wellness platform powered by AI, designed to help couples strengthen their relationships through personalized assessments, challenges, AI conversations, and wellness resources.
 
-## Project Structure
-
-### Root Directory
-```
-├── src/                    # Source code
-├── public/                 # Static assets
-├── ios/                    # iOS app configuration
-├── supabase/              # Database configuration and migrations
-├── database/              # Database scripts and migrations
-├── deployment/            # Deployment scripts and configurations
-├── tests/                 # Test files organized by type
-├── config/                # Configuration files
-├── docs/                  # Documentation
-└── scripts/               # Build and utility scripts
-```
-
-### Source Code Organization (`src/`)
-
-#### Components (`src/components/`)
-Organized by feature and shared components:
-```
-├── features/
-│   ├── ai/                # AI-related components (chat, voice, agents)
-│   ├── auth/              # Authentication and onboarding
-│   ├── admin/             # Admin panel components
-│   ├── assessment/        # Assessment and evaluation components
-│   ├── community/         # Community and social features
-│   └── payment/           # Payment and subscription components
-└── shared/
-    ├── ui/                # Reusable UI components
-    ├── layout/            # Layout components
-    └── forms/             # Form components
-```
-
-#### Pages (`src/pages/`)
-Organized by feature and page type:
-```
-├── features/
-│   ├── ai/                # AI-related pages
-│   ├── auth/              # Authentication pages
-│   ├── admin/             # Admin panel pages
-│   ├── assessment/        # Assessment pages
-│   ├── community/         # Community pages
-│   ├── dashboard/         # Dashboard and profile pages
-│   └── payment/           # Payment pages
-└── shared/
-    ├── public/            # Public pages (landing, about, etc.)
-    └── mobile/            # Mobile-specific pages
-```
-
-#### Services (`src/services/`)
-Business logic organized by feature:
-```
-├── features/
-│   ├── ai/                # AI services
-│   ├── auth/              # Authentication services
-│   ├── admin/             # Admin services
-│   ├── assessment/        # Assessment services
-│   ├── community/         # Community services
-│   └── payment/           # Payment services
-└── shared/
-    ├── core/              # Core services
-    └── integrations/      # Third-party integrations
-```
-
-#### Hooks (`src/hooks/`)
-Custom React hooks organized by feature:
-```
-├── features/
-│   ├── ai/                # AI-related hooks
-│   ├── auth/              # Authentication hooks
-│   ├── admin/             # Admin hooks
-│   ├── community/         # Community hooks
-│   └── assessment/        # Assessment hooks
-└── shared/
-    ├── ui/                # UI-related hooks
-    └── core/              # Core utility hooks
-```
-
-#### Library (`src/lib/`)
-Utility functions and configurations:
-```
-├── features/
-│   ├── ai/                # AI utilities
-│   ├── auth/              # Authentication utilities
-│   └── assessment/        # Assessment utilities
-└── shared/
-    ├── core/              # Core utilities
-    ├── utils/              # General utilities
-    ├── types/              # Type definitions
-    └── validation/         # Validation schemas
-```
-
-#### Types (`src/types/`)
-TypeScript type definitions:
-```
-├── features/
-│   ├── ai/                # AI-related types
-│   └── assessment/        # Assessment types
-└── shared/
-    └── core/              # Core types
-```
-
-#### Utils (`src/utils/`)
-Utility functions:
-```
-├── features/
-│   └── mobile/            # Mobile-specific utilities
-└── shared/
-    └── core/              # Core utilities
-```
-
-### Database (`database/`)
-```
-├── migrations/            # Database migration scripts
-├── scripts/               # Database setup and utility scripts
-├── seeds/                 # Database seed data
-└── tests/                 # Database tests
-```
-
-### Deployment (`deployment/`)
-```
-├── scripts/               # Deployment scripts
-└── configs/               # Deployment configurations
-```
-
-### Tests (`tests/`)
-```
-├── unit/                  # Unit tests
-├── integration/           # Integration tests
-└── e2e/                   # End-to-end tests
-```
-
-### Configuration (`config/`)
-```
-├── environment/           # Environment configurations
-└── build/                 # Build configurations
-```
-
-## Key Features
-
-- **AI-Powered Assessments**: Comprehensive personality and wellness assessments
-- **Community Features**: Social interactions and challenges
-- **Mobile Support**: iOS and Android apps via Capacitor
-- **Admin Panel**: Complete administrative interface
-- **Payment Integration**: PayPal and subscription management
-- **Real-time Features**: Live chat and notifications
-
-## Technology Stack
-
-- **Frontend**: React 18, TypeScript, Vite
-- **UI Framework**: Radix UI, Tailwind CSS
-- **Backend**: Supabase (PostgreSQL, Auth, Real-time)
-- **Mobile**: Capacitor
-- **State Management**: TanStack Query
-- **Routing**: React Router v6
-- **Forms**: React Hook Form + Zod validation
-- **AI Integration**: Multiple AI providers
-
-## Development
+## 🚀 Quick Start
 
 ```bash
 # Install dependencies
 npm install
 
-# Start development server
+# Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your Supabase credentials
+
+# Run development server
 npm run dev
 
 # Build for production
 npm run build
 
-# Run tests
-npm test
-
-# Lint code
-npm run lint
+# Preview production build
+npm run preview
 ```
 
-## Mobile Development
+## 📁 Project Structure
+
+```
+newomen/
+├── src/                          # Source code
+│   ├── components/              # React components
+│   │   ├── features/           # Feature-specific components
+│   │   │   ├── ai/            # AI chat, voice, assessments
+│   │   │   ├── admin/         # Admin panel components
+│   │   │   ├── community/     # Community features
+│   │   │   ├── couples/       # Couples challenges
+│   │   │   ├── dashboard/     # Dashboard widgets
+│   │   │   ├── gamification/  # Badges, achievements
+│   │   │   ├── notifications/ # Notification system
+│   │   │   ├── onboarding/    # User onboarding
+│   │   │   ├── profile/       # User profiles
+│   │   │   ├── sessions/      # Live sessions
+│   │   │   ├── subscription/  # Payment & subscriptions
+│   │   │   └── wellness/      # Wellness features
+│   │   ├── shared/            # Shared/reusable components
+│   │   │   ├── layout/        # Layout components
+│   │   │   └── ui/            # UI primitives (buttons, cards, etc.)
+│   │   └── ui/                # Shadcn UI components
+│   ├── hooks/                  # Custom React hooks
+│   │   ├── features/          # Feature-specific hooks
+│   │   └── shared/            # Shared hooks
+│   ├── integrations/           # Third-party integrations
+│   │   └── supabase/          # Supabase client & types
+│   ├── lib/                    # Utility libraries
+│   │   ├── features/          # Feature utilities
+│   │   └── shared/            # Shared utilities
+│   ├── pages/                  # Page components (routes)
+│   │   ├── features/          # Feature pages
+│   │   │   ├── ai/           # AI features
+│   │   │   ├── admin/        # Admin pages
+│   │   │   ├── assessment/   # Assessments
+│   │   │   ├── community/    # Community
+│   │   │   ├── dashboard/    # Dashboard
+│   │   │   ├── profile/      # Profile
+│   │   │   └── wellness/     # Wellness hub
+│   │   └── public/           # Public pages (landing, about)
+│   ├── services/              # Business logic & API services
+│   │   ├── features/         # Feature services
+│   │   │   ├── ai/          # AI services
+│   │   │   ├── assessment/  # Assessment services
+│   │   │   ├── auth/        # Authentication
+│   │   │   ├── community/   # Community services
+│   │   │   └── wellness/    # Wellness services
+│   │   └── shared/          # Shared services
+│   │       └── core/        # Core services (error handling, etc.)
+│   ├── styles/               # Global styles
+│   ├── types/                # TypeScript type definitions
+│   └── utils/                # Utility functions
+├── supabase/                  # Supabase backend
+│   ├── functions/            # Edge Functions
+│   ├── migrations/           # Database migrations
+│   └── templates/            # Email templates
+├── public/                    # Static assets
+├── docs/                      # Documentation
+│   ├── deployment/           # Deployment guides
+│   ├── development/          # Development docs
+│   ├── ios/                  # iOS app documentation
+│   └── guides/               # User guides
+├── ios/                       # iOS native app (Capacitor)
+├── scripts/                   # Build & deployment scripts
+└── tests/                     # Test suites
+    ├── e2e/                  # End-to-end tests
+    ├── integration/          # Integration tests
+    └── unit/                 # Unit tests
+```
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **React 18** - UI library
+- **TypeScript** - Type safety
+- **Vite** - Build tool & dev server
+- **TailwindCSS** - Utility-first CSS
+- **Shadcn/ui** - Component library
+- **Framer Motion** - Animations
+- **React Router** - Client-side routing
+- **React Query** - Server state management
+- **Zustand** - Client state management
+
+### Backend
+- **Supabase** - Backend as a Service
+  - PostgreSQL database
+  - Authentication
+  - Real-time subscriptions
+  - Edge Functions (Deno)
+  - Storage
+
+### AI Services
+- **OpenAI** - GPT models for chat & assessments
+- **Z.AI** - Alternative AI provider
+- **WebRTC** - Real-time voice chat
+
+### Mobile
+- **Capacitor** - Native mobile wrapper
+- **iOS** - Native iOS support
+
+## 🔑 Key Features
+
+### AI-Powered Features
+- **AI Companion Chat** - Real-time voice and text conversations
+- **AI Assessments** - Personalized relationship assessments with AI analysis
+- **Couples Challenges** - AI-generated questions and compatibility analysis
+- **Conflict Resolution** - AI-guided conflict resolution sessions
+
+### Community
+- **Discussion Forums** - Community posts and discussions
+- **Live Sessions** - Group wellness sessions
+- **Provider Directory** - Find relationship counselors and wellness providers
+
+### Wellness
+- **Wellness Library** - Articles, videos, and resources
+- **Daily Affirmations** - Personalized affirmations
+- **Podcast Hub** - Curated relationship podcasts
+- **Card Readings** - Daily guidance cards
+
+### Gamification
+- **Achievements** - Earn badges and rewards
+- **Streaks** - Daily engagement tracking
+- **Leaderboards** - Community rankings
+- **Points System** - Earn points for activities
+
+### Admin Panel
+- **User Management** - Manage users and permissions
+- **Content Management** - Manage articles, resources
+- **AI Configuration** - Configure AI providers and models
+- **Analytics** - Platform usage analytics
+- **System Health** - Monitor system performance
+
+## 🌐 Environment Variables
+
+```env
+# Supabase
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_anon_key
+
+# AI Providers
+VITE_OPENAI_API_KEY=your_openai_key
+VITE_ZAI_API_KEY=your_zai_key
+
+# Optional
+VITE_ENABLE_ANALYTICS=true
+VITE_ENABLE_SOCIAL_LOGIN=true
+```
+
+## 📱 Mobile App (iOS)
 
 ```bash
-# Sync with mobile platforms
-npm run cap:sync
+# Sync with iOS
+npx cap sync ios
 
-# Open iOS project
-npm run ios:build
+# Open in Xcode
+npx cap open ios
 
-# Open Android project
-npm run android:build
+# Build iOS app
+# See docs/ios/iOS_BUILD_GUIDE.md
 ```
 
-## Database Management
+## 🧪 Testing
 
 ```bash
-# Check database status
-npm run db:status
+# Run unit tests
+npm run test
 
-# Run database tests
-npm run db:test
+# Run e2e tests
+npm run test:e2e
+
+# Run integration tests
+npm run test:integration
 ```
 
-## Architecture Principles
+## 🚢 Deployment
 
-1. **Feature-Based Organization**: Code is organized by business features rather than technical layers
-2. **Separation of Concerns**: Clear separation between UI, business logic, and data layers
-3. **Reusability**: Shared components and utilities are clearly identified
-4. **Scalability**: Structure supports easy addition of new features
-5. **Maintainability**: Clear naming conventions and logical grouping
-6. **Type Safety**: Comprehensive TypeScript usage throughout
-7. **Testing**: Organized test structure supporting different test types
-8. **Documentation**: Clear documentation and README files
+### Web App
+```bash
+# Build for production
+npm run build
+
+# Deploy to Vercel (recommended)
+vercel deploy
+
+# Or deploy to your hosting provider
+```
+
+### Supabase Functions
+```bash
+# Deploy all functions
+supabase functions deploy --project-ref your_project_ref
+
+# Deploy specific function
+supabase functions deploy function-name --project-ref your_project_ref
+```
+
+### iOS App
+See `docs/ios/IOS_APP_STORE_SUBMISSION.md` for detailed instructions.
+
+## 📚 Documentation
+
+- **[Deployment Guide](docs/deployment/DEPLOYMENT_STATUS.md)** - Production deployment checklist
+- **[iOS Build Guide](docs/ios/iOS_BUILD_GUIDE.md)** - iOS app build instructions
+- **[Start Here](docs/guides/START_HERE.md)** - Getting started guide
+- **[API Documentation](docs/api/)** - API reference
+
+## 🔐 Security
+
+- Row Level Security (RLS) enabled on all Supabase tables
+- JWT-based authentication
+- Secure API key management
+- CORS properly configured
+- Input validation and sanitization
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+Copyright © 2025 Newomen. All rights reserved.
+
+## 🆘 Support
+
+For support, email support@newomen.me or join our community forum.
+
+---
+
+**Built with ❤️ by the Newomen Team**
+

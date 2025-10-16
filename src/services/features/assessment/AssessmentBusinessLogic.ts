@@ -7,7 +7,7 @@ import type {
   AssessmentResponse, 
   AIAnalysisResult,
   APIResponse 
-} from '@/types/validation';
+} from '@/types/assessment.types';
 import type { Database } from '@/integrations/supabase/types';
 import { Json } from '@/integrations/supabase/types';
 

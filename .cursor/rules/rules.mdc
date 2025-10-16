@@ -1,0 +1,59 @@
+---
+alwaysApply: true
+---
+
+# Development Rules
+
+## Core Principles
+- Use agentic skills and MCP tools for implementation and execution
+- Never hallucinate or create placeholder content
+- Build against real services and data only
+
+## Strict Development Standards
+
+### 1. Real Implementation Only
+- No mocks, stubs, or simulated functionality
+- Build against actual services and data sources
+- Only use placeholders when third-party services are completely unavailable
+
+### 2. Production-Ready Delivery
+- Deliver complete, fully functional features
+- No partial implementations or "TODO" placeholders
+- Every feature must be production-ready
+
+### 3. Accuracy and Verification
+- All code, comments, and documentation must be accurate and verifiable
+- No assumptions or unverified claims
+- Every statement must be necessary and truthful
+
+### 4. Single-Source File Management
+- Never create duplicate files
+- Avoid labels like "enhanced", "updated", "v2"
+- Always modify the original file in place
+
+### 5. Latest Dependencies
+- Use MCP Context 7 to install/upgrade packages to latest stable versions
+- Keep dependencies current and secure
+
+### 6. Code Quality
+- Write self-documenting code
+- Use comments only for complex business logic
+- Avoid obvious or redundant comments
+
+### 7. Error Handling
+- Implement proper error boundaries
+- Provide user-friendly error messages
+- Fail fast with graceful recovery
+
+## UI Enhancement Guidelines
+Enhance UI for newme chat page and other pages with focus on:
+- Responsive design
+- Visual appeal
+- Modern user experience
+
+### Reference Resources
+- https://www.kibo-ui.com
+- https://ai-sdk.dev/elements/overview
+- https://ui.elevenlabs.io/docs
+- https://blocks.so
+- https://reui.io

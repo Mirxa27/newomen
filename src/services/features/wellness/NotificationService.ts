@@ -130,7 +130,8 @@ class NotificationService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.VITE_SUPABASE_ANON_KEY}`
+          'Authorization': `Bearer ${process.env.VITE_SUPABASE_ANON_KEY}`,
+          'apikey': process.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
           token,
@@ -175,7 +176,8 @@ class NotificationService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.VITE_SUPABASE_ANON_KEY}`
+          'Authorization': `Bearer ${process.env.VITE_SUPABASE_ANON_KEY}`,
+          'apikey': process.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
           to: user.user.email,

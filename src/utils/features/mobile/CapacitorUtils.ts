@@ -9,15 +9,25 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics';
 export class CapacitorUtils {
   // Initialize Capacitor plugins
   static async initialize() {
+    // Only initialize on supported native platforms, and guard per-plugin
     if (Capacitor.isNativePlatform()) {
       try {
-        // Configure status bar
-        await StatusBar.setStyle({ style: Style.Dark });
-        await StatusBar.setBackgroundColor({ color: '#1a1428' });
+        // Configure status bar (available on iOS/Android)
+        if (StatusBar && typeof StatusBar.setStyle === 'function') {
+          await StatusBar.setStyle({ style: Style.Dark });
+        }
+        if (StatusBar && typeof StatusBar.setBackgroundColor === 'function' && Capacitor.getPlatform() !== 'ios') {
+          // setBackgroundColor is not implemented on iOS
+          await StatusBar.setBackgroundColor({ color: '#1a1428' });
+        }
         
         // Configure keyboard
-        await Keyboard.setResizeMode({ mode: KeyboardResize.Body });
-        await Keyboard.setAccessoryBarVisible({ isVisible: false });
+        if (Keyboard && typeof Keyboard.setResizeMode === 'function') {
+          await Keyboard.setResizeMode({ mode: KeyboardResize.Body });
+        }
+        if (Keyboard && typeof Keyboard.setAccessoryBarVisible === 'function') {
+          await Keyboard.setAccessoryBarVisible({ isVisible: false });
+        }
         
         // Hide splash screen when app is ready
         await this.hideSplashScreen();
@@ -33,7 +43,9 @@ export class CapacitorUtils {
   static async hideSplashScreen() {
     if (Capacitor.isNativePlatform()) {
       try {
-        await SplashScreen.hide();
+        if (SplashScreen && typeof SplashScreen.hide === 'function') {
+          await SplashScreen.hide();
+        }
         console.log('✅ Splash screen hidden');
       } catch (error) {
         console.error('❌ Error hiding splash screen:', error);
@@ -47,7 +59,9 @@ export class CapacitorUtils {
       try {
         const style = type === 'light' ? ImpactStyle.Light : 
                      type === 'medium' ? ImpactStyle.Medium : ImpactStyle.Heavy;
-        await Haptics.impact({ style });
+        if (Haptics && typeof Haptics.impact === 'function') {
+          await Haptics.impact({ style });
+        }
       } catch (error) {
         console.error('❌ Error triggering haptic:', error);
       }
@@ -78,9 +92,15 @@ export class CapacitorUtils {
   static async configureKeyboard() {
     if (Capacitor.isNativePlatform()) {
       try {
-        await Keyboard.setResizeMode({ mode: KeyboardResize.Body });
-        await Keyboard.setAccessoryBarVisible({ isVisible: false });
-        await Keyboard.setScroll({ isDisabled: false });
+        if (Keyboard && typeof Keyboard.setResizeMode === 'function') {
+          await Keyboard.setResizeMode({ mode: KeyboardResize.Body });
+        }
+        if (Keyboard && typeof Keyboard.setAccessoryBarVisible === 'function') {
+          await Keyboard.setAccessoryBarVisible({ isVisible: false });
+        }
+        if (Keyboard && typeof Keyboard.setScroll === 'function') {
+          await Keyboard.setScroll({ isDisabled: false });
+        }
       } catch (error) {
         console.error('❌ Error configuring keyboard:', error);
       }
@@ -91,7 +111,9 @@ export class CapacitorUtils {
   static async showKeyboard() {
     if (Capacitor.isNativePlatform()) {
       try {
-        await Keyboard.show();
+        if (Keyboard && typeof Keyboard.show === 'function') {
+          await Keyboard.show();
+        }
       } catch (error) {
         console.error('❌ Error showing keyboard:', error);
       }
@@ -101,7 +123,9 @@ export class CapacitorUtils {
   static async hideKeyboard() {
     if (Capacitor.isNativePlatform()) {
       try {
-        await Keyboard.hide();
+        if (Keyboard && typeof Keyboard.hide === 'function') {
+          await Keyboard.hide();
+        }
       } catch (error) {
         console.error('❌ Error hiding keyboard:', error);
       }
@@ -112,9 +136,15 @@ export class CapacitorUtils {
   static async configureStatusBar() {
     if (Capacitor.isNativePlatform()) {
       try {
-        await StatusBar.setStyle({ style: Style.Dark });
-        await StatusBar.setBackgroundColor({ color: '#1a1428' });
-        await StatusBar.setOverlaysWebView({ overlay: false });
+        if (StatusBar && typeof StatusBar.setStyle === 'function') {
+          await StatusBar.setStyle({ style: Style.Dark });
+        }
+        if (StatusBar && typeof StatusBar.setBackgroundColor === 'function' && Capacitor.getPlatform() !== 'ios') {
+          await StatusBar.setBackgroundColor({ color: '#1a1428' });
+        }
+        if (StatusBar && typeof StatusBar.setOverlaysWebView === 'function') {
+          await StatusBar.setOverlaysWebView({ overlay: false });
+        }
       } catch (error) {
         console.error('❌ Error configuring status bar:', error);
       }
@@ -161,7 +191,9 @@ export class CapacitorUtils {
   // Remove keyboard event listeners
   static removeKeyboardListeners() {
     if (Capacitor.isNativePlatform()) {
-      Keyboard.removeAllListeners();
+      if (Keyboard && typeof Keyboard.removeAllListeners === 'function') {
+        Keyboard.removeAllListeners();
+      }
       document.body.classList.remove('keyboard-open');
       document.body.style.removeProperty('--keyboard-height');
     }

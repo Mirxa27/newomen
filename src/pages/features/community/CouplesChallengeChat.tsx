@@ -541,6 +541,7 @@ export default function CouplesChallengeChat() {
     return pairs;
   };
 
+
   if (loading) {
     return (
       <div className="fixed inset-0 bg-gradient-to-br from-purple-900 via-pink-800 to-blue-900">
@@ -711,21 +712,25 @@ export default function CouplesChallengeChat() {
 
         {/* Input Area */}
         {challenge.status !== "completed" && partnerJoined && (
-          <div className="bg-white/10 backdrop-blur-md border-t border-white/20 shadow-lg">
+          <div className="bg-white/10 backdrop-blur-md border-t border-white/20 shadow-lg sticky bottom-0">
             <div className="max-w-4xl mx-auto px-4 py-4">
-              <div className="flex gap-2">
-                <Input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
-                  placeholder="Type your answer..."
-                  className="flex-1 bg-white/10 backdrop-blur border-white/30 text-white placeholder:text-white/50"
-                  disabled={sending}
-                />
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <Input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
+                    placeholder="Type your answer..."
+                    className="w-full bg-white/10 backdrop-blur border-white/30 text-white placeholder:text-white/50 min-h-[44px]"
+                    aria-label="Message input"
+                    disabled={sending}
+                  />
+                </div>
                 <Button 
                   onClick={handleSendMessage} 
                   disabled={sending || !input.trim()}
-                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 min-h-[44px] min-w-[44px]"
+                  aria-label={sending ? "Sending message" : "Send message"}
                 >
                   {sending ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -733,6 +738,9 @@ export default function CouplesChallengeChat() {
                     <Send className="w-4 h-4" />
                   )}
                 </Button>
+              </div>
+              <div className="mt-2 text-xs text-white/50 text-center">
+                Press Enter to send • Shift+Enter for new line
               </div>
             </div>
           </div>

@@ -1,15 +1,18 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/shared/ui/button";
-import { ArrowLeft, Bot } from "lucide-react";
+import { ArrowLeft, Bot, Wifi, WifiOff, Activity } from "lucide-react";
 import { TranscriptPane } from "@/components/features/ai/TranscriptPane";
 import { SessionHUD } from "@/components/features/ai/SessionHUD";
 import { Composer } from "@/components/features/ai/Composer";
 import { Waveform } from "@/components/features/ai/Waveform";
 import { SuggestionPrompts } from "@/components/features/ai/SuggestionPrompts";
+import { Badge } from "@/components/shared/ui/badge";
+import { cn } from "@/lib/shared/utils/utils";
 import type { Message } from "@/hooks/features/ai/useChat";
 
 interface ChatInterfaceProps {
   isConnected: boolean;
+  isConnecting?: boolean;
   isSpeaking: boolean;
   isRecording: boolean;
   isSpeakerMuted: boolean;
@@ -27,6 +30,7 @@ interface ChatInterfaceProps {
 
 export const ChatInterface = ({
   isConnected,
+  isConnecting = false,
   isSpeaking,
   isRecording,
   isSpeakerMuted,
@@ -37,65 +41,198 @@ export const ChatInterface = ({
   endConversation,
   handleSendText,
   handleSendImage = async (file: File) => {
-    // Default implementation if not provided
+    // Enhanced image handling with validation
+    if (!file.type.startsWith('image/')) {
+      console.error('Invalid file type. Please select an image.');
+      return;
+    }
+    
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      console.error('File too large. Please select an image under 10MB.');
+      return;
+    }
+
     const reader = new FileReader();
     reader.onloadend = () => {
       const message: Message = {
         role: 'user',
-        content: '',
+        content: `Shared an image: ${file.name}`,
         timestamp: new Date(),
         type: 'image',
         imageUrl: reader.result as string
       };
-      // Add message to state
       messages.push(message);
     };
     reader.readAsDataURL(file);
   },
-  handleSendDocument,
+  handleSendDocument = async (file: File, fileType: string) => {
+    // Enhanced document handling
+    const maxSize = 25 * 1024 * 1024; // 25MB
+    if (file.size > maxSize) {
+      console.error('File too large. Please select a document under 25MB.');
+      return;
+    }
+
+    const message: Message = {
+      role: 'user',
+      content: `Shared a document: ${file.name}`,
+      timestamp: new Date(),
+      type: 'document',
+      documentData: {
+        name: file.name,
+        size: file.size,
+        type: fileType
+      }
+    };
+    messages.push(message);
+  },
   toggleRecording,
   toggleSpeakerMute,
 }: ChatInterfaceProps) => {
   const navigate = useNavigate();
 
+  const getConnectionStatus = () => {
+    if (isConnecting) return { text: 'Connecting...', color: 'bg-amber-400', icon: Activity };
+    if (isConnected) return { text: 'Connected', color: 'bg-emerald-400', icon: Wifi };
+    return { text: 'Disconnected', color: 'bg-red-400', icon: WifiOff };
+  };
+
+  const status = getConnectionStatus();
+
   return (
-    <div className="app-page-shell min-h-dvh flex flex-col bg-fixed bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'url(/fixed-background.jpg)' }}>
-      {/* Header */}
-      <header className="flex-shrink-0 glass border-b border-white/10 sticky top-0 z-10 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto w-full px-3 py-2 sm:px-6 sm:py-4">
+    <div className="app-page-shell min-h-dvh flex flex-col relative">
+      {/* Enhanced Fixed Background with better mobile optimization */}
+      <div className="fixed inset-0 -z-10 bg-cover bg-center bg-no-repeat bg-fixed" 
+           style={{ backgroundImage: 'url(/fixed-background.jpg)' }} />
+      
+      {/* Enhanced Glassmorphic Overlay with better gradients */}
+      <div className="fixed inset-0 -z-9 bg-gradient-to-br from-black/80 via-purple-900/50 to-black/80 backdrop-blur-md" />
+      
+      {/* Enhanced Header with better responsive design */}
+      <header className="flex-shrink-0 glass border-b border-white/20 sticky top-0 z-20 backdrop-blur-xl shadow-lg">
+        <div className="max-w-7xl mx-auto w-full px-3 py-3 sm:px-6 sm:py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center clay">
-                <Bot className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="relative">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 via-pink-500 to-purple-600 rounded-full flex items-center justify-center clay shadow-lg">
+                  <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                </div>
+                {/* Activity indicator */}
+                {isSpeaking && (
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-400 rounded-full animate-pulse border-2 border-white shadow-sm" />
+                )}
               </div>
-              <div>
-                <h2 className="text-base sm:text-lg font-semibold">NewMe Chat</h2>
-                <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">AI Companion</p>
+              <div className="space-y-1">
+                <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">
+                  NewMe Chat
+                </h2>
+                <p className="text-xs sm:text-sm text-purple-200/80 font-medium">
+                  AI Companion • {messages.length} messages
+                </p>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/dashboard')}
-              className="gap-1 sm:gap-2 hover:gap-2 sm:hover:gap-3 transition-all h-8 sm:h-10 px-2 sm:px-4"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline text-sm">Dashboard</span>
-            </Button>
+            
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Enhanced connection status */}
+              <Badge 
+                variant={isConnected ? "default" : "secondary"}
+                className={cn(
+                  "flex items-center gap-1.5 px-2 py-1 text-xs font-medium transition-all duration-300",
+                  isConnected 
+                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-400/30" 
+                    : "bg-red-500/20 text-red-300 border-red-400/30"
+                )}
+              >
+                <status.icon className="w-3 h-3" />
+                <span className="hidden sm:inline">{status.text}</span>
+              </Badge>
+              
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/dashboard')}
+                className="gap-1 sm:gap-2 hover:gap-2 sm:hover:gap-3 transition-all h-9 sm:h-10 px-3 sm:px-4 bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/30"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="hidden sm:inline text-sm font-medium">Dashboard</span>
+              </Button>
+            </div>
+          </div>
+          
+          {/* Enhanced Connection Status Bar with better visual feedback */}
+          <div className="mt-3 flex items-center justify-between">
+            <div className="flex items-center gap-3 text-xs sm:text-sm text-purple-200/70">
+              <div className={cn("h-2 w-2 rounded-full transition-all duration-300", status.color)} />
+              <span className="font-medium">
+                {isConnecting ? 'Establishing secure connection...' : 
+                 isConnected ? `Session active • ${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}` : 
+                 'Connection lost'}
+              </span>
+              {isConnected && (
+                <div className="flex items-center gap-1 text-emerald-300">
+                  <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse" />
+                  <span className="text-xs">Live</span>
+                </div>
+              )}
+            </div>
+            
+            {/* Audio level indicator */}
+            {isConnected && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-purple-200/60">Audio</span>
+                <div className="flex items-center gap-0.5">
+                  {[...Array(5)].map((_, i) => (
+                    <div
+                      key={i}
+                      className={cn(
+                        "w-1 h-3 rounded-full transition-all duration-150",
+                        audioLevel > (i * 20) 
+                          ? "bg-emerald-400" 
+                          : "bg-white/20"
+                      )}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0 max-w-7xl mx-auto w-full p-2 sm:p-4 md:p-6 gap-2 sm:gap-4 md:gap-6">
-        {/* Chat Area */}
-        <main className="flex-1 flex flex-col min-h-0 gap-2 sm:gap-4">
-          <div className="flex-1 glass rounded-2xl sm:rounded-3xl border border-white/10 shadow-lg flex flex-col overflow-hidden backdrop-blur-xl">
-            <TranscriptPane messages={messages} partialTranscript={partialTranscript} />
+      {/* Enhanced Main Content Area */}
+      <div className="flex-1 flex flex-col lg:flex-row gap-4 sm:gap-6 p-4 sm:p-6 overflow-hidden">
+        {/* Enhanced Chat Area */}
+        <div className="flex-1 flex flex-col min-h-0 space-y-4 sm:space-y-6">
+          {/* Enhanced Transcript Pane */}
+          <div className="flex-1 min-h-0">
+            <TranscriptPane 
+              messages={messages} 
+              partialTranscript={partialTranscript}
+            />
           </div>
-          <div className="flex-shrink-0 glass rounded-2xl sm:rounded-3xl border border-white/10 p-3 sm:p-4 shadow-lg backdrop-blur-xl">
-            <Waveform isActive={isConnected && isSpeaking} audioLevel={audioLevel} />
-          </div>
-          <div className="flex-shrink-0 glass rounded-2xl sm:rounded-3xl border border-white/10 p-3 sm:p-4 shadow-lg backdrop-blur-xl">
+
+          {/* Enhanced Suggestion Prompts */}
+          {messages.length === 0 && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <SuggestionPrompts 
+                onSelectPrompt={handleSendText} 
+                isConnected={isConnected} 
+              />
+            </div>
+          )}
+
+          {/* Enhanced Waveform Visualization */}
+          {isConnected && (
+            <div className="h-16 sm:h-20 glass rounded-2xl border border-white/20 p-4 shadow-lg backdrop-blur-xl">
+              <Waveform 
+                isActive={isRecording || isSpeaking} 
+                audioLevel={audioLevel} 
+              />
+            </div>
+          )}
+
+          {/* Enhanced Composer */}
+          <div className="flex-shrink-0">
             <Composer
               onSendText={handleSendText}
               onSendImage={handleSendImage}
@@ -108,26 +245,17 @@ export const ChatInterface = ({
               onToggleSpeakerMute={toggleSpeakerMute}
             />
           </div>
-          {messages.length === 0 && (
-            <div className="flex-shrink-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <SuggestionPrompts
-                onSelectPrompt={handleSendText}
-                isConnected={isConnected}
-              />
-            </div>
-          )}
-        </main>
+        </div>
 
-        {/* Sidebar - Desktop */}
-        <aside className="hidden lg:flex w-80 xl:w-96 flex-shrink-0">
-          <div className="w-full glass rounded-3xl border border-white/10 p-6 shadow-lg backdrop-blur-xl">
-            <SessionHUD duration={duration} isConnected={isConnected} isSpeaking={isSpeaking} />
+        {/* Enhanced Session HUD - Better responsive positioning */}
+        <div className="lg:w-80 xl:w-96 flex-shrink-0">
+          <div className="sticky top-24">
+            <SessionHUD
+              duration={duration}
+              isConnected={isConnected}
+              isSpeaking={isSpeaking}
+            />
           </div>
-        </aside>
-
-        {/* Bottom HUD - Mobile */}
-        <div className="lg:hidden flex-shrink-0 glass rounded-2xl sm:rounded-3xl border border-white/10 p-3 sm:p-4 shadow-lg backdrop-blur-xl">
-          <SessionHUD duration={duration} isConnected={isConnected} isSpeaking={isSpeaking} />
         </div>
       </div>
     </div>

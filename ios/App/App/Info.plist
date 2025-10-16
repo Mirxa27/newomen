@@ -149,5 +149,59 @@
 		<string>googleapis.com</string>
 		<string>openai.com</string>
 	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>background-fetch</string>
+		<string>background-processing</string>
+		<string>remote-notification</string>
+		<string>background-app-refresh</string>
+	</array>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Newomen uses Face ID to securely authenticate you and protect your personal wellness data.</string>
+	<key>UIUserInterfaceStyle</key>
+	<string>Automatic</string>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>armv7</string>
+	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Newomen uses Face ID to securely authenticate you and protect your personal wellness data.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Newomen uses Face ID to securely authenticate you and protect your personal wellness data.</string>
+	<key>UIPrerenderedIcon</key>
+	<false/>
+	<key>UIRequiresFullScreen</key>
+	<true/>
+	<key>UIStatusBarHidden</key>
+	<false/>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleLightContent</string>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen.storyboard</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>me.newomen.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>newomen</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>sms</string>
+		<string>tel</string>
+		<string>mailto</string>
+		<string>https</string>
+		<string>http</string>
+	</array>
 </dict>
 </plist>

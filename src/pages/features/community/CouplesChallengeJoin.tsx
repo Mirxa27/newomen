@@ -271,6 +271,7 @@ export default function CouplesChallengeJoin() {
                 onKeyPress={(e) => e.key === "Enter" && handleJoin()}
                 disabled={joining}
                 className="bg-white/10 backdrop-blur border-white/30 text-white placeholder:text-white/50"
+                aria-label="Your name"
               />
               <p className="text-xs text-gray-400">
                 No account needed - just enter your name to start
@@ -282,6 +283,7 @@ export default function CouplesChallengeJoin() {
               disabled={joining || !partnerName.trim()}
               className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
               size="lg"
+              aria-label={joining ? "Joining challenge" : "Join challenge"}
             >
               {joining ? (
                 <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Joining...</>

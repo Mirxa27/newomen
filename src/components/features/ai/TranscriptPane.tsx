@@ -1,8 +1,9 @@
 // src/components/chat/TranscriptPane.tsx
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { User, Bot } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shared/ui/avatar';
 import { cn } from '@/lib/shared/utils/utils';
+import { Button } from '@/components/shared/ui/button';
 import type { Message } from '@/hooks/features/ai/useChat';
 
 interface TranscriptPaneProps {
@@ -12,6 +13,13 @@ interface TranscriptPaneProps {
 
 export const TranscriptPane = ({ messages = [], partialTranscript }: TranscriptPaneProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+
+  const isAtBottom = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return true;
+    return Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight) < 4;
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -19,8 +27,23 @@ export const TranscriptPane = ({ messages = [], partialTranscript }: TranscriptP
     }
   }, [messages, partialTranscript]);
 
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => setShowScrollButton(!isAtBottom());
+    onScroll();
+    el.addEventListener('scroll', onScroll);
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [isAtBottom]);
+
+  const scrollToBottom = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+  };
+
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full relative">
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4" ref={scrollRef}>
         {messages.map((message, index) => (
           <div
@@ -97,6 +120,19 @@ export const TranscriptPane = ({ messages = [], partialTranscript }: TranscriptP
           </div>
         )}
       </div>
+      {showScrollButton && (
+        <div className="absolute bottom-3 right-3">
+          <Button
+            size="sm"
+            variant="secondary"
+            className="shadow-md"
+            onClick={scrollToBottom}
+            aria-label="Scroll to latest message"
+          >
+            Jump to latest
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

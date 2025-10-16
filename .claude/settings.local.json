@@ -7,9 +7,20 @@
       "Bash(npm run lint)",
       "Bash(npm run test)",
       "Bash(npm run)",
-      "Bash(deno check:*)"
+      "Bash(deno check:*)",
+      "WebSearch",
+      "mcp__desktop-commander__list_directory",
+      "Bash(mkdir:*)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "claude-flow@alpha",
+    "ruv-swarm",
+    "flow-nexus",
+    "chrome-devtools"
+  ]
 }

@@ -145,7 +145,7 @@ export const Composer = ({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex gap-2">
+      <form onSubmit={handleSubmit} className="flex gap-2" aria-label="Message composer">
         <Textarea
           ref={textareaRef}
           value={text}
@@ -155,6 +155,7 @@ export const Composer = ({
           className="min-h-[44px] max-h-[150px] glass bg-white/5"
           disabled={!isConnected}
           rows={1}
+          aria-label="Message input"
         />
         <div className="flex flex-col gap-2">
           {/* Document Upload */}
@@ -173,6 +174,7 @@ export const Composer = ({
             onClick={() => docInputRef.current?.click()}
             disabled={!isConnected}
             title="Attach document"
+            aria-label="Attach document"
           >
             <Paperclip className="h-5 w-5" />
           </Button>
@@ -193,6 +195,7 @@ export const Composer = ({
             onClick={() => fileInputRef.current?.click()}
             disabled={!isConnected}
             title="Attach image"
+            aria-label="Attach image"
           >
             <ImageIcon className="h-5 w-5" />
           </Button>
@@ -209,6 +212,7 @@ export const Composer = ({
             onClick={onToggleRecording}
             disabled={!isConnected}
             title={isRecording ? "Stop recording" : "Start recording"}
+            aria-label={isRecording ? "Stop recording" : "Start recording"}
           >
             {isRecording ? (
               <MicOff className="h-5 w-5" />
@@ -225,6 +229,7 @@ export const Composer = ({
             className="h-11 w-11 shrink-0"
             disabled={!isConnected || (!text.trim() && !selectedImage && !selectedDocument)}
             title="Send message"
+            aria-label="Send message"
           >
             <Send className="h-5 w-5" />
           </Button>
@@ -240,6 +245,7 @@ export const Composer = ({
             className="h-9"
             onClick={onToggleSpeakerMute}
             disabled={!isConnected}
+            aria-label={isSpeakerMuted ? 'Unmute speaker' : 'Mute speaker'}
           >
             {isSpeakerMuted ? (
               <VolumeX className="h-4 w-4 mr-2" />
@@ -258,6 +264,7 @@ export const Composer = ({
           variant="ghost"
           className="h-9 text-destructive hover:text-destructive hover:bg-destructive/10"
           onClick={onEndSession}
+          aria-label="End session"
         >
           <PhoneOff className="h-4 w-4 mr-2" />
           <span className="hidden sm:inline">End Call</span>

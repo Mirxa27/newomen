@@ -20,6 +20,9 @@ import {
   Target,
   Shield,
   Timer,
+  Bell,
+  Search,
+  Zap
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -31,6 +34,7 @@ import {
 } from "@/components/shared/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/shared/ui/use-toast";
+import { cn } from "@/lib/shared/utils/utils";
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -43,14 +47,38 @@ export default function Header() {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Set initial scroll state
+    setIsScrolled(window.scrollY > 20);
+    
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      const scrolled = window.scrollY > 20;
+      if (scrolled !== isScrolled) {
+        setIsScrolled(scrolled);
+      }
     };
 
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+    // Add throttling to improve performance
+    const throttledHandleScroll = () => {
+      let isThrottled = false;
+      return () => {
+        if (!isThrottled) {
+          handleScroll();
+          isThrottled = true;
+          setTimeout(() => {
+            isThrottled = false;
+          }, 100);
+        }
+      };
+    };
 
+    const throttled = throttledHandleScroll();
+    window.addEventListener("scroll", throttled, { passive: true });
+    
+    // Force a check in case page loads already scrolled
+    handleScroll();
+    
+    return () => window.removeEventListener("scroll", throttled);
+  }, [isScrolled]);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -94,231 +122,276 @@ export default function Header() {
 
   return (
     <header
-      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
+      className={cn(
+        "relative z-50 w-full transition-all duration-300",
         isScrolled
           ? "glass-card shadow-lg backdrop-blur-xl bg-background/95 border-b border-white/20"
           : "glass border-b border-white/10"
-      }`}
+      )}
     >
-      <nav className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link to="/" className="flex items-center group">
-          <div className="h-12 w-auto transition-transform group-hover:scale-105">
-            <img src="/Newomen%20logo.svg" alt="Newomen" className="h-12 w-auto" />
-          </div>
-        </Link>
-
-        {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center space-x-6">
-          {(user ? authenticatedLinks : publicLinks).map((link) => (
-            <Link
-              key={link.to}
-              to={link.to}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                isActive(link.to) ? "text-primary" : "text-muted-foreground"
-              }`}
+      <div className="container-responsive">
+        <div className="flex h-20 sm:h-24 items-center justify-between">
+          {/* Enhanced Logo Section */}
+          <div className="flex items-center">
+            <Link 
+              to={user ? "/dashboard" : "/"} 
+              className="flex items-center group transition-all duration-200 hover:scale-105"
             >
-              {link.label}
+              {isScrolled ? (
+                <img 
+                  src="/dist/Newomen icon.svg" 
+                  alt="Newomen"
+                  className="w-14 h-14 object-contain max-h-full"
+                />
+              ) : (
+                <img 
+                  src="/public/newomen-logo.png" 
+                  alt="Newomen"
+                  className="w-26 h-26 object-contain max-h-full"
+                />
+              )}
             </Link>
-          ))}
-        </div>
+          </div>
 
-        {/* Desktop Auth & Quick Stats */}
-        <div className="hidden md:flex items-center gap-4">
-          {user && !profileLoading && (
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="bg-white/10 text-xs capitalize">
-                {subscriptionTier}
-              </Badge>
-              <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                <Timer className="h-4 w-4" />
-                <span>{remainingMinutes} min</span>
-              </div>
-            </div>
-          )}
-
-          {user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="flex items-center gap-2 glass-card hover:bg-white/10"
-                >
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={profile?.avatar_url} />
-                    <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white">
-                      {(displayName || user?.email || "U")[0].toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium hidden lg:block">
-                    {displayName}
-                  </span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-60 glass-card border-white/10">
-                <DropdownMenuLabel>Account</DropdownMenuLabel>
-                <DropdownMenuSeparator className="bg-white/10" />
-                <DropdownMenuItem disabled className="flex-col items-start">
-                  <span className="text-xs text-muted-foreground">Subscription</span>
-                  <span className="text-sm font-semibold capitalize">{subscriptionTier}</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled className="flex-col items-start">
-                  <span className="text-xs text-muted-foreground">Remaining Minutes</span>
-                  <span className="text-sm font-semibold">{remainingMinutes} min</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-white/10" />
-                <DropdownMenuItem onClick={() => navigate("/profile")}>
-                  <User className="mr-2 h-4 w-4" />
-                  Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/account-settings")}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/narrative-exploration")}>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Narrative Exploration
-                </DropdownMenuItem>
-                {isAdmin && (
-                  <DropdownMenuItem onClick={() => navigate("/admin")}> 
-                    <Shield className="mr-2 h-4 w-4" />
-                    Admin Console
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator className="bg-white/10" />
-                <DropdownMenuItem onClick={handleSignOut}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sign Out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <>
-              <Button
-                variant="ghost"
-                className="glass-card"
-                onClick={() => navigate("/auth")}
-              >
-                Sign In
-              </Button>
-              <Button
-                className="clay-button bg-gradient-to-r from-primary to-accent"
-                onClick={() => navigate("/auth")}
-              >
-                Get Started
-              </Button>
-            </>
-          )}
-        </div>
-
-        {/* Mobile Menu Button */}
-        <button
-          className="md:hidden p-2"
-          onClick={() => setMobileMenuOpen((prev) => !prev)}
-          aria-label="Toggle navigation"
-        >
-          {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
-      </nav>
-
-      {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden glass-card rounded-b-2xl mt-2 animate-in slide-in-from-top duration-200">
-          <div className="container mx-auto px-4 py-4 space-y-2">
+          {/* Enhanced Desktop Navigation */}
+          <nav className="hidden lg:flex items-center space-x-1">
             {(user ? authenticatedLinks : publicLinks).map((link) => {
               const Icon = link.icon;
+              const active = isActive(link.to);
+              
               return (
                 <Link
                   key={link.to}
                   to={link.to}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                    isActive(link.to)
-                      ? "glass-card text-primary font-semibold"
-                      : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-                  }`}
-                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105 touch-target",
+                    active
+                      ? "bg-primary/20 text-primary border border-primary/30 shadow-glow"
+                      : "text-muted-foreground hover:text-foreground hover:bg-white/10"
+                  )}
                 >
-                  <Icon className="h-5 w-5" />
-                  {link.label}
+                  <Icon className="w-4 h-4" />
+                  <span>{link.label}</span>
+                  {active && (
+                    <div className="w-1 h-1 bg-primary rounded-full animate-pulse" />
+                  )}
                 </Link>
               );
             })}
+          </nav>
 
-            {user && (
+          {/* Enhanced Right Section */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {user ? (
               <>
-                <div className="h-px bg-white/10 my-2" />
-                <div className="flex items-center justify-between px-4 py-2 text-sm text-muted-foreground">
-                  <span className="capitalize">{subscriptionTier}</span>
-                  <span className="flex items-center gap-1">
-                    <Timer className="h-4 w-4" />
-                    {remainingMinutes} min
-                  </span>
-                </div>
-                <Link
-                  to="/profile"
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <User className="h-5 w-5" />
-                  Profile
-                </Link>
-                <Link
-                  to="/account-settings"
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <Settings className="h-5 w-5" />
-                  Settings
-                </Link>
-                {isAdmin && (
-                  <Link
-                    to="/admin"
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5"
-                    onClick={() => setMobileMenuOpen(false)}
+                {/* Enhanced User Stats - Desktop */}
+                <div className="hidden md:flex items-center gap-3">
+                  {/* Subscription Badge */}
+                  <Badge 
+                    variant="secondary" 
+                    className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-200 border-purple-400/30 hover:scale-105 transition-all duration-200"
                   >
-                    <Shield className="h-5 w-5" />
-                    Admin Console
-                  </Link>
-                )}
-                <button
-                  onClick={() => {
-                    handleSignOut();
-                    setMobileMenuOpen(false);
-                  }}
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 text-left w-full"
-                >
-                  <LogOut className="h-5 w-5" />
-                  Sign Out
-                </button>
-              </>
-            )}
+                    <Zap className="w-3 h-3 mr-1" />
+                    {subscriptionTier}
+                  </Badge>
+                  
+                  {/* Minutes Remaining */}
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <Timer className="w-4 h-4" />
+                    <span className="font-mono">{remainingMinutes}m</span>
+                  </div>
+                </div>
 
-            {!user && (
-              <>
-                <div className="h-px bg-white/10 my-2" />
-                <Button
-                  variant="outline"
-                  className="glass-card w-full"
-                  onClick={() => {
-                    navigate("/auth");
-                    setMobileMenuOpen(false);
-                  }}
+                {/* Enhanced User Menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      className="relative h-10 w-10 sm:h-12 sm:w-12 rounded-full hover:scale-105 transition-all duration-200 touch-target"
+                    >
+                      <Avatar className="h-8 w-8 sm:h-10 sm:w-10 border-2 border-white/20 shadow-lg">
+                        <AvatarImage 
+                          src={profile?.avatar_url || undefined} 
+                          alt={displayName}
+                          className="object-cover"
+                        />
+                        <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white font-semibold">
+                          {displayName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      {/* Online indicator */}
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 border-2 border-background rounded-full animate-pulse" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  
+                  <DropdownMenuContent 
+                    className="w-64 glass-card border-white/20 shadow-xl backdrop-blur-xl" 
+                    align="end"
+                  >
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-2">
+                        <p className="text-sm font-medium leading-none">{displayName}</p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          {user.email}
+                        </p>
+                        <div className="flex items-center gap-2 pt-1">
+                          <Badge 
+                            variant="secondary" 
+                            className="text-xs bg-primary/20 text-primary border-primary/30"
+                          >
+                            {subscriptionTier}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Timer className="w-3 h-3" />
+                            {remainingMinutes}m left
+                          </span>
+                        </div>
+                      </div>
+                    </DropdownMenuLabel>
+                    
+                    <DropdownMenuSeparator className="bg-white/10" />
+                    
+                    <DropdownMenuItem 
+                      onClick={() => navigate("/profile")}
+                      className="hover:bg-white/10 cursor-pointer"
+                    >
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </DropdownMenuItem>
+                    
+                    <DropdownMenuItem 
+                      onClick={() => navigate("/account-settings")}
+                      className="hover:bg-white/10 cursor-pointer"
+                    >
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
+
+                    {isAdmin && (
+                      <DropdownMenuItem 
+                        onClick={() => navigate("/admin")}
+                        className="hover:bg-white/10 cursor-pointer"
+                      >
+                        <Shield className="mr-2 h-4 w-4" />
+                        <span>Admin Panel</span>
+                      </DropdownMenuItem>
+                    )}
+                    
+                    <DropdownMenuSeparator className="bg-white/10" />
+                    
+                    <DropdownMenuItem 
+                      onClick={handleSignOut}
+                      className="hover:bg-red-500/20 text-red-400 cursor-pointer"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Sign out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : (
+              /* Enhanced Auth Buttons */
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => navigate("/auth")}
+                  className="hidden sm:flex hover:bg-white/10 hover:scale-105 transition-all duration-200"
                 >
                   Sign In
                 </Button>
-                <Button
-                  className="clay-button bg-gradient-to-r from-primary to-accent w-full"
-                  onClick={() => {
-                    navigate("/auth");
-                    setMobileMenuOpen(false);
-                  }}
+                <Button 
+                  onClick={() => navigate("/auth")}
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-glow hover:scale-105 transition-all duration-200"
                 >
-                  Get Started
+                  <span className="hidden sm:inline">Get Started</span>
+                  <span className="sm:hidden">Join</span>
                 </Button>
-              </>
+              </div>
             )}
+
+            {/* Enhanced Mobile Menu Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden hover:bg-white/10 hover:scale-105 transition-all duration-200 touch-target"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
+            </Button>
           </div>
         </div>
-      )}
+
+        {/* Enhanced Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden animate-slide-up">
+            <div className="px-2 pt-2 pb-3 space-y-1 glass-card mt-2 rounded-2xl border border-white/20 shadow-xl backdrop-blur-xl">
+              {(user ? authenticatedLinks : publicLinks).map((link) => {
+                const Icon = link.icon;
+                const active = isActive(link.to);
+                
+                return (
+                  <Link
+                    key={link.to}
+                    to={link.to}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 touch-target",
+                      active
+                        ? "bg-primary/20 text-primary border border-primary/30"
+                        : "text-muted-foreground hover:text-foreground hover:bg-white/10"
+                    )}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span>{link.label}</span>
+                    {active && (
+                      <div className="ml-auto w-2 h-2 bg-primary rounded-full animate-pulse" />
+                    )}
+                  </Link>
+                );
+              })}
+              
+              {/* Mobile User Stats */}
+              {user && (
+                <div className="px-4 py-3 border-t border-white/10 mt-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Badge 
+                        variant="secondary" 
+                        className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-200 border-purple-400/30"
+                      >
+                        <Zap className="w-3 h-3 mr-1" />
+                        {subscriptionTier}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Timer className="w-4 h-4" />
+                      <span className="font-mono">{remainingMinutes}m</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {!user && (
+                <div className="px-4 py-3 border-t border-white/10 mt-2">
+                  <Button 
+                    onClick={() => {
+                      navigate("/auth");
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg"
+                  >
+                    Get Started
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </header>
   );
 }

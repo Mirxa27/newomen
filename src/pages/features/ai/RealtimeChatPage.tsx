@@ -73,10 +73,10 @@ const RealtimeChatPage = () => {
     <div className="app-page-shell flex flex-col">
       <div className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6">
         <div className="mx-auto flex h-full max-w-6xl flex-col gap-6">
-          <header className="glass rounded-3xl border border-white/10 px-6 py-5 shadow-lg">
+          <header className="glass rounded-3xl border border-white/10 px-6 py-5 shadow-lg clay-card">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h1 className="text-2xl font-semibold leading-tight">AI Conversation Prototype</h1>
+                <h1 className="text-2xl font-semibold leading-tight gradient-text">AI Conversation Prototype</h1>
                 <p className="text-sm text-muted-foreground">
                   Test the realtime voice experience with the unified background aesthetic.
                 </p>
@@ -88,15 +88,27 @@ const RealtimeChatPage = () => {
                 </div>
               )}
             </div>
+            <div className="mt-3 flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <div className={`h-2 w-2 rounded-full ${isConnecting ? 'bg-amber-400 animate-pulse' : isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-gray-400'}`} />
+                <span>
+                  {isConnecting ? 'Connecting to session…' : isConnected ? 'Connected' : 'Disconnected'}
+                </span>
+              </div>
+              <div className="hidden sm:flex items-center gap-3">
+                <span>Enter to send</span>
+                <span>Shift+Enter for newline</span>
+              </div>
+            </div>
           </header>
 
           <main className="flex flex-1 flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_320px]">
             <div className="flex min-h-0 flex-col gap-4">
-              <div className="glass rounded-3xl border border-white/10 p-4 sm:p-6 shadow-lg">
+              <div className="glass rounded-3xl border border-white/10 p-4 sm:p-6 shadow-lg clay-card">
                 <SessionHUD duration={duration} isConnected={isConnected} isSpeaking={isSpeaking} />
               </div>
 
-              <div className="glass flex min-h-[500px] flex-1 flex-col overflow-hidden rounded-3xl border border-white/10 shadow-lg">
+              <div className="glass flex min-h-[500px] flex-1 flex-col overflow-hidden rounded-3xl border border-white/10 shadow-lg clay-card">
                 <Transcriber conversation={messages} />
                 {partialTranscript && (
                   <div className="px-6 py-2 border-t border-white/10 bg-purple-500/10">
@@ -107,12 +119,12 @@ const RealtimeChatPage = () => {
                 )}
               </div>
 
-              <div className="glass rounded-3xl border border-white/10 p-4 shadow-lg">
+              <div className="glass rounded-3xl border border-white/10 p-4 shadow-lg clay-card">
                 <Waveform isActive={isSpeaking} audioLevel={audioLevel} />
               </div>
             </div>
 
-            <aside className="glass hidden min-h-0 flex-col gap-4 rounded-3xl border border-white/10 p-6 shadow-lg lg:flex">
+            <aside className="glass hidden min-h-0 flex-col gap-4 rounded-3xl border border-white/10 p-6 shadow-lg lg:flex clay-card">
               <div>
                 <h2 className="text-lg font-semibold">Session Controls</h2>
                 <p className="text-sm text-muted-foreground">
@@ -134,7 +146,7 @@ const RealtimeChatPage = () => {
             </aside>
           </main>
 
-          <footer className="glass rounded-3xl border border-white/10 px-4 py-4 shadow-lg sm:px-6">
+          <footer className="glass rounded-3xl border border-white/10 px-4 py-4 shadow-lg sm:px-6 clay-card">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : isConnecting ? 'bg-amber-400 animate-pulse' : 'bg-gray-400'}`} />
@@ -152,6 +164,7 @@ const RealtimeChatPage = () => {
                   onClick={handleStartSession}
                   disabled={isConnecting || isConnected}
                   className="gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                  aria-label="Start session"
                 >
                   <Mic className="h-4 w-4" />
                   Start Session
@@ -161,6 +174,7 @@ const RealtimeChatPage = () => {
                   disabled={!isConnected}
                   variant="destructive"
                   className="gap-2"
+                  aria-label="Stop session"
                 >
                   <MicOff className="h-4 w-4" />
                   Stop Session

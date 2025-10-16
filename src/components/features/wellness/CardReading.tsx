@@ -54,13 +54,13 @@ export default function CardReading() {
 
   return (
     <div className="space-y-6">
-      <UICard>
+      <UICard className="glass clay-card">
         <CardHeader>
-          <CardTitle>Daily Card Reading</CardTitle>
+          <CardTitle className="gradient-text">Daily Card Reading</CardTitle>
           <CardDescription>Draw a card for daily guidance and reflection.</CardDescription>
         </CardHeader>
         <CardContent className="text-center">
-          <Button onClick={handleDrawCard} size="lg">
+          <Button onClick={handleDrawCard} size="lg" className="glass clay-button hover:scale-102 transition-all duration-200">
             <Wand2 className="w-5 h-5 mr-2" />
             Draw a Card
           </Button>
@@ -76,7 +76,7 @@ export default function CardReading() {
             variants={cardVariants}
             transition={{ duration: 0.5 }}
           >
-            <UICard className="bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/50 dark:to-indigo-900/50">
+            <UICard className="bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/50 dark:to-indigo-900/50 glass clay-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-purple-500" />

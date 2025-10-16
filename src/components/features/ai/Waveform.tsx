@@ -79,7 +79,7 @@ const Waveform: React.FC<WaveformProps> = ({ isActive, audioLevel }) => {
   }, [isActive, audioLevel]);
 
   return (
-    <div className="h-16 sm:h-20 md:h-24 w-full bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+    <div className="h-16 sm:h-20 md:h-24 w-full glass rounded-lg overflow-hidden border border-white/10 backdrop-blur-sm">
       <canvas ref={canvasRef} className="w-full h-full" />
     </div>
   );

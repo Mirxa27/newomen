@@ -6,12 +6,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/shared/ui/badge";
 import { Loader2, ArrowLeft, Heart } from "lucide-react";
 import { useToast } from "@/hooks/shared/ui/use-toast";
-import type { Tables } from "@/integrations/supabase/types";
 import React from "react";
 
-type ChallengeTemplate = Tables<'challenge_templates'> & {
+// Local interface for challenge templates to avoid deep type instantiation
+// and to support templates not present in the generated Supabase types.
+interface ChallengeTemplate {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  is_active: boolean;
+  created_at: string;
   questions: string[];
-};
+}
 
 export default function CouplesChallenge() {
   const navigate = useNavigate();
@@ -23,14 +30,37 @@ export default function CouplesChallenge() {
   const loadTemplates = React.useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Use untyped query for templates not present in generated Supabase types
+      const { data, error } = await (supabase as any)
         .from("challenge_templates")
         .select("*")
         .eq("is_active", true)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setTemplates((data || []) as ChallengeTemplate[]);
+      const normalized: ChallengeTemplate[] = (data || []).map((t: any) => {
+        let questions: string[] = [];
+        if (Array.isArray(t?.questions)) {
+          questions = t.questions as string[];
+        } else if (typeof t?.questions === "string") {
+          try {
+            const parsed = JSON.parse(t.questions);
+            if (Array.isArray(parsed)) questions = parsed as string[];
+          } catch {
+            questions = [];
+          }
+        }
+        return {
+          id: String(t.id),
+          title: String(t.title ?? ""),
+          description: String(t.description ?? ""),
+          category: String(t.category ?? "general"),
+          is_active: Boolean(t.is_active),
+          created_at: String(t.created_at ?? new Date().toISOString()),
+          questions,
+        };
+      });
+      setTemplates(normalized);
     } catch (err) {
       console.error("Error loading templates:", err);
       toast({
@@ -153,7 +183,7 @@ export default function CouplesChallenge() {
                         <p className="text-sm text-muted-foreground">
                           {template.questions.length} questions
                         </p>
-                        <Button size="sm" onClick={(e) => {
+                        <Button size="sm" aria-label="Start selected couples challenge" onClick={(e) => {
                           e.stopPropagation();
                           startChallenge(template.id);
                         }}>

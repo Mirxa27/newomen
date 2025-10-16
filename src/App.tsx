@@ -19,6 +19,7 @@ const Onboarding = lazy(() => import("./pages/features/auth/Onboarding"));
 const Dashboard = lazy(() => import("./pages/features/dashboard/Dashboard"));
 const MobileDashboard = lazy(() => import("./pages/shared/mobile/MobileDashboard"));
 const Chat = lazy(() => import("./pages/features/ai/Chat"));
+const EnhancedVoiceChat = lazy(() => import("./pages/features/ai/EnhancedVoiceChat"));
 const CouplesChallenge = lazy(() => import("./pages/features/community/CouplesChallenge"));
 const CouplesChallengeChat = lazy(() => import("./pages/features/community/CouplesChallengeChat"));
 const CouplesChallengeJoin = lazy(() => import("./pages/features/community/CouplesChallengeJoin"));
@@ -132,6 +133,11 @@ const App = () => {
           <Route path="/chat" element={
             <ProtectedRoute>
               <MainLayout><Chat /></MainLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/voice-chat" element={
+            <ProtectedRoute>
+              <EnhancedVoiceChat />
             </ProtectedRoute>
           } />
           <Route path="/wellness-library" element={

@@ -1,5 +1,12 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-requested-with',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
+  'Access-Control-Max-Age': '86400',
+};
+
 // Use production PayPal API for live transactions
 const PAYPAL_MODE = Deno.env.get('PAYPAL_MODE') || 'live';
 const PAYPAL_API_BASE = PAYPAL_MODE === 'sandbox' 
@@ -26,7 +33,7 @@ async function getAccessToken() {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' } });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
@@ -66,12 +73,12 @@ serve(async (req) => {
     const orderData = await orderResponse.json();
 
     return new Response(JSON.stringify({ orderID: orderData.id }), {
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });

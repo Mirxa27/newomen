@@ -33,7 +33,7 @@ const SessionHUD: React.FC<SessionHUDProps> = ({
   };
 
   return (
-    <div className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-4 sm:p-6 shadow-lg backdrop-blur-xl">
+    <div className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-4 sm:p-6 shadow-lg backdrop-blur-xl clay-card">
       {/* Status */}
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-muted-foreground">Status</span>

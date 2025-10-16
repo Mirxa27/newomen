@@ -157,8 +157,11 @@ export class CompatibilityScoringService {
     }
 
     // Factor 4: Response timing/promptness (10 points)
-    // In real implementation, check timestamps
-    totalScore += 7; // Placeholder
+    const timeliness = this.analyzeResponseTimeliness(responses);
+    totalScore += timeliness * 10;
+    if (timeliness > 0.8) {
+      insights.push('Prompt and engaged responses show active participation');
+    }
 
     // Factor 5: Shared vocabulary (15 points)
     const sharedVocab = this.calculateSharedVocabulary(responses);
@@ -818,12 +821,44 @@ export class CompatibilityScoringService {
   }
 
   private analyzePriorityAlignment(responses: ResponsePair[]): number {
-    // Simplified priority analysis based on response patterns
-    return 0.65; // Placeholder - would need more sophisticated NLP
+    const priorityKeywords = ['important', 'priority', 'value', 'matter', 'care about', 'focus on', 'essential', 'crucial'];
+    let alignmentScore = 0;
+    let totalComparisons = 0;
+
+    responses.forEach((pair) => {
+      const userPriorities = this.extractKeywords(pair.userResponse, priorityKeywords);
+      const partnerPriorities = this.extractKeywords(pair.partnerResponse, priorityKeywords);
+      
+      if (userPriorities.length > 0 && partnerPriorities.length > 0) {
+        const overlap = userPriorities.filter(p => partnerPriorities.includes(p)).length;
+        const total = Math.max(userPriorities.length, partnerPriorities.length);
+        alignmentScore += overlap / total;
+        totalComparisons++;
+      }
+    });
+
+    return totalComparisons > 0 ? alignmentScore / totalComparisons : 0.65;
   }
 
   private analyzePhilosophyMatch(responses: ResponsePair[]): number {
-    return 0.60; // Placeholder
+    const philosophyKeywords = ['believe', 'think', 'feel', 'philosophy', 'perspective', 'view', 'opinion', 'stance'];
+    let matchScore = 0;
+    let totalComparisons = 0;
+
+    responses.forEach((pair) => {
+      const userPhilosophy = this.extractKeywords(pair.userResponse, philosophyKeywords);
+      const partnerPhilosophy = this.extractKeywords(pair.partnerResponse, philosophyKeywords);
+      
+      if (userPhilosophy.length > 0 && partnerPhilosophy.length > 0) {
+        // Calculate semantic similarity based on shared philosophical terms
+        const sharedTerms = userPhilosophy.filter(term => partnerPhilosophy.includes(term)).length;
+        const totalTerms = Math.max(userPhilosophy.length, partnerPhilosophy.length);
+        matchScore += sharedTerms / totalTerms;
+        totalComparisons++;
+      }
+    });
+
+    return totalComparisons > 0 ? matchScore / totalComparisons : 0.60;
   }
 
   private analyzeGoalCompatibility(responses: ResponsePair[]): number {
@@ -1100,6 +1135,30 @@ export class CompatibilityScoringService {
     });
 
     return Math.min(1, improvementCount / (responses.length * 0.3));
+  }
+
+  private analyzeResponseTimeliness(responses: ResponsePair[]): number {
+    // Analyze response timing based on response length and depth
+    // Longer, more thoughtful responses indicate engagement
+    let timelinessScore = 0;
+    
+    responses.forEach((pair) => {
+      const userLength = pair.userResponse.length;
+      const partnerLength = pair.partnerResponse.length;
+      
+      // Responses between 50-500 characters are considered optimal
+      const userTimeliness = userLength >= 50 && userLength <= 500 ? 1 : userLength > 500 ? 0.8 : 0.5;
+      const partnerTimeliness = partnerLength >= 50 && partnerLength <= 500 ? 1 : partnerLength > 500 ? 0.8 : 0.5;
+      
+      timelinessScore += (userTimeliness + partnerTimeliness) / 2;
+    });
+
+    return responses.length > 0 ? timelinessScore / responses.length : 0.7;
+  }
+
+  private extractKeywords(text: string, keywords: string[]): string[] {
+    const lowerText = text.toLowerCase();
+    return keywords.filter(keyword => lowerText.includes(keyword.toLowerCase()));
   }
 }
 

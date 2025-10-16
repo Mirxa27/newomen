@@ -139,7 +139,7 @@ export default function MobileTouchOptimizer({
   return (
     <motion.div
       ref={containerRef}
-      className={`touch-optimized ${className}`}
+      className={`touch-optimized glass rounded-lg ${className}`}
       style={{ scale, x, y }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}

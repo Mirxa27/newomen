@@ -1,7 +1,7 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.newomen.app',
+  appId: 'me.newomen.app',
   appName: 'Newomen',
   webDir: 'dist',
   server: {
@@ -47,6 +47,7 @@ const config: CapacitorConfig = {
     backgroundColor: "#1a1428",
     allowsLinkPreview: false,
     handleApplicationURL: false,
+    scheme: "Newomen",
   },
   android: {
     allowMixedContent: true,

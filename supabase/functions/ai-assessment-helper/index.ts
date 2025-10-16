@@ -3,8 +3,9 @@ import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supa
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-requested-with',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
+  'Access-Control-Max-Age': '86400',
 };
 
 interface AssessmentHelperPayload {
@@ -34,39 +35,7 @@ const ZAI_CONFIG = {
   results_model: 'GLM-4.6',          // For result generation
 };
 
-// Function to call Z.AI API
-async function callZAI(model: string, prompt: string, maxTokens: number = 2000): Promise<string> {
-  const response = await fetch(`${ZAI_CONFIG.base_url}/completions`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${ZAI_CONFIG.auth_token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert assessment analyzer providing detailed, empathetic, and actionable feedback.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      max_tokens: maxTokens,
-      temperature: 0.7,
-      top_p: 0.9,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Z.AI API error: ${response.status} ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  return data.choices[0]?.message?.content || '';
-}
+// NOTE: Removed duplicate callZAI(model, prompt) implementation to prevent boot-time errors.
 
 type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 

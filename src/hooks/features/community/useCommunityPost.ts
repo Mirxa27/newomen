@@ -23,7 +23,8 @@ export const useCommunityPost = (postId: string) => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
           operation: 'get_post',
@@ -64,7 +65,8 @@ export const useCommunityPost = (postId: string) => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
           operation: 'comment',

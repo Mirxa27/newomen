@@ -63,7 +63,8 @@ export const useCommunityPosts = (filterType: string = 'all', tag?: string) => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
           operation: 'get_feed',
@@ -132,7 +133,8 @@ export const useCommunityPosts = (filterType: string = 'all', tag?: string) => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
           operation: 'create_post',
@@ -165,7 +167,8 @@ export const useCommunityPosts = (filterType: string = 'all', tag?: string) => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
           operation: 'like_post',
@@ -203,7 +206,8 @@ export const useCommunityPosts = (filterType: string = 'all', tag?: string) => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
           operation: 'unlike_post',
@@ -241,7 +245,8 @@ export const useCommunityPosts = (filterType: string = 'all', tag?: string) => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
           operation: 'comment',
@@ -281,7 +286,8 @@ export const useCommunityPosts = (filterType: string = 'all', tag?: string) => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
           operation: 'follow',
@@ -319,7 +325,8 @@ export const useCommunityPosts = (filterType: string = 'all', tag?: string) => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
         body: JSON.stringify({
           operation: 'unfollow',

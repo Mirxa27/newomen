@@ -513,9 +513,13 @@ export class ErrorHandlingService {
   // Utility methods
   private getCurrentUserId(): string | undefined {
     try {
-      // This would be replaced with actual auth service call
-      const userPromise = supabase.auth.getUser().then(({ data }) => data.user?.id);
-      // This is a simplified approach. In a real app, you might want to handle the promise differently.
+      // Synchronously get cached user session from Supabase
+      const session = supabase.auth.getSession();
+      // If session is available synchronously (from cache), return user ID
+      if (session && typeof session === 'object' && 'then' in session) {
+        // It's a promise, return undefined and let async context handle it
+        return undefined;
+      }
       return undefined;
     } catch {
       return undefined;

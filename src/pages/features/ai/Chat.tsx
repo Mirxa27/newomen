@@ -9,7 +9,7 @@ const ChatPage = () => {
     return <ChatOnboarding startConversation={chat.startConversation} isConnecting={chat.isConnecting} />;
   }
 
-  return <ChatInterface {...chat} />;
+  return <ChatInterface {...chat} isConnecting={chat.isConnecting} />;
 };
 
 export default ChatPage;

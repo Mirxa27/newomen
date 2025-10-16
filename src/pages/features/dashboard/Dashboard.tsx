@@ -16,65 +16,36 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/shared/ui/use-toast";
 import { useUserProfile } from "@/hooks/features/auth/useUserProfile";
-import type { Database } from "@/integrations/supabase/types";
 import { trackDailyLogin } from "@/lib/features/assessment/gamification-events";
-import { AffirmationService } from "@/services/features/wellness/AffirmationService";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { profile, loading, getDisplayName } = useUserProfile();
-  const [levelThresholds, setLevelThresholds] = useState<Database["public"]["Tables"]["level_thresholds"]["Row"][]>([]);
-  const [affirmation, setAffirmation] = useState("");
+  const [affirmation, setAffirmation] = useState("You are capable of amazing things.");
 
   useEffect(() => {
-    const loadGamificationData = async () => {
-      if (!profile) return;
-
-      try {
-        const { data: thresholdsData, error: thresholdsError } = await supabase
-          .from("level_thresholds")
-          .select("*")
-          .order("level", { ascending: true });
-
-        if (thresholdsError) {
-          throw thresholdsError;
-        }
-
-        setLevelThresholds(thresholdsData);
-        // Track daily login after profile is loaded
-        void trackDailyLogin(profile.user_id!);
-      } catch (error) {
-        console.error("Error loading gamification data:", error);
-        toast({
-          title: "Unable to load gamification data",
-          description: "Some features may not work correctly.",
-          variant: "destructive",
-        });
-      }
-    };
-
     if (profile) {
-      void loadGamificationData();
+      // Track daily login after profile is loaded
+      void trackDailyLogin(profile.user_id!);
     }
     
-    const loadAffirmation = async () => {
-      try {
-        const todayAffirmation = await AffirmationService.getTodaysAffirmation();
-        if (todayAffirmation) {
-          setAffirmation(todayAffirmation.content);
-        } else {
-          setAffirmation("You are capable of amazing things.");
-        }
-      } catch (error) {
-        console.error("Failed to load affirmation", error);
-        setAffirmation("Your journey is unique and beautiful.");
-      }
-    };
+    // Set a random affirmation from a predefined list
+    const affirmations = [
+      "You are capable of amazing things.",
+      "Your journey is unique and beautiful.",
+      "Every day is a new opportunity for growth.",
+      "You have the power to create positive change.",
+      "Your potential is limitless.",
+      "Small steps lead to big transformations.",
+      "You are worthy of love and happiness.",
+      "Your strength is greater than any challenge."
+    ];
+    
+    const randomAffirmation = affirmations[Math.floor(Math.random() * affirmations.length)];
+    setAffirmation(randomAffirmation);
 
-    void loadAffirmation();
-
-  }, [profile, toast]);
+  }, [profile]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -95,30 +66,14 @@ const Dashboard = () => {
   const currentLevel = profile?.current_level || 1;
   const dailyStreak = profile?.daily_streak || 0;
 
-  const nextLevelThreshold = levelThresholds.find(
-    (threshold) => threshold.level === currentLevel + 1
-  );
-  const currentLevelThreshold = levelThresholds.find(
-    (threshold) => threshold.level === currentLevel
-  );
-
-  const crystalsNeededForNextLevel = nextLevelThreshold
-    ? nextLevelThreshold.crystals_required - currentCrystalBalance
-    : 0;
-
-  const crystalsEarnedInCurrentLevel = currentCrystalBalance - (currentLevelThreshold?.crystals_required || 0);
-  const crystalsRequiredForCurrentLevelUp = (nextLevelThreshold?.crystals_required || 0) - (currentLevelThreshold?.crystals_required || 0);
-
-  const levelProgressPercentage =
-    crystalsRequiredForCurrentLevelUp > 0
-      ? (crystalsEarnedInCurrentLevel / crystalsRequiredForCurrentLevelUp) * 100
-      : 0;
-
+  // Default level progression (simplified without database dependency)
+  const crystalsNeededForNextLevel = Math.max(0, (currentLevel * 100) - currentCrystalBalance);
+  const levelProgressPercentage = Math.min(100, (currentCrystalBalance / (currentLevel * 100)) * 100);
 
   const displayName = getDisplayName();
 
   return (
-    <div className="min-h-screen p-3 sm:p-4 md:p-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+    <div className="min-h-screen p-3 sm:p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 md:space-y-8">
         {/* Header - Mobile optimized */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 sm:gap-6">
@@ -148,7 +103,7 @@ const Dashboard = () => {
 
         {/* Featured: Narrative Identity Exploration - Mobile responsive */}
         <Card
-          className="glass-card hover:shadow-lg transition-all cursor-pointer border-2 border-accent bg-gradient-to-br from-primary/10 to-accent/10"
+          className="glass-card hover:shadow-lg transition-all cursor-pointer border-2 border-accent bg-gradient-to-br from-primary/10 to-accent/10 clay-card hover:scale-102"
           onClick={() => navigate("/narrative-exploration")}
         >
           <CardHeader className="p-3 sm:p-4 md:p-6">
@@ -172,7 +127,7 @@ const Dashboard = () => {
         {/* Quick Access Grid - Fully responsive */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
           <Card
-            className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
+            className="glass-card hover:shadow-lg transition-shadow cursor-pointer clay-card hover:scale-102"
             onClick={() => navigate("/chat")}
           >
             <CardHeader className="p-4 sm:p-5 md:p-6">
@@ -185,7 +140,7 @@ const Dashboard = () => {
           </Card>
 
           <Card
-            className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
+            className="glass-card hover:shadow-lg transition-shadow cursor-pointer clay-card hover:scale-102"
             onClick={() => navigate("/member-assessments")}
           >
             <CardHeader className="p-4 sm:p-5 md:p-6">
@@ -198,7 +153,7 @@ const Dashboard = () => {
           </Card>
 
           <Card
-            className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
+            className="glass-card hover:shadow-lg transition-shadow cursor-pointer clay-card hover:scale-102"
             onClick={() => navigate("/couples-challenge")}
           >
             <CardHeader className="p-4 sm:p-5 md:p-6">
@@ -211,7 +166,7 @@ const Dashboard = () => {
           </Card>
 
           <Card
-            className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
+            className="glass-card hover:shadow-lg transition-shadow cursor-pointer clay-card hover:scale-102"
             onClick={() => navigate("/community")}
           >
             <CardHeader className="p-4 sm:p-5 md:p-6">
@@ -224,7 +179,7 @@ const Dashboard = () => {
           </Card>
 
           <Card
-            className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
+            className="glass-card hover:shadow-lg transition-shadow cursor-pointer clay-card hover:scale-102"
             onClick={() => navigate("/wellness-library")}
           >
             <CardHeader className="p-4 sm:p-5 md:p-6">
@@ -237,7 +192,7 @@ const Dashboard = () => {
           </Card>
 
           <Card
-            className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
+            className="glass-card hover:shadow-lg transition-shadow cursor-pointer clay-card hover:scale-102"
             onClick={() => navigate("/profile")}
           >
             <CardHeader className="p-4 sm:p-5 md:p-6">
