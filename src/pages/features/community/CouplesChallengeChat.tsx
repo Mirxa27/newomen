@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { Button } from "@/components/shared/ui/button";
 import { Card } from "@/components/shared/ui/card";
 import { Input } from "@/components/shared/ui/input";
@@ -15,26 +17,46 @@ import type { AIQuestionGeneration, AICouplesAnalysis } from "@/services/feature
 import ConflictDetectionAlert from "@/components/features/community/ConflictDetectionAlert";
 import ConflictResolutionExercise from "@/components/features/community/ConflictResolutionExercise";
 
-type Message = {
+interface Message {
   id: string;
   sender: "ai" | "user" | "partner" | "system";
   content: string;
   timestamp: string;
-};
+}
 
-type ChallengeData = {
+function toJsonMessages(arr: Message[]): Record<string, Json>[] {
+  return arr.map((m) => ({
+    id: m.id,
+    sender: m.sender,
+    content: m.content,
+    timestamp: m.timestamp,
+  }));
+}
+
+interface QuestionSet {
+  title: string;
+  description: string;
+  questions: string[];
+}
+
+interface ChallengeData {
   id: string;
   initiator_id: string;
   partner_id: string | null;
   status: string;
-  question_set: {
-    title: string;
-    description: string;
-    questions: string[];
-  };
+  question_set: QuestionSet;
   messages: Message[];
   current_question_index: number;
-};
+}
+
+function isMessage(v: unknown): v is Message {
+  const m = v as Record<string, unknown> | null;
+  return !!m &&
+    typeof m.id === "string" &&
+    (m.sender === "ai" || m.sender === "user" || m.sender === "partner" || m.sender === "system") &&
+    typeof m.content === "string" &&
+    typeof m.timestamp === "string";
+}
 
 export default function CouplesChallengeChat() {
   const { id: challengeId } = useParams<{ id: string }>();
@@ -78,36 +100,62 @@ export default function CouplesChallengeChat() {
 
       if (error) throw error;
 
-      const challengeData = data as unknown as (ChallengeData & { partner_name?: string }) & { question_set: { title?: string; description?: string; questions?: string[] | string }; messages?: Message[] };
-      const questionSet: ChallengeData["question_set"] = {
-        title: challengeData.question_set?.title || "Couple's Challenge",
-        description: challengeData.question_set?.description || "",
-        questions: Array.isArray(challengeData.question_set?.questions)
-          ? challengeData.question_set.questions
-          : (challengeData.question_set?.questions ? JSON.parse(challengeData.question_set.questions) : [])
+      const challengeRow = data as Database["public"]["Tables"]["couples_challenges"]["Row"];
+
+      const qsRaw = challengeRow.question_set;
+      let qsTitle = "Couple's Challenge";
+      let qsDescription = "";
+      let qsQuestions: string[] = [];
+      if (qsRaw && typeof qsRaw === "object" && !Array.isArray(qsRaw)) {
+        const obj = qsRaw as Record<string, unknown>;
+        if (typeof obj.title === "string") qsTitle = obj.title;
+        if (typeof obj.description === "string") qsDescription = obj.description;
+        const qv = obj.questions as unknown;
+        if (Array.isArray(qv) && qv.every((x) => typeof x === "string")) {
+          qsQuestions = qv as string[];
+        } else if (typeof qv === "string") {
+          try { qsQuestions = JSON.parse(qv) as string[]; } catch { qsQuestions = []; }
+        }
+      }
+      const questionSet: QuestionSet = {
+        title: qsTitle,
+        description: qsDescription,
+        questions: qsQuestions,
       };
       
       setChallenge({
-        id: challengeData.id,
-        initiator_id: challengeData.initiator_id,
-        partner_id: challengeData.partner_id,
-        status: challengeData.status,
+        id: challengeRow.id,
+        initiator_id: challengeRow.initiator_id,
+        partner_id: challengeRow.partner_id,
+        status: challengeRow.status,
         question_set: questionSet,
-        messages: challengeData.messages || [],
-        current_question_index: challengeData.current_question_index || 0,
+        messages: [],
+        current_question_index: challengeRow.current_question_index || 0,
       });
 
-      const loadedMessages = challengeData.messages || [];
+      const rawMessages = (challengeRow.messages ?? []) as unknown[];
+      const loadedMessages = Array.isArray(rawMessages) ? rawMessages.filter(isMessage) as Message[] : [];
       console.log('Loaded messages:', loadedMessages);
       setMessages(loadedMessages);
-      setIsInitiator(currentUserId === challengeData.initiator_id);
+      setIsInitiator(currentUserId === challengeRow.initiator_id);
       // Partner joined if they have partner_id OR partner_name (for guests)
-      setPartnerJoined(!!(challengeData.partner_id || challengeData.partner_name));
+      setPartnerJoined(!!(challengeRow.partner_id || challengeRow.partner_name));
 
       // Initialize chat if no messages yet
       if (!loadedMessages || loadedMessages.length === 0) {
         console.log('No messages found, initializing chat...');
-        await initializeChat(challengeData, questionSet);
+        await initializeChat(
+          {
+            id: challengeRow.id,
+            initiator_id: challengeRow.initiator_id,
+            partner_id: challengeRow.partner_id,
+            status: challengeRow.status,
+            question_set: questionSet,
+            messages: [],
+            current_question_index: challengeRow.current_question_index || 0,
+          },
+          questionSet
+        );
       }
 
     } catch (err) {
@@ -184,7 +232,7 @@ export default function CouplesChallengeChat() {
 
     const { error } = await supabase
       .from("couples_challenges")
-      .update({ messages: welcomeMessages })
+      .update({ messages: toJsonMessages(welcomeMessages) })
       .eq("id", challengeData.id);
 
     if (error) {
@@ -222,7 +270,7 @@ export default function CouplesChallengeChat() {
       // Save message to database
       const { error } = await supabase
         .from("couples_challenges")
-        .update({ messages: updatedMessages })
+        .update({ messages: toJsonMessages(updatedMessages) })
         .eq("id", challengeId);
 
       if (error) throw error;
@@ -293,7 +341,7 @@ export default function CouplesChallengeChat() {
         await supabase
           .from("couples_challenges")
           .update({ 
-            messages: newMessages,
+            messages: toJsonMessages(newMessages),
             current_question_index: currentIndex + 1,
           })
           .eq("id", challengeId);
@@ -422,7 +470,7 @@ export default function CouplesChallengeChat() {
       await supabase
         .from("couples_challenges")
         .update({ 
-          messages: [...messages, analysisMessage],
+          messages: toJsonMessages([...messages, analysisMessage]),
           status: "completed",
         })
         .eq("id", challengeId);
@@ -445,7 +493,7 @@ export default function CouplesChallengeChat() {
       await supabase
         .from("couples_challenges")
         .update({ 
-          messages: [...messages, analysisMessage, resultMessage],
+          messages: toJsonMessages([...messages, analysisMessage, resultMessage]),
           ai_analysis: data.analysis,
         })
         .eq("id", challengeId);
@@ -460,8 +508,10 @@ export default function CouplesChallengeChat() {
     }
   };
 
-  const extractQuestionResponsePairs = (messages: Message[]): Array<{ question: string; userResponse: string; partnerResponse: string }> => {
-    const pairs: Array<{ question: string; userResponse: string; partnerResponse: string }> = [];
+  interface ResponsePair { question: string; userResponse: string; partnerResponse: string }
+
+  const extractQuestionResponsePairs = (messages: Message[]): ResponsePair[] => {
+    const pairs: ResponsePair[] = [];
     let currentQuestion = "";
     let userResponse = "";
     let partnerResponse = "";
