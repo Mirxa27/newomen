@@ -37,7 +37,8 @@ export const useAdmin = () => {
           setIsAdmin(isAdminByEmail);
         } else {
           const profileData = data as { role?: string };
-          const isAdminByRole = (profileData?.role ?? "user") === "admin";
+          const userRole = profileData?.role ?? "user";
+          const isAdminByRole = userRole === "admin" || userRole === "superadmin" || userRole === "moderator";
           setIsAdmin(isAdminByRole || isAdminByEmail);
         }
       } catch (error) {

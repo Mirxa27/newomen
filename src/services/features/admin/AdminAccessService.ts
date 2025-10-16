@@ -6,7 +6,7 @@ export interface AdminAccessResult {
   user?: {
     id: string;
     email: string;
-    role: 'user' | 'admin' | 'moderator';
+    role: 'user' | 'admin' | 'moderator' | 'superadmin';
     user_id: string;
   };
   error?: string;
@@ -200,7 +200,7 @@ export class AdminAccessService {
       const { data: admins, error } = await supabase
         .from('user_profiles')
         .select('id, email, role, user_id, created_at')
-        .eq('role', 'admin')
+        .in('role', ['admin', 'superadmin', 'moderator'])
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -212,6 +212,113 @@ export class AdminAccessService {
     } catch (error) {
       console.error('Error fetching admins:', error);
       return [];
+    }
+  }
+
+  /**
+   * Grant moderator access (limited admin access)
+   * @param email The user's email address
+   * @returns Result object with success status and details
+   */
+  static async grantModeratorAccess(email: string): Promise<AdminAccessResult> {
+    console.log(`🔐 Granting moderator access to: ${email}`);
+
+    try {
+      // Step 1: Find the user
+      const { data: user, error: findError } = await supabase
+        .from('user_profiles')
+        .select('id, email, role, user_id')
+        .ilike('email', email)
+        .single();
+
+      if (findError || !user) {
+        return {
+          success: false,
+          message: `User with email "${email}" not found in system`,
+          error: findError?.message || 'User not found'
+        };
+      }
+
+      // Step 2: Update role to moderator
+      const { data: updated, error: updateError } = await supabase
+        .from('user_profiles')
+        .update({ role: 'moderator' })
+        .eq('id', user.id)
+        .select('id, email, role, user_id')
+        .single();
+
+      if (updateError) {
+        return {
+          success: false,
+          message: 'Failed to update user role',
+          error: updateError.message
+        };
+      }
+
+      // Step 3: Verify the change
+      const { data: verified, error: verifyError } = await supabase
+        .from('user_profiles')
+        .select('id, email, role, user_id')
+        .eq('id', user.id)
+        .single();
+
+      if (verifyError || !verified || verified.role !== 'moderator') {
+        return {
+          success: false,
+          message: 'Failed to verify moderator access',
+          error: verifyError?.message
+        };
+      }
+
+      console.log(`✨ SUCCESS! ${verified.email} now has moderator access`);
+      return {
+        success: true,
+        message: `Moderator access granted to ${verified.email}`,
+        user: verified
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return {
+        success: false,
+        message: 'An unexpected error occurred',
+        error: errorMessage
+      };
+    }
+  }
+
+  /**
+   * Setup the database constraint to support all roles including superadmin
+   * This should be run once during setup
+   */
+  static async setupRoleConstraint(): Promise<{ success: boolean; message: string }> {
+    try {
+      console.log('🔧 Setting up role constraints...');
+      
+      // This would need to be executed as a migration via Supabase SQL editor
+      const migration = `
+        -- Add 'superadmin' role to user_profiles role constraint
+        ALTER TABLE public.user_profiles 
+        DROP CONSTRAINT IF EXISTS user_profiles_role_check;
+
+        ALTER TABLE public.user_profiles 
+        ADD CONSTRAINT user_profiles_role_check 
+        CHECK (role IN ('user', 'admin', 'moderator', 'superadmin'));
+
+        -- Update admin@newomen.me to superadmin role (if exists)
+        UPDATE public.user_profiles 
+        SET role = 'superadmin' 
+        WHERE email = 'admin@newomen.me';
+      `;
+
+      return {
+        success: true,
+        message: 'Please execute this migration in Supabase SQL Editor:\n' + migration
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to setup role constraint'
+      };
     }
   }
 }

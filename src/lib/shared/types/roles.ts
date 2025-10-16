@@ -41,14 +41,14 @@ export const RolePermissions: Record<UserRole, UserPermissions> = {
   moderator: {
     canViewHistory: false,
     canViewLiveSessions: false,
-    canManageSettings: false,
-    canManageContent: true,
-    canManageCommunity: true,
+    canManageSettings: true, // For Branding tab
+    canManageContent: true, // For Wellness Library & Content Management
+    canManageCommunity: true, // For Gamification
     canManageUsers: false,
     canManageAPIs: false,
     canViewAnalytics: false,
     canManageAIProviders: false,
-    canManageAssessments: true, // Allow access to AI Assessments
+    canManageAssessments: true, // For AI Assessments
   },
   user: {
     canViewHistory: false,

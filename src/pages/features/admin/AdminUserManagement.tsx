@@ -54,7 +54,9 @@ export default function AdminUserManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [grantAccessDialogOpen, setGrantAccessDialogOpen] = useState(false);
+  const [grantModeratorDialogOpen, setGrantModeratorDialogOpen] = useState(false);
   const [grantAccessEmail, setGrantAccessEmail] = useState("");
+  const [grantModeratorEmail, setGrantModeratorEmail] = useState("");
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [formData, setFormData] = useState<EditUserForm>({
     role: 'user',
@@ -141,7 +143,29 @@ export default function AdminUserManagement() {
         toast.success(result.message);
         setGrantAccessEmail('');
         setGrantAccessDialogOpen(false);
-        // Reload users to show updated role
+        void loadUsers();
+      } else {
+        toast.error(result.message);
+      }
+    } finally {
+      setGrantingAccess(false);
+    }
+  };
+
+  const handleGrantModeratorAccess = async () => {
+    if (!grantModeratorEmail.trim()) {
+      toast.error('Please enter an email address');
+      return;
+    }
+
+    setGrantingAccess(true);
+    try {
+      const result = await AdminAccessService.grantModeratorAccess(grantModeratorEmail);
+      
+      if (result.success) {
+        toast.success(result.message + ' - Access to: AI Assessments, Wellness Library, Content Management, Gamification, Branding');
+        setGrantModeratorEmail('');
+        setGrantModeratorDialogOpen(false);
         void loadUsers();
       } else {
         toast.error(result.message);
@@ -315,6 +339,28 @@ export default function AdminUserManagement() {
         </CardContent>
       </Card>
 
+      {/* Grant Moderator Access Section */}
+      <Card className="glass-card border-blue-500/20 bg-blue-500/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="w-5 h-5 text-blue-600" />
+            Grant Moderator Access
+          </CardTitle>
+          <CardDescription>
+            Grant limited admin access (AI Assessments, Wellness Library, Content Management, Gamification, Branding)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            onClick={() => setGrantModeratorDialogOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Shield className="w-4 h-4 mr-2" />
+            Grant Moderator Access
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Edit User Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="glass-card max-w-md">
@@ -459,6 +505,70 @@ export default function AdminUserManagement() {
             >
               {grantingAccess && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Grant Admin Access
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Grant Moderator Access Dialog */}
+      <Dialog open={grantModeratorDialogOpen} onOpenChange={setGrantModeratorDialogOpen}>
+        <DialogContent className="glass-card max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-blue-600" />
+              Grant Moderator Access
+            </DialogTitle>
+            <DialogDescription>
+              Grant limited admin access with specific permissions only.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="moderator_email">User Email</Label>
+              <Input
+                id="moderator_email"
+                type="email"
+                value={grantModeratorEmail}
+                onChange={(e) => setGrantModeratorEmail(e.target.value)}
+                placeholder="e.g., katrina@newomen.me"
+                disabled={grantingAccess}
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                The user must already have an account in the system.
+              </p>
+            </div>
+
+            <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+              <p className="text-sm font-medium mb-2">Moderator will have access to:</p>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                <li>✓ AI Assessments</li>
+                <li>✓ Wellness Library</li>
+                <li>✓ Content Management</li>
+                <li>✓ Gamification</li>
+                <li>✓ Branding</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setGrantModeratorDialogOpen(false);
+                setGrantModeratorEmail('');
+              }}
+              disabled={grantingAccess}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleGrantModeratorAccess} 
+              disabled={grantingAccess || !grantModeratorEmail.trim()}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {grantingAccess && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Grant Moderator Access
             </Button>
           </div>
         </DialogContent>
