@@ -14,8 +14,14 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-  type?: 'text' | 'image';
+  type?: 'text' | 'image' | 'document';
   imageUrl?: string;
+  documentData?: {
+    name: string;
+    type: string;
+    size: number;
+    url?: string;
+  };
 }
 
 interface ChatEvent {
@@ -333,6 +339,48 @@ export function useChat() {
     }
   }, [toast, resetInactivityTimer]);
 
+  const handleSendDocument = useCallback(async (file: File, fileType: string) => {
+    try {
+      // Read file content based on type
+      const fileContent = await file.text();
+      
+      // Create a context-aware message about analyzing the document
+      const documentMessage = `I'm sharing a ${fileType} document: "${file.name}" (${(file.size / 1024 / 1024).toFixed(2)} MB). Please analyze it and provide insights.\n\nDocument content:\n${fileContent.substring(0, 5000)}${fileContent.length > 5000 ? '...[truncated]' : ''}`;
+      
+      // Send the document content as a message
+      await chatRef.current?.sendMessage(documentMessage);
+      
+      // Add to messages with document metadata
+      setMessages(prev => [...prev, { 
+        role: 'user', 
+        content: documentMessage,
+        type: 'document',
+        timestamp: new Date(),
+        documentData: {
+          name: file.name,
+          type: fileType,
+          size: file.size,
+        }
+      }]);
+      
+      if (conversationIdRef.current) {
+        void newMeMemoryService.addMessage({ 
+          conversation_id: conversationIdRef.current, 
+          role: 'user', 
+          content: `[Document Shared] ${file.name} - ${fileType}`
+        });
+      }
+      
+      toast({ title: "Document Sent", description: `${file.name} has been sent for analysis` });
+      
+      // Reset inactivity timer
+      resetInactivityTimer();
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to read document';
+      toast({ title: "Error", description: `Failed to send document: ${errorMsg}`, variant: "destructive" });
+    }
+  }, [toast, resetInactivityTimer]);
+
   const toggleRecording = useCallback(() => {
     const newRecordingState = !isRecording;
     chatRef.current?.toggleRecording(newRecordingState);
@@ -370,6 +418,7 @@ export function useChat() {
     startConversation,
     endConversation,
     handleSendText,
+    handleSendDocument,
     toggleRecording,
     toggleSpeakerMute,
     navigate,

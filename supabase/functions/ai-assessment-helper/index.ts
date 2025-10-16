@@ -1,5 +1,5 @@
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,43 +16,151 @@ interface AssessmentHelperPayload {
   questionType?: string;
 }
 
+interface AssessmentAnalysisRequest {
+  assessment_id: string;
+  user_id: string;
+  responses: Record<string, string | number | boolean>;
+  zai_config?: {
+    questions_model?: string;  // GLM-4.5-Air (default)
+    results_model?: string;     // GLM-4.6 (default)
+  };
+}
+
+// Z.AI Configuration
+const ZAI_CONFIG = {
+  base_url: Deno.env.get('ZAI_BASE_URL') || 'https://api.z.ai/api/coding/paas/v4',
+  auth_token: Deno.env.get('ZAI_AUTH_TOKEN') || 'b8979b7827034e8ab50df3d09f975ca7.fQUeGKyLX1xtGJgN',
+  questions_model: 'GLM-4.5-Air',   // For question generation
+  results_model: 'GLM-4.6',          // For result generation
+};
+
+// Function to call Z.AI API
+async function callZAI(model: string, prompt: string, maxTokens: number = 2000): Promise<string> {
+  const response = await fetch(`${ZAI_CONFIG.base_url}/completions`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${ZAI_CONFIG.auth_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert assessment analyzer providing detailed, empathetic, and actionable feedback.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      max_tokens: maxTokens,
+      temperature: 0.7,
+      top_p: 0.9,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Z.AI API error: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.choices[0]?.message?.content || '';
+}
+
+type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+
+type Database = {
+  public: {
+    Tables: {
+      provider_api_keys: {
+        Row: {
+          id: string;
+          provider_id: string;
+          api_key: string;
+          encrypted: boolean | null;
+        };
+        Insert: {
+          id?: string;
+          provider_id: string;
+          api_key: string;
+          encrypted?: boolean | null;
+        };
+        Update: {
+          id?: string;
+          provider_id?: string;
+          api_key?: string;
+          encrypted?: boolean | null;
+        };
+        Relationships: [];
+      };
+      assessments_enhanced: {
+        Row: {
+          id: string;
+          title: string;
+          description: string | null;
+          questions: Json | null;
+          category: string | null;
+          difficulty_level: string | null;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          description?: string | null;
+          questions?: Json | null;
+          category?: string | null;
+          difficulty_level?: string | null;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          description?: string | null;
+          questions?: Json | null;
+          category?: string | null;
+          difficulty_level?: string | null;
+        };
+        Relationships: [];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: {
+      get_provider_api_key_by_type: {
+        Args: { p_provider_type: string };
+        Returns: string | null;
+      };
+    };
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+};
+
 const ZAI_BASE_URL = 'https://api.z.ai/api/coding/paas/v4';
 const ZAI_MODEL_SUGGESTIONS = 'GLM-4.5-Air'; // For generating answer suggestions
-const ZAI_AUTH_TOKEN = 'b8979b7827034e8ab50df3d09f975ca7.fQUeGKyLX1xtGJgN';
+
+type TypedSupabaseClient = SupabaseClient<Database, 'public'>;
+
+async function getZaiApiKey(supabase: TypedSupabaseClient): Promise<string> {
+  const envKey = Deno.env.get('ZAI_API_KEY');
+  if (envKey && envKey.trim().length > 0) {
+    return envKey.trim();
+  }
+
+  const { data, error } = await supabase.rpc('get_provider_api_key_by_type', { p_provider_type: 'zai' });
+  if (error) {
+    console.error('Error retrieving Z.AI API key:', error);
+    throw new Error(`Z.AI API key retrieval failed: ${error.message}`);
+  }
+
+  if (!data || typeof data !== 'string' || data.trim().length === 0) {
+    throw new Error('Z.AI API key not configured. Please add your Z.ai API key in the admin panel.');
+  }
+
+  return data.trim();
+}
 
 // Z.AI API Integration for Assessment Helper
-async function callZAI(prompt: string, systemPrompt: string, supabase: ReturnType<typeof createClient>) {
-  let zaiApiKey = ZAI_AUTH_TOKEN;
-
-  if (!zaiApiKey) {
-    // Retrieve API key directly from provider_api_keys table as fallback
-    const { data: apiKeyData, error: keyError } = await supabase
-      .from('provider_api_keys')
-      .select('api_key, encrypted')
-      .eq('provider_id', '9415e5a1-4fcf-4aaa-98f8-44a5e9be1df8') // Z.ai provider ID
-      .single();
-    
-    if (keyError) {
-      console.error('Error retrieving Z.AI API key:', keyError);
-      throw new Error(`Z.AI API key retrieval failed: ${keyError.message}`);
-    }
-    
-    if (!apiKeyData) {
-      throw new Error('Z.AI API key not configured. Please add your Z.ai API key in the admin panel.');
-    }
-
-    zaiApiKey = apiKeyData.api_key;
-    if (apiKeyData.encrypted) {
-      try {
-        const decoded = atob(apiKeyData.api_key);
-        zaiApiKey = decoded.split('_encrypted_')[0];
-        console.log('API key decrypted successfully');
-      } catch (decryptError) {
-        console.error('Failed to decrypt API key:', decryptError);
-        throw new Error('API key decryption failed');
-      }
-    }
-  }
+async function callZAI(prompt: string, systemPrompt: string, supabase: TypedSupabaseClient) {
+  const zaiApiKey = await getZaiApiKey(supabase);
 
   console.log('Making request to Z.ai API for assessment helper');
 
@@ -61,7 +169,7 @@ async function callZAI(prompt: string, systemPrompt: string, supabase: ReturnTyp
     headers: {
       'Content-Type': 'application/json',
       'Accept-Language': 'en-US,en',
-      'Authorization': zaiApiKey
+      'Authorization': `Bearer ${zaiApiKey}`
     },
     body: JSON.stringify({
       model: ZAI_MODEL_SUGGESTIONS,
@@ -109,7 +217,7 @@ serve(async (req) => {
 
     console.log('Assessment helper request:', { assessmentId, userId, action });
 
-    const supabase = createClient(
+    const supabase = createClient<Database>(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
@@ -137,7 +245,7 @@ serve(async (req) => {
           JSON.stringify({
             success: false,
             status: 'unhealthy',
-            error: error.message,
+            error: error instanceof Error ? error.message : String(error),
             message: 'AI services are not available'
           }),
           {
@@ -263,11 +371,12 @@ Generate 2-3 example answers that demonstrate good responses to this question.`;
 
   } catch (error) {
     console.error('Error in assessment helper:', error);
+    const message = error instanceof Error ? error.message : String(error);
 
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message,
+        error: message,
         message: 'Assessment helper service is temporarily unavailable'
       }),
       {

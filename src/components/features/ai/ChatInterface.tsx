@@ -20,6 +20,7 @@ interface ChatInterfaceProps {
   endConversation: () => void;
   handleSendText: (text: string) => void;
   handleSendImage?: (file: File) => void;
+  handleSendDocument?: (file: File, fileType: string) => void;
   toggleRecording: () => void;
   toggleSpeakerMute: () => void;
 }
@@ -51,6 +52,7 @@ export const ChatInterface = ({
     };
     reader.readAsDataURL(file);
   },
+  handleSendDocument,
   toggleRecording,
   toggleSpeakerMute,
 }: ChatInterfaceProps) => {
@@ -97,6 +99,7 @@ export const ChatInterface = ({
             <Composer
               onSendText={handleSendText}
               onSendImage={handleSendImage}
+              onSendDocument={handleSendDocument}
               onEndSession={endConversation}
               isConnected={isConnected}
               isRecording={isRecording}

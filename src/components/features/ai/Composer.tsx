@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/shared/ui/button';
 import { Textarea } from '@/components/shared/ui/textarea';
-import { Mic, MicOff, Send, PhoneOff, Volume2, VolumeX, Image as ImageIcon, X } from 'lucide-react';
+import { Mic, MicOff, Send, PhoneOff, Volume2, VolumeX, Image as ImageIcon, FileText, X, Paperclip } from 'lucide-react';
 import { cn } from '@/lib/shared/utils/utils';
 
 interface ComposerProps {
   onSendText: (text: string) => void;
   onSendImage: (file: File) => void;
+  onSendDocument?: (file: File, fileType: string) => void;
   onEndSession: () => void;
   isConnected: boolean;
   isRecording: boolean;
@@ -18,6 +19,7 @@ interface ComposerProps {
 export const Composer = ({
   onSendText,
   onSendImage,
+  onSendDocument = async () => {},
   onEndSession,
   isConnected,
   isRecording,
@@ -27,9 +29,11 @@ export const Composer = ({
 }: ComposerProps) => {
   const [text, setText] = useState('');
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -40,7 +44,11 @@ export const Composer = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedImage) {
+    if (selectedDocument) {
+      const fileType = selectedDocument.type || getFileExtension(selectedDocument.name);
+      onSendDocument(selectedDocument, fileType);
+      setSelectedDocument(null);
+    } else if (selectedImage) {
       onSendImage(selectedImage);
       setSelectedImage(null);
       setImagePreview(null);
@@ -57,15 +65,26 @@ export const Composer = ({
     }
   };
 
+  const getFileExtension = (filename: string): string => {
+    return filename.split('.').pop()?.toLowerCase() || '';
+  };
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (file && file.type.startsWith('image/')) {
       setSelectedImage(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDocumentSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedDocument(file);
     }
   };
 
@@ -77,8 +96,16 @@ export const Composer = ({
     }
   };
 
+  const handleDocumentClear = () => {
+    setSelectedDocument(null);
+    if (docInputRef.current) {
+      docInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="space-y-4">
+      {/* Image Preview */}
       {imagePreview && (
         <div className="relative w-32 h-32">
           <img
@@ -96,18 +123,61 @@ export const Composer = ({
           </Button>
         </div>
       )}
+
+      {/* Document Preview */}
+      {selectedDocument && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{selectedDocument.name}</p>
+            <p className="text-xs text-muted-foreground">
+              {(selectedDocument.size / 1024 / 1024).toFixed(2)} MB
+            </p>
+          </div>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-6 w-6 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={handleDocumentClear}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="flex gap-2">
         <Textarea
           ref={textareaRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type a message or press the mic to speak..."
+          placeholder="Type a message or press the mic to speak... Attach docs for analysis"
           className="min-h-[44px] max-h-[150px] glass bg-white/5"
           disabled={!isConnected}
           rows={1}
         />
         <div className="flex flex-col gap-2">
+          {/* Document Upload */}
+          <input
+            type="file"
+            ref={docInputRef}
+            accept=".pdf,.txt,.doc,.docx,.md,.json,.csv"
+            className="hidden"
+            onChange={handleDocumentSelect}
+          />
+          <Button
+            type="button"
+            size="icon"
+            variant="secondary"
+            className="h-11 w-11 shrink-0"
+            onClick={() => docInputRef.current?.click()}
+            disabled={!isConnected}
+            title="Attach document"
+          >
+            <Paperclip className="h-5 w-5" />
+          </Button>
+
+          {/* Image Upload */}
           <input
             type="file"
             ref={fileInputRef}
@@ -122,9 +192,12 @@ export const Composer = ({
             className="h-11 w-11 shrink-0"
             onClick={() => fileInputRef.current?.click()}
             disabled={!isConnected}
+            title="Attach image"
           >
             <ImageIcon className="h-5 w-5" />
           </Button>
+
+          {/* Voice Input */}
           <Button
             type="button"
             size="icon"
@@ -135,6 +208,7 @@ export const Composer = ({
             )}
             onClick={onToggleRecording}
             disabled={!isConnected}
+            title={isRecording ? "Stop recording" : "Start recording"}
           >
             {isRecording ? (
               <MicOff className="h-5 w-5" />
@@ -142,12 +216,15 @@ export const Composer = ({
               <Mic className="h-5 w-5" />
             )}
           </Button>
+
+          {/* Send */}
           <Button
             type="submit"
             size="icon"
             variant="secondary"
             className="h-11 w-11 shrink-0"
-            disabled={!isConnected || (!text.trim() && !selectedImage)}
+            disabled={!isConnected || (!text.trim() && !selectedImage && !selectedDocument)}
+            title="Send message"
           >
             <Send className="h-5 w-5" />
           </Button>

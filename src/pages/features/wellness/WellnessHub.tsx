@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/features/auth/useAuth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/shared/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shared/ui/card";
 import { Button } from "@/components/shared/ui/button";
-import { Heart, Brain, Sparkles, Book, Wand2, Zap, Infinity as InfinityIcon } from "lucide-react";
+import { Heart, Brain, Sparkles, Book, Wand2, Zap, Infinity as InfinityIcon, BookOpen } from "lucide-react";
 import { MeditationService } from "@/services/features/wellness/MeditationService";
 import { AffirmationService } from "@/services/features/wellness/AffirmationService";
 import { HabitTrackerService } from "@/services/features/wellness/HabitTrackerService";
@@ -71,54 +71,54 @@ export default function WellnessHub() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600 mb-2">
+      <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
+        {/* Header - Mobile responsive */}
+        <div className="mb-4 sm:mb-6 md:mb-8">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600 mb-1 sm:mb-2">
             Wellness Hub
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-400">
             Your personal sanctuary for meditation, affirmations, habits, and personal growth
           </p>
         </div>
 
-        {/* Today's Affirmation Banner */}
+        {/* Today's Affirmation Banner - Mobile responsive */}
         {todayAffirmation && (
-          <Card className="mb-8 bg-gradient-to-r from-pink-50 to-purple-50 dark:from-pink-900/20 dark:to-purple-900/20 border-pink-200">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-pink-500" />
-                <CardTitle>Today's Affirmation</CardTitle>
+          <Card className="mb-4 sm:mb-6 md:mb-8 bg-gradient-to-r from-pink-50 to-purple-50 dark:from-pink-900/20 dark:to-purple-900/20 border-pink-200">
+            <CardHeader className="p-3 sm:p-4 md:p-6">
+              <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-pink-500" />
+                <CardTitle className="text-base sm:text-lg">Today's Affirmation</CardTitle>
               </div>
             </CardHeader>
-            <CardContent>
-              <p className="text-lg italic text-gray-700 dark:text-gray-300">
+            <CardContent className="px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6">
+              <p className="text-sm sm:text-base md:text-lg italic text-gray-700 dark:text-gray-300 line-clamp-4">
                 "{todayAffirmation.content}"
               </p>
               {todayAffirmation.category && (
-                <p className="text-sm text-gray-500 mt-2">Category: {todayAffirmation.category}</p>
+                <p className="text-xs sm:text-sm text-gray-500 mt-2 sm:mt-3">Category: {todayAffirmation.category}</p>
               )}
             </CardContent>
           </Card>
         )}
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        {/* Quick Stats - Mobile responsive grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6 md:mb-8">
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2">
-                <Brain className="w-5 h-5 text-blue-500" />
+            <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 sm:pb-3 md:pb-4">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Brain className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
                 Meditation Stats
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
               <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Sessions:</span>
+                <div className="flex justify-between text-xs sm:text-sm">
+                  <span className="text-gray-600">Sessions:</span>
                   <span className="font-bold">{stats.meditationStats?.totalSessions || 0}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Minutes:</span>
+                <div className="flex justify-between text-xs sm:text-sm">
+                  <span className="text-gray-600">Minutes:</span>
                   <span className="font-bold">{stats.meditationStats?.totalMinutes || 0}</span>
                 </div>
               </div>
@@ -126,20 +126,20 @@ export default function WellnessHub() {
           </Card>
 
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-orange-500" />
+            <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 sm:pb-3 md:pb-4">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />
                 Habit Streaks
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
               <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Active Habits:</span>
+                <div className="flex justify-between text-xs sm:text-sm">
+                  <span className="text-gray-600">Active Habits:</span>
                   <span className="font-bold">{stats.habitStats?.totalHabits || 0}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Avg Streak:</span>
+                <div className="flex justify-between text-xs sm:text-sm">
+                  <span className="text-gray-600">Avg Streak:</span>
                   <span className="font-bold">
                     {stats.habitStats?.averageCompletion?.toFixed(1) || 0} days
                   </span>
@@ -149,67 +149,38 @@ export default function WellnessHub() {
           </Card>
 
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2">
-                <Heart className="w-5 h-5 text-red-500" />
-                Wellness Insights
+            <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 sm:pb-3 md:pb-4">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
+                Journal Insights
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
               <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Diary Entries:</span>
-                  <span className="font-bold">
-                    {(
-                      parseInt(stats.diaryStats?.totalGratitudeEntries || "0") +
-                      parseInt(stats.diaryStats?.totalStateEntries || "0")
-                    ).toString()}
-                  </span>
+                <div className="flex justify-between text-xs sm:text-sm">
+                  <span className="text-gray-600">Entries:</span>
+                  <span className="font-bold">{stats.diaryStats?.totalGratitudeEntries || 0}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Avg Mood:</span>
-                  <span className="font-bold">{stats.diaryStats?.averageMood}/10</span>
+                <div className="flex justify-between text-xs sm:text-sm">
+                  <span className="text-gray-600">Avg Mood:</span>
+                  <span className="font-bold">{stats.diaryStats?.averageMood?.toFixed(1) || 0}/10</span>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Main Features Tabs */}
+        {/* Tabs - Mobile responsive */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 w-full mb-6">
-            <TabsTrigger value="meditations" className="flex items-center gap-1">
-              <Brain className="w-4 h-4" />
-              <span className="hidden sm:inline">Meditations</span>
-            </TabsTrigger>
-            <TabsTrigger value="affirmations" className="flex items-center gap-1">
-              <Sparkles className="w-4 h-4" />
-              <span className="hidden sm:inline">Affirmations</span>
-            </TabsTrigger>
-            <TabsTrigger value="habits" className="flex items-center gap-1">
-              <Zap className="w-4 h-4" />
-              <span className="hidden sm:inline">Habits</span>
-            </TabsTrigger>
-            <TabsTrigger value="diaries" className="flex items-center gap-1">
-              <Book className="w-4 h-4" />
-              <span className="hidden sm:inline">Diaries</span>
-            </TabsTrigger>
-            <TabsTrigger value="cards" className="flex items-center gap-1">
-              <Wand2 className="w-4 h-4" />
-              <span className="hidden sm:inline">Cards</span>
-            </TabsTrigger>
-            <TabsTrigger value="audio" className="flex items-center gap-1">
-              <Heart className="w-4 h-4" />
-              <span className="hidden sm:inline">Audio</span>
-            </TabsTrigger>
-            <TabsTrigger value="recipes" className="flex items-center gap-1">
-              <InfinityIcon className="w-4 h-4" />
-              <span className="hidden sm:inline">Recipes</span>
-            </TabsTrigger>
-            <TabsTrigger value="community" className="flex items-center gap-1">
-              <Heart className="w-4 h-4" />
-              <span className="hidden sm:inline">Community</span>
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1 sm:gap-2 mb-4 sm:mb-6">
+            <TabsTrigger value="meditations" className="text-xs sm:text-sm">🧘 Meditations</TabsTrigger>
+            <TabsTrigger value="affirmations" className="text-xs sm:text-sm">✨ Affirmations</TabsTrigger>
+            <TabsTrigger value="habits" className="text-xs sm:text-sm">🔥 Habits</TabsTrigger>
+            <TabsTrigger value="diaries" className="hidden sm:inline-flex text-xs sm:text-sm">📔 Diaries</TabsTrigger>
+            <TabsTrigger value="cards" className="hidden lg:inline-flex text-xs sm:text-sm">🃏 Cards</TabsTrigger>
+            <TabsTrigger value="audio" className="hidden lg:inline-flex text-xs sm:text-sm">🎵 Audio</TabsTrigger>
+            <TabsTrigger value="recipes" className="hidden lg:inline-flex text-xs sm:text-sm">♾️ Recipes</TabsTrigger>
+            <TabsTrigger value="community" className="hidden lg:inline-flex text-xs sm:text-sm">🤝 Community</TabsTrigger>
           </TabsList>
 
           {/* Meditations Tab */}

@@ -106,14 +106,10 @@ export class AICouplesChallengeService {
     approvalOptions: string[];
     psychologicalRationale: string;
   }> {
-    // For now, return a fallback implementation
-    // TODO: Add this to the edge function
-    return {
-      question: "How accurate do you feel this psychological analysis is for you?",
-      context: "Understanding your perspective on this analysis helps both partners grow together",
-      approvalOptions: ["I agree with this analysis", "This is partially accurate", "I disagree with this analysis", "I need to think more about this"],
-      psychologicalRationale: "Getting your perspective helps validate the insights and promotes mutual understanding"
-    };
+    return this.callEdgeFunction('couples-challenge-ai', {
+      type: 'generateQualityApprovalQuestion',
+      payload: { userPerspective, partnerPerspective, originalQualities }
+    });
   }
 
   async generateQualityApprovalQuestionOld(
@@ -197,14 +193,10 @@ This should help both partners understand if the psychological insights resonate
     conversationStarter: string;
     psychologicalDepth: string;
   }> {
-    // For now, return a fallback implementation
-    // TODO: Add this to the edge function
-    return {
-      insight: "Your communication shows mutual respect and openness to understanding each other.",
-      relevance: "This insight is relevant because it highlights the positive dynamics in your conversation.",
-      conversationStarter: "What's one thing you learned about your partner today that surprised you?",
-      psychologicalDepth: "This reflects secure attachment patterns and emotional intelligence in your relationship."
-    };
+    return this.callEdgeFunction('couples-challenge-ai', {
+      type: 'generateRealTimeInsight',
+      payload: { recentMessages, challengeProgress }
+    });
   }
 
   async generateRealTimeInsightOld(
@@ -280,23 +272,10 @@ Keep it supportive, constructive, and focused on growth.`;
       partner: PartnerQualityData;
     }
   ): Promise<AICouplesAnalysis> {
-    // For now, return a fallback implementation
-    // TODO: Add this to the edge function
-    return {
-      compatibilityScore: 85,
-      strengths: ["Strong communication", "Mutual respect", "Shared values"],
-      growthOpportunities: ["Deepen emotional intimacy", "Improve conflict resolution"],
-      communicationPatterns: ["Active listening", "Open dialogue"],
-      psychologicalInsights: {
-        attachmentStyle: "Secure attachment patterns observed",
-        loveLanguage: "Quality time and words of affirmation",
-        conflictResolution: "Collaborative approach to problem-solving",
-        emotionalNeeds: ["Understanding", "Support", "Connection"],
-        growthAreas: ["Vulnerability", "Trust building"]
-      },
-      nextSteps: ["Continue regular check-ins", "Practice active listening"],
-      conversationStarters: ["What made you feel most connected today?", "How can we support each other better?"]
-    };
+    return this.callEdgeFunction('couples-challenge-ai', {
+      type: 'synthesizeChallengeAnalysis',
+      payload: { allResponses, partnerQualities }
+    });
   }
 
   async synthesizeChallengeAnalysisOld(

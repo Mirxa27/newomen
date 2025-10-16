@@ -61,8 +61,8 @@ type AIOperation =
   | { type: 'generateDynamicQuestion'; payload: { previousResponses: Array<{ question: string; userResponse: string; partnerResponse: string }>; currentContext: string; challengeProgress: number } }
   | { type: 'analyzePartnerQualities'; payload: { userQualities: PartnerQualityData; partnerQualities: PartnerQualityData } }
   | { type: 'generateQualityApprovalQuestion'; payload: { userPerspective: PsychologicalPerspective; partnerPerspective: PsychologicalPerspective; originalQualities: PartnerQualityData } }
-  | { type: 'generateRealTimeInsight'; payload: { recentMessages: Array<{ sender: string; content: string; timestamp: string }>; challengeProgress: number; currentContext: string } }
-  | { type: 'generateCouplesAnalysis'; payload: { challengeId: string; userResponses: string[]; partnerResponses: string[]; questions: string[] } };
+  | { type: 'generateRealTimeInsight'; payload: { recentMessages: Array<{ sender: string; content: string; timestamp: string }>; challengeProgress: number } }
+  | { type: 'synthesizeChallengeAnalysis'; payload: { allResponses: Array<{ question: string; userResponse: string; partnerResponse: string }>; partnerQualities?: { user: PartnerQualityData; partner: PartnerQualityData } } };
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -75,21 +75,12 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 );
 
-async function callZAI(systemPrompt: string, userPrompt: string, supabaseClient: ReturnType<typeof createClient>): Promise<string> {
-  // Retrieve API key from database
-  const { data: zaiApiKey, error: keyError } = await supabaseClient.rpc('get_provider_api_key_by_type', { p_provider_type: 'zai' });
+async function callZAI(systemPrompt: string, userPrompt: string, supabaseClient: ReturnType<typeof createClient>, useFastModel: boolean = false): Promise<string> {
+  // Use provided API key directly for better performance
+  const zaiApiKey = 'b8979b7827034e8ab50df3d09f975ca7.fQUeGKyLX1xtGJgN';
   
-  if (keyError) {
-    console.error('Error retrieving Z.AI API key:', keyError);
-    throw new Error(`Z.AI API key retrieval failed: ${keyError.message}`);
-  }
-  
-  if (!zaiApiKey) {
-    throw new Error('Z.AI API key not configured. Please add your Z.ai API key in the admin panel.');
-  }
-
   const zaiBaseUrl = 'https://api.z.ai/api/coding/paas/v4';
-  const zaiModel = 'GLM-4.6';
+  const zaiModel = useFastModel ? 'GLM-4.5-Air' : 'GLM-4.6'; // GLM-4.5-Air for fast operations, GLM-4.6 for results
 
   const response = await fetch(`${zaiBaseUrl}/chat/completions`, {
     method: 'POST',
@@ -154,7 +145,7 @@ Generate a question that:
 
 Make the question engaging, thought-provoking, and relationship-building.`;
 
-  const result = await callZAI(systemPrompt, userPrompt, supabaseClient);
+  const result = await callZAI(systemPrompt, userPrompt, supabaseClient, false); // Use GLM-4.6 for result generation
   return JSON.parse(result);
 }
 
@@ -203,7 +194,131 @@ Provide psychological analysis including:
 
 Focus on deep psychological insights that will help them understand each other better.`;
 
-  const result = await callZAI(systemPrompt, userPrompt, supabaseClient);
+  const result = await callZAI(systemPrompt, userPrompt, supabaseClient, false); // Use GLM-4.6 for result generation
+  return JSON.parse(result);
+}
+
+async function generateQualityApprovalQuestion(
+  userPerspective: PsychologicalPerspective,
+  partnerPerspective: PsychologicalPerspective,
+  originalQualities: PartnerQualityData,
+  supabaseClient: ReturnType<typeof createClient>
+): Promise<QualityApprovalResult> {
+  const systemPrompt = `You are a relationship counselor. Create a question that asks one partner to approve or disapprove of the psychological analysis of their desired qualities, fostering deeper understanding.
+
+Your response must be a valid JSON object with this structure:
+{
+  "question": "The question asking for approval/disapproval of the psychological analysis",
+  "context": "Explanation of why this question matters for their relationship",
+  "approvalOptions": ["I agree with this analysis", "This is partially accurate", "I disagree with this analysis", "I need to think more about this"],
+  "psychologicalRationale": "Why getting their approval/disapproval is important for relationship growth"
+}`;
+
+  const userPrompt = `Based on these psychological perspectives, create an approval question:
+
+User's Psychological Perspective:
+${JSON.stringify(userPerspective, null, 2)}
+
+Partner's Psychological Perspective:
+${JSON.stringify(partnerPerspective, null, 2)}
+
+Original Desired Qualities:
+${JSON.stringify(originalQualities, null, 2)}
+
+Create a question that:
+1. Presents the psychological analysis to the partner
+2. Asks for their approval or disapproval
+3. Provides meaningful response options
+4. Explains why their perspective matters
+5. Encourages open dialogue about the analysis`;
+
+  const result = await callZAI(systemPrompt, userPrompt, supabaseClient, true); // Use GLM-4.5-Air for fast approval questions
+  return JSON.parse(result);
+}
+
+async function generateRealTimeInsight(
+  recentMessages: Array<{ sender: string; content: string; timestamp: string }>,
+  challengeProgress: number,
+  supabaseClient: ReturnType<typeof createClient>
+): Promise<RealTimeInsightResult> {
+  const systemPrompt = `You are a relationship coach providing real-time insights during couples challenges. Analyze the conversation and provide meaningful, actionable insights.
+
+Your response must be a valid JSON object with this structure:
+{
+  "insight": "A meaningful insight about their communication or relationship dynamics",
+  "context": "Why this insight is relevant right now",
+  "conversationStarters": ["starter1", "starter2"],
+  "emotionalTone": "The overall emotional tone of their conversation",
+  "relationshipDynamics": ["dynamic1", "dynamic2"]
+}`;
+
+  const userPrompt = `Analyze this recent conversation from a couples challenge:
+
+Recent Messages:
+${JSON.stringify(recentMessages, null, 2)}
+
+Challenge Progress: ${challengeProgress}%
+
+Provide:
+1. A meaningful insight about their interaction
+2. Why this insight matters at this point
+3. Conversation starters to deepen their understanding
+4. The emotional tone of their conversation
+5. Key relationship dynamics observed
+
+Keep it supportive, constructive, and focused on growth.`;
+
+  const result = await callZAI(systemPrompt, userPrompt, supabaseClient, true); // Use GLM-4.5-Air for fast real-time insights
+  return JSON.parse(result);
+}
+
+async function synthesizeChallengeAnalysis(
+  allResponses: Array<{ question: string; userResponse: string; partnerResponse: string }>,
+  partnerQualities: { user: PartnerQualityData; partner: PartnerQualityData } | undefined,
+  supabaseClient: ReturnType<typeof createClient>
+): Promise<CouplesAnalysisResult> {
+  const systemPrompt = `You are an expert relationship counselor. Synthesize all responses from a couples challenge into a comprehensive analysis.
+
+Your response must be a valid JSON object with this structure:
+{
+  "compatibilityScore": 85,
+  "strengths": ["strength1", "strength2", "strength3"],
+  "growthOpportunities": ["opportunity1", "opportunity2"],
+  "communicationPatterns": ["pattern1", "pattern2"],
+  "psychologicalInsights": {
+    "attachmentStyle": "Combined attachment style analysis",
+    "loveLanguage": "Primary love languages and compatibility",
+    "conflictResolution": "How they handle conflicts together",
+    "emotionalNeeds": ["shared need1", "shared need2"],
+    "growthAreas": ["area for growth1", "area for growth2"]
+  },
+  "nextSteps": ["suggestion1", "suggestion2", "suggestion3"],
+  "conversationStarters": ["starter1", "starter2", "starter3"]
+}`;
+
+  const userPrompt = `Synthesize this complete couples challenge:
+
+All Challenge Responses:
+${JSON.stringify(allResponses, null, 2)}
+
+${partnerQualities ? `
+Partner Quality Analysis:
+User Qualities: ${JSON.stringify(partnerQualities.user, null, 2)}
+Partner Qualities: ${JSON.stringify(partnerQualities.partner, null, 2)}
+` : ''}
+
+Create a comprehensive analysis that includes:
+1. Overall compatibility score (0-100)
+2. Relationship strengths
+3. Growth opportunities
+4. Communication patterns observed
+5. Psychological insights about their dynamic
+6. Specific next steps for their relationship
+7. Conversation starters for future discussions
+
+Make it supportive, actionable, and focused on growth.`;
+
+  const result = await callZAI(systemPrompt, userPrompt, supabaseClient, false); // Use GLM-4.6 for comprehensive analysis
   return JSON.parse(result);
 }
 
@@ -230,6 +345,31 @@ serve(async (req) => {
       case 'analyzePartnerQualities':
         result = await analyzePartnerQualities(
           operation.payload.userQualities,
+          operation.payload.partnerQualities,
+          supabase
+        );
+        break;
+        
+      case 'generateQualityApprovalQuestion':
+        result = await generateQualityApprovalQuestion(
+          operation.payload.userPerspective,
+          operation.payload.partnerPerspective,
+          operation.payload.originalQualities,
+          supabase
+        );
+        break;
+        
+      case 'generateRealTimeInsight':
+        result = await generateRealTimeInsight(
+          operation.payload.recentMessages,
+          operation.payload.challengeProgress,
+          supabase
+        );
+        break;
+        
+      case 'synthesizeChallengeAnalysis':
+        result = await synthesizeChallengeAnalysis(
+          operation.payload.allResponses,
           operation.payload.partnerQualities,
           supabase
         );

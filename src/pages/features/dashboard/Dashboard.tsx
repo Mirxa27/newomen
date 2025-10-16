@@ -118,24 +118,26 @@ const Dashboard = () => {
   const displayName = getDisplayName();
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="max-w-7xl mx-auto space-y-8">
-        <div className="flex justify-between items-center">
-          <div className="space-y-1">
-            <h1 className="text-4xl font-bold gradient-text">
+    <div className="min-h-screen p-3 sm:p-4 md:p-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 md:space-y-8">
+        {/* Header - Mobile optimized */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 sm:gap-6">
+          <div className="space-y-1 sm:space-y-2">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold gradient-text line-clamp-2">
               Welcome back, {displayName}!
             </h1>
-            <p className="text-xl text-muted-foreground flex items-center gap-2">
-              <Zap className="w-5 h-5 text-accent" />
+            <p className="text-sm sm:text-base md:text-lg text-muted-foreground flex items-center gap-1 sm:gap-2 line-clamp-2">
+              <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-accent shrink-0" />
               <span>{affirmation}</span>
             </p>
           </div>
-          <Button variant="outline" className="glass" onClick={handleSignOut}>
+          <Button variant="outline" className="glass w-full sm:w-auto h-10 sm:h-auto" onClick={handleSignOut}>
             <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
+            <span className="text-sm sm:text-base">Sign Out</span>
           </Button>
         </div>
 
+        {/* Gamification Display */}
         <GamificationDisplay
           crystalBalance={currentCrystalBalance}
           currentLevel={currentLevel}
@@ -144,40 +146,41 @@ const Dashboard = () => {
           levelProgressPercentage={levelProgressPercentage}
         />
 
-        {/* Featured: Narrative Identity Exploration */}
+        {/* Featured: Narrative Identity Exploration - Mobile responsive */}
         <Card
           className="glass-card hover:shadow-lg transition-all cursor-pointer border-2 border-accent bg-gradient-to-br from-primary/10 to-accent/10"
           onClick={() => navigate("/narrative-exploration")}
         >
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="clay w-16 h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-primary to-accent">
-                  <Sparkles className="w-8 h-8 text-white" />
+          <CardHeader className="p-3 sm:p-4 md:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                <div className="clay w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-primary to-accent shrink-0">
+                  <Sparkles className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
                 </div>
-                <div>
-                  <CardTitle className="text-2xl gradient-text">Discover Your Narrative Identity</CardTitle>
-                  <CardDescription className="text-base mt-1">
+                <div className="min-w-0">
+                  <CardTitle className="text-lg sm:text-xl md:text-2xl gradient-text line-clamp-2">Discover Your Narrative Identity</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm md:text-base mt-1 line-clamp-2">
                     Take a guided journey through 10 questions to understand your personal story
                   </CardDescription>
                 </div>
               </div>
-              <Button className="clay-button bg-gradient-to-r from-primary to-accent">Begin Journey</Button>
+              <Button className="clay-button bg-gradient-to-r from-primary to-accent w-full sm:w-auto h-9 sm:h-10 md:h-auto text-sm sm:text-base mt-2 sm:mt-0 shrink-0">Begin Journey</Button>
             </div>
           </CardHeader>
         </Card>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Quick Access Grid - Fully responsive */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
           <Card
             className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
             onClick={() => navigate("/chat")}
           >
-            <CardHeader>
-              <div className="clay w-12 h-12 rounded-2xl flex items-center justify-center mb-4">
-                <MessageSquare className="w-6 h-6 text-primary" />
+            <CardHeader className="p-4 sm:p-5 md:p-6">
+              <div className="clay w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center mb-3 sm:mb-4">
+                <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               </div>
-              <CardTitle>Start Conversation</CardTitle>
-              <CardDescription>Talk with your AI companion</CardDescription>
+              <CardTitle className="text-base sm:text-lg">Start Conversation</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Talk with your AI companion</CardDescription>
             </CardHeader>
           </Card>
 
@@ -185,12 +188,12 @@ const Dashboard = () => {
             className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
             onClick={() => navigate("/member-assessments")}
           >
-            <CardHeader>
-              <div className="clay w-12 h-12 rounded-2xl flex items-center justify-center mb-4">
-                <Target className="w-6 h-6 text-primary" />
+            <CardHeader className="p-4 sm:p-5 md:p-6">
+              <div className="clay w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center mb-3 sm:mb-4">
+                <Target className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               </div>
-              <CardTitle>Assessments</CardTitle>
-              <CardDescription>Explore your personality and growth areas</CardDescription>
+              <CardTitle className="text-base sm:text-lg">Assessments</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Explore your personality and growth areas</CardDescription>
             </CardHeader>
           </Card>
 
@@ -198,12 +201,12 @@ const Dashboard = () => {
             className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
             onClick={() => navigate("/couples-challenge")}
           >
-            <CardHeader>
-              <div className="clay w-12 h-12 rounded-2xl flex items-center justify-center mb-4">
-                <Heart className="w-6 h-6 text-primary" />
+            <CardHeader className="p-4 sm:p-5 md:p-6">
+              <div className="clay w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center mb-3 sm:mb-4">
+                <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               </div>
-              <CardTitle>Couple's Challenge</CardTitle>
-              <CardDescription>Connect deeper with your partner</CardDescription>
+              <CardTitle className="text-base sm:text-lg">Couple's Challenge</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Connect deeper with your partner</CardDescription>
             </CardHeader>
           </Card>
 
@@ -211,12 +214,12 @@ const Dashboard = () => {
             className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
             onClick={() => navigate("/community")}
           >
-            <CardHeader>
-              <div className="clay w-12 h-12 rounded-2xl flex items-center justify-center mb-4">
-                <Users className="w-6 h-6 text-primary" />
+            <CardHeader className="p-4 sm:p-5 md:p-6">
+              <div className="clay w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center mb-3 sm:mb-4">
+                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               </div>
-              <CardTitle>Community</CardTitle>
-              <CardDescription>Connect with others on the same journey</CardDescription>
+              <CardTitle className="text-base sm:text-lg">Community</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Connect with others on the same journey</CardDescription>
             </CardHeader>
           </Card>
 
@@ -224,12 +227,12 @@ const Dashboard = () => {
             className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
             onClick={() => navigate("/wellness-library")}
           >
-            <CardHeader>
-              <div className="clay w-12 h-12 rounded-2xl flex items-center justify-center mb-4">
-                <BookOpen className="w-6 h-6 text-primary" />
+            <CardHeader className="p-4 sm:p-5 md:p-6">
+              <div className="clay w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center mb-3 sm:mb-4">
+                <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               </div>
-              <CardTitle>Wellness Library</CardTitle>
-              <CardDescription>Access guided meditations and more</CardDescription>
+              <CardTitle className="text-base sm:text-lg">Wellness Library</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Access guided meditations and more</CardDescription>
             </CardHeader>
           </Card>
 
@@ -237,12 +240,12 @@ const Dashboard = () => {
             className="glass-card hover:shadow-lg transition-shadow cursor-pointer"
             onClick={() => navigate("/profile")}
           >
-            <CardHeader>
-              <div className="clay w-12 h-12 rounded-2xl flex items-center justify-center mb-4">
-                <Sparkles className="w-6 h-6 text-primary" />
+            <CardHeader className="p-4 sm:p-5 md:p-6">
+              <div className="clay w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center mb-3 sm:mb-4">
+                <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               </div>
-              <CardTitle>My Profile</CardTitle>
-              <CardDescription>View achievements and progress</CardDescription>
+              <CardTitle className="text-base sm:text-lg">My Profile</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">View achievements and progress</CardDescription>
             </CardHeader>
           </Card>
         </div>
