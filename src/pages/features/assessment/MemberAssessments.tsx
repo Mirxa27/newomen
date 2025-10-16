@@ -8,6 +8,14 @@ import { ArrowRight, Clock, Target, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/features/auth/useAuth";
 import { toast } from "sonner";
 
+interface AssessmentQuestion {
+  id: string;
+  question: string;
+  type: 'multiple_choice' | 'text' | 'rating';
+  options?: string[];
+  required?: boolean;
+}
+
 interface Assessment {
   id: string;
   title: string;
@@ -15,7 +23,7 @@ interface Assessment {
   category: string;
   difficulty_level: string;
   time_limit_minutes: number;
-  questions: any;
+  questions: AssessmentQuestion[];
   is_public: boolean;
 }
 

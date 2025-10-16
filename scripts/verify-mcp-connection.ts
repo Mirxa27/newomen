@@ -63,7 +63,7 @@ async function verifyConnection() {
         console.log(`  ✓ Found ${tablesData.length} tables in public schema`);
         if (tablesData.length > 0) {
           console.log('  📋 Available tables:');
-          tablesData.forEach((table: any) => {
+          tablesData.forEach((table: { table_name: string }) => {
             console.log(`     - ${table.table_name}`);
           });
         }

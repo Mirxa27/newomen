@@ -55,7 +55,17 @@ export class CorsMiddleware {
 
   // Main CORS middleware function
   middleware() {
-    return async (req: any, res: any, next: any) => {
+    return async (
+      req: { headers: { origin: string }; method: string },
+      res: {
+        status: (code: number) => {
+          json: (data: { error: string; code: string }) => void;
+          end: () => void;
+        };
+        setHeader: (name: string, value: string) => void;
+      },
+      next: (error?: Error) => void
+    ) => {
       try {
         const origin = req.headers.origin;
         const method = req.method;
@@ -70,18 +80,35 @@ export class CorsMiddleware {
 
         next();
       } catch (error) {
-        logger.error('CORS middleware error', { error, origin: req.headers.origin });
-        next(error);
+        logger.error('CORS middleware error', {
+          error: error as Error,
+          origin: req.headers.origin,
+        });
+        next(error as Error);
       }
     };
   }
 
-  private async handlePreflight(req: any, res: any): Promise<void> {
+  private async handlePreflight(
+    req: { headers: { origin: string }; method: string },
+    res: {
+      status: (
+        code: number
+      ) => {
+        json: (data: { error: string; code: string }) => void;
+        end: () => void;
+      };
+      setHeader: (name: string, value: string) => void;
+    }
+  ): Promise<void> {
     const origin = req.headers.origin;
 
     // Check if origin is allowed
-    if (!await this.isOriginAllowed(origin)) {
-      logger.warn('CORS preflight rejected', { origin, method: req.method });
+    if (!(await this.isOriginAllowed(origin))) {
+      logger.warn('CORS preflight rejected', {
+        origin,
+        method: req.method,
+      });
       res.status(403).json({
         error: 'Origin not allowed',
         code: 'ORIGIN_NOT_ALLOWED',
@@ -91,8 +118,14 @@ export class CorsMiddleware {
 
     // Set preflight headers
     res.setHeader('Access-Control-Allow-Origin', this.getAllowedOrigin(origin));
-    res.setHeader('Access-Control-Allow-Methods', this.config.allowedMethods.join(', '));
-    res.setHeader('Access-Control-Allow-Headers', this.config.allowedHeaders.join(', '));
+    res.setHeader(
+      'Access-Control-Allow-Methods',
+      this.config.allowedMethods.join(', ')
+    );
+    res.setHeader(
+      'Access-Control-Allow-Headers',
+      this.config.allowedHeaders.join(', ')
+    );
     res.setHeader('Access-Control-Max-Age', this.config.maxAge.toString());
 
     if (this.config.credentials) {
@@ -100,24 +133,33 @@ export class CorsMiddleware {
     }
 
     if (this.config.exposedHeaders.length > 0) {
-      res.setHeader('Access-Control-Expose-Headers', this.config.exposedHeaders.join(', '));
+      res.setHeader(
+        'Access-Control-Expose-Headers',
+        this.config.exposedHeaders.join(', ')
+      );
     }
 
     res.status(this.config.optionsSuccessStatus).end();
   }
 
-  private async setCorsHeaders(req: any, res: any): Promise<void> {
+  private async setCorsHeaders(
+    req: { headers: { origin: string } },
+    res: { setHeader: (name: string, value: string) => void }
+  ): Promise<void> {
     const origin = req.headers.origin;
 
     if (await this.isOriginAllowed(origin)) {
       res.setHeader('Access-Control-Allow-Origin', this.getAllowedOrigin(origin));
-      
+
       if (this.config.credentials) {
         res.setHeader('Access-Control-Allow-Credentials', 'true');
       }
 
       if (this.config.exposedHeaders.length > 0) {
-        res.setHeader('Access-Control-Expose-Headers', this.config.exposedHeaders.join(', '));
+        res.setHeader(
+          'Access-Control-Expose-Headers',
+          this.config.exposedHeaders.join(', ')
+        );
       }
     }
   }

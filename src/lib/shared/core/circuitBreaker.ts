@@ -36,9 +36,9 @@ export interface CircuitBreakerStats {
 }
 
 // Circuit breaker options for individual calls
-export interface CircuitBreakerOptions {
+export interface CircuitBreakerOptions<T = unknown> {
   timeout?: number;
-  fallback?: () => Promise<any>;
+  fallback?: () => Promise<T>;
   onTimeout?: () => void;
   onFailure?: (error: Error) => void;
   onSuccess?: () => void;
@@ -399,7 +399,21 @@ export class CircuitBreakerFactory {
 
 // Circuit breaker middleware for Express
 export function circuitBreakerMiddleware(breaker: CircuitBreaker) {
-  return async (req: any, res: any, next: any) => {
+  return async (
+    req: unknown,
+    res: {
+      status: (code: number) => {
+        json: (data: {
+          error: {
+            code: string | undefined;
+            message: string;
+            retryAfter: number | undefined;
+          };
+        }) => void;
+      };
+    },
+    next: (error?: Error) => void
+  ) => {
     try {
       await breaker.execute(async () => {
         next();
@@ -411,10 +425,10 @@ export function circuitBreakerMiddleware(breaker: CircuitBreaker) {
             code: error.code,
             message: error.message,
             retryAfter: error.retryAfter,
-          }
+          },
         });
       }
-      next(error);
+      next(error as Error);
     }
   };
 }
@@ -431,13 +445,13 @@ export function CircuitBreakerDecorator(
   );
 
   return function (
-    target: any,
+    target: object,
     propertyKey: string,
     descriptor: PropertyDescriptor
   ) {
     const originalMethod = descriptor.value;
 
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (...args: unknown[]) {
       return breaker.execute(async () => {
         return originalMethod.apply(this, args);
       });
@@ -451,12 +465,22 @@ export function CircuitBreakerDecorator(
 export class CircuitBreakerHealthCheck {
   static async checkHealth(): Promise<{
     healthy: boolean;
-    details: Record<string, any>;
+    details: Record<string, {
+      state: CircuitBreakerState;
+      failureRate: string;
+      totalRequests: number;
+      totalFailures: number;
+    }>;
   }> {
     const manager = CircuitBreakerFactory.getManager();
     const stats = manager.getStats();
     
-    const details: Record<string, any> = {};
+    const details: Record<string, {
+      state: CircuitBreakerState;
+      failureRate: string;
+      totalRequests: number;
+      totalFailures: number;
+    }> = {};
     let healthy = true;
 
     for (const [name, stat] of Object.entries(stats)) {

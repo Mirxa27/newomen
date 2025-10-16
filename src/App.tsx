@@ -26,6 +26,7 @@ const NotFound = lazy(() => import("./pages/shared/public/NotFound"));
 const Profile = lazy(() => import("./pages/features/dashboard/Profile"));
 const WellnessLibrary = lazy(() => import("./pages/features/dashboard/WellnessLibrary"));
 const Community = lazy(() => import("./pages/features/community/Community"));
+const PostPage = lazy(() => import("./pages/features/community/PostPage"));
 const AccountSettings = lazy(() => import("./pages/features/dashboard/AccountSettings"));
 const AboutUs = lazy(() => import("./pages/shared/public/AboutUs"));
 const Pricing = lazy(() => import("./pages/features/payment/Pricing"));
@@ -141,6 +142,11 @@ const App = () => {
           <Route path="/community" element={
             <ProtectedRoute>
               <MainLayout><Community /></MainLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/post/:postId" element={
+            <ProtectedRoute>
+              <MainLayout><PostPage /></MainLayout>
             </ProtectedRoute>
           } />
           <Route path="/couples-challenge" element={

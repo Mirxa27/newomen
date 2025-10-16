@@ -574,14 +574,14 @@ export const securityHeaders = {
 export interface RateLimitConfig {
   windowMs: number;
   maxRequests: number;
-  keyGenerator?: (req: any) => string;
+  keyGenerator?: (req: unknown) => string;
   skipSuccessfulRequests?: boolean;
   skipFailedRequests?: boolean;
   message?: string;
   statusCode?: number;
   headers?: boolean;
   draft_polli_ratelimit?: boolean;
-  store?: any;
+  store?: object;
 }
 
 export const defaultRateLimitConfig: RateLimitConfig = {
@@ -622,8 +622,8 @@ export const validationPatterns = {
   email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   password: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
   username: /^[a-zA-Z0-9_-]{3,20}$/,
-  phone: /^\+?[\d\s\-\(\)]{10,}$/,
-  url: /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/,
+  phone: /^\+?[\d\s()-]{10,}$/,
+  url: /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)$/,
   uuid: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
 };
 

@@ -28,6 +28,42 @@ export interface PodcastEpisode {
   transcript?: string;
 }
 
+interface UserSubscription {
+  podcasts: Podcast;
+}
+
+interface PlaybackHistoryItem {
+  podcast_episodes: PodcastEpisode;
+}
+
+interface FavoriteEpisode {
+  podcast_episodes: PodcastEpisode;
+}
+
+interface Playlist {
+  id: string;
+  user_id: string;
+  title: string;
+  description?: string;
+  is_public: boolean;
+  episode_ids: string[];
+}
+
+interface Download {
+  id: string;
+  user_id: string;
+  episode_id: string;
+  download_status: 'pending' | 'downloading' | 'completed' | 'failed';
+  created_at: string;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  display_order: number;
+}
+
+
 class PodcastService {
   /**
    * Get all featured podcasts
@@ -164,7 +200,7 @@ class PodcastService {
 
       if (error) throw error;
 
-      return data?.map((sub: any) => sub.podcasts).filter(Boolean) || [];
+      return data?.map((sub: UserSubscription) => sub.podcasts).filter(Boolean) || [];
     } catch (error) {
       logError(`Error fetching podcast subscriptions for user ${userId}`, error);
       throw error;
@@ -220,7 +256,7 @@ class PodcastService {
   /**
    * Get playback history
    */
-  async getPlaybackHistory(userId: string, limit: number = 50): Promise<any[]> {
+  async getPlaybackHistory(userId: string, limit: number = 50): Promise<PlaybackHistoryItem[]> {
     try {
       const { data, error } = await supabase
         .from("podcast_playback")
@@ -230,7 +266,7 @@ class PodcastService {
         .limit(limit);
 
       if (error) throw error;
-      return data || [];
+      return (data as PlaybackHistoryItem[]) || [];
     } catch (error) {
       logError(`Error fetching playback history for user ${userId}`, error);
       throw error;
@@ -316,7 +352,7 @@ class PodcastService {
 
       if (error) throw error;
 
-      return data?.map((fav: any) => fav.podcast_episodes).filter(Boolean) || [];
+      return data?.map((fav: FavoriteEpisode) => fav.podcast_episodes).filter(Boolean) || [];
     } catch (error) {
       logError(`Error fetching favorite episodes for user ${userId}`, error);
       throw error;
@@ -326,7 +362,7 @@ class PodcastService {
   /**
    * Create podcast playlist
    */
-  async createPlaylist(userId: string, title: string, description: string): Promise<any> {
+  async createPlaylist(userId: string, title: string, description: string): Promise<Playlist | null> {
     try {
       const { data, error } = await supabase
         .from("podcast_playlists")
@@ -342,7 +378,7 @@ class PodcastService {
       if (error) throw error;
 
       logInfo(`Playlist created by user ${userId}`);
-      return data;
+      return data as Playlist;
     } catch (error) {
       logError(`Error creating playlist`, error);
       throw error;
@@ -383,7 +419,7 @@ class PodcastService {
   /**
    * Download episode for offline listening
    */
-  async downloadEpisode(userId: string, episodeId: string): Promise<any> {
+  async downloadEpisode(userId: string, episodeId: string): Promise<Download | null> {
     try {
       const { data, error } = await supabase
         .from("podcast_downloads")
@@ -398,7 +434,7 @@ class PodcastService {
       if (error) throw error;
 
       logInfo(`Episode ${episodeId} queued for download by user ${userId}`);
-      return data;
+      return data as Download;
     } catch (error) {
       logError(`Error downloading episode`, error);
       throw error;
@@ -408,7 +444,7 @@ class PodcastService {
   /**
    * Get podcast categories
    */
-  async getCategories(): Promise<any[]> {
+  async getCategories(): Promise<Category[]> {
     try {
       const { data, error } = await supabase
         .from("podcast_categories")
@@ -417,7 +453,7 @@ class PodcastService {
         .order("display_order", { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      return (data as Category[]) || [];
     } catch (error) {
       logError("Error fetching podcast categories", error);
       throw error;

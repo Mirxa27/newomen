@@ -278,7 +278,7 @@ export class MobileOptimizationService {
   private setupKeyboardHandling(): void {
     if (!this.isMobile()) return;
 
-    let initialViewportHeight = window.visualViewport?.height || window.innerHeight;
+    const initialViewportHeight = window.visualViewport?.height || window.innerHeight;
     
     const handleViewportChange = () => {
       if (!window.visualViewport) return;

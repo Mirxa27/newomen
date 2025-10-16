@@ -101,7 +101,7 @@ export function useCommunityReal() {
     } finally {
       setLoading(false);
     }
-  }, [profile]);
+  }, [profile, fetchConnectionsDirect]);
 
   // Fallback method using direct SQL queries
   const fetchConnectionsDirect = useCallback(async () => {
@@ -216,7 +216,7 @@ export function useCommunityReal() {
     } finally {
       setSearching(false);
     }
-  }, [profile]);
+  }, [profile, searchUsersDirect]);
 
   // Fallback user search
   const searchUsersDirect = useCallback(async (query: string) => {
@@ -278,7 +278,7 @@ export function useCommunityReal() {
       // Fallback: direct insertion
       await sendConnectionRequestDirect(receiverId);
     }
-  }, [profile, fetchConnections]);
+  }, [profile, fetchConnections, sendConnectionRequestDirect]);
 
   // Fallback connection request method
   const sendConnectionRequestDirect = useCallback(async (receiverId: string) => {
@@ -286,11 +286,15 @@ export function useCommunityReal() {
 
     try {
       // Check if connection already exists
-      const { data: existingConnection } = await supabase
-        .from('community_connections' as any)
+      const { data: existingConnection, error: existingConnectionError } = await supabase
+        .from('community_connections')
         .select('id, status')
         .or(`and(requester_id.eq.${profile.id},receiver_id.eq.${receiverId}),and(requester_id.eq.${receiverId},receiver_id.eq.${profile.id})`)
         .single();
+      
+      if(existingConnectionError && existingConnectionError.code !== 'PGRST116'){ // ignore no rows found
+        throw existingConnectionError;
+      }
 
       if (existingConnection) {
         toast.error('Connection already exists with this user.');
@@ -298,7 +302,7 @@ export function useCommunityReal() {
       }
 
       const { error } = await supabase
-        .from('community_connections' as any)
+        .from('community_connections')
         .insert({
           requester_id: profile.id,
           receiver_id: receiverId,
@@ -348,7 +352,7 @@ export function useCommunityReal() {
       // Fallback: direct update
       await updateConnectionStatusDirect(connectionId, status);
     }
-  }, [profile, fetchConnections]);
+  }, [profile, fetchConnections, updateConnectionStatusDirect]);
 
   // Fallback connection status update
   const updateConnectionStatusDirect = useCallback(async (connectionId: string, status: ConnectionStatus) => {
@@ -357,20 +361,20 @@ export function useCommunityReal() {
     try {
       // First verify that the current user is the receiver
       const { data: connection, error: fetchError } = await supabase
-        .from('community_connections' as any)
+        .from('community_connections')
         .select('receiver_id')
         .eq('id', connectionId)
         .single();
 
       if (fetchError) throw fetchError;
 
-      if (connection.receiver_id !== profile.id) {
+      if (connection?.receiver_id !== profile.id) {
         toast.error('You can only update connection requests sent to you.');
         return;
       }
 
       const { error } = await supabase
-        .from('community_connections' as any)
+        .from('community_connections')
         .update({ status })
         .eq('id', connectionId);
 

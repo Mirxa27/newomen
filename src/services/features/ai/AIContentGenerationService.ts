@@ -373,7 +373,7 @@ Return the response in JSON format with this exact structure:
       return {
         title: parsed.title,
         description: parsed.description,
-        questions: parsed.questions.map((q: any, index: number) => ({
+        questions: parsed.questions.map((q: AssessmentQuestion, index: number) => ({
           id: `q_${Date.now()}_${index}`,
           question: q.question,
           type: q.type,
@@ -417,7 +417,7 @@ Return the response in JSON format with this exact structure:
       return {
         title: parsed.title,
         description: parsed.description,
-        questions: parsed.questions.map((q: any, index: number) => ({
+        questions: parsed.questions.map((q: CouplesQuestion, index: number) => ({
           id: `cq_${Date.now()}_${index}`,
           question: q.question,
           type: q.type,

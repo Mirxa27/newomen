@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import { monitoringService } from '@/lib/monitoring';
+import { monitoringService, SystemHealth as SystemHealthType, MetricsSummary } from '@/lib/monitoring';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared/ui/card';
 import { Badge } from '@/components/shared/ui/badge';
 import { Button } from '@/components/shared/ui/button';
 import { AlertTriangle, CheckCircle, AlertCircle, RefreshCw, Activity } from 'lucide-react';
 
 export default function SystemHealth() {
-  const [health, setHealth] = useState<any>(null);
-  const [metrics, setMetrics] = useState<any>(null);
+  const [health, setHealth] = useState<SystemHealthType | null>(null);
+  const [metrics, setMetrics] = useState<MetricsSummary | null>(null);
   const [loading, setLoading] = useState(false);
 
   const checkHealth = async () => {
@@ -48,7 +48,7 @@ export default function SystemHealth() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: any = {
+    const variants: Record<string, string> = {
       healthy: 'bg-green-100 text-green-800',
       warning: 'bg-yellow-100 text-yellow-800',
       critical: 'bg-red-100 text-red-800',

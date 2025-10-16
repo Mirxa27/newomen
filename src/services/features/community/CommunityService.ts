@@ -1,6 +1,6 @@
 // Comprehensive community service for Newomen platform
 import { supabase } from '@/integrations/supabase/client';
-import { errorHandler, ErrorFactory } from '@/utils/error-handling';
+import { errorHandler, ErrorFactory } from '@/utils/shared/core/error-handling';
 import type { 
   CommunityPostCreate, 
   CommunityPost, 
@@ -8,6 +8,15 @@ import type {
   CommunityComment,
   APIResponse 
 } from '@/types/validation';
+import type { Database } from '@/integrations/supabase/types';
+import { Json } from '@/integrations/supabase/types';
+
+type CommunityPostWithAuthor = Database['public']['Tables']['community_posts']['Row'] & {
+    author: Pick<Database['public']['Tables']['user_profiles']['Row'], 'id' | 'full_name' | 'nickname' | 'avatar_url'> | null;
+};
+type CommunityCommentWithAuthor = Database['public']['Tables']['community_comments']['Row'] & {
+    author: Pick<Database['public']['Tables']['user_profiles']['Row'], 'id' | 'full_name' | 'nickname' | 'avatar_url'> | null;
+};
 
 export interface CommunityStats {
   totalPosts: number;
@@ -607,7 +616,7 @@ export class CommunityService {
     }
   }
 
-  private formatPostData(post: any): CommunityPost {
+  private formatPostData(post: CommunityPostWithAuthor): CommunityPost {
     return {
       id: post.id,
       user_id: post.user_id,
@@ -630,7 +639,7 @@ export class CommunityService {
     };
   }
 
-  private formatCommentData(comment: any): CommunityComment {
+  private formatCommentData(comment: CommunityCommentWithAuthor): CommunityComment {
     return {
       id: comment.id,
       post_id: comment.post_id,
@@ -649,7 +658,7 @@ export class CommunityService {
     };
   }
 
-  private async logCommunityEvent(eventType: string, data: any): Promise<void> {
+  private async logCommunityEvent(eventType: string, data: Json): Promise<void> {
     try {
       await supabase
         .from('community_events')
@@ -663,7 +672,7 @@ export class CommunityService {
     }
   }
 
-  private async triggerGamificationEvent(eventType: string, userId: string, metadata: any): Promise<void> {
+  private async triggerGamificationEvent(eventType: string, userId: string, metadata: Json): Promise<void> {
     try {
       await supabase.functions.invoke('gamification-engine', {
         body: {

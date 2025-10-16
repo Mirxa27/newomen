@@ -33,6 +33,7 @@ import {
   AlertTriangle,
   Loader2
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 // Import services
 import { aiProviderManager } from '@/services/features/ai/AIProviderManager';
@@ -259,26 +260,59 @@ export function AgentBuilder({ onAgentCreated, onAgentUpdated }: AgentBuilderPro
     }
 
     try {
-      // Save agent to database
-      const agentData = {
+      // 1. Save the prompt configuration
+      const { data: promptData, error: promptError } = await supabase
+        .from('prompts')
+        .insert({
+          name: `${agentConfig.name} - Prompt`,
+          content: {
+            system_prompt: agentConfig.systemPrompt,
+            user_prompt: agentConfig.userPrompt,
+            temperature: agentConfig.temperature,
+            max_tokens: agentConfig.maxTokens,
+            category: agentConfig.category,
+            capabilities: agentConfig.capabilities,
+          },
+          status: 'active',
+        })
+        .select('id')
+        .single();
+
+      if (promptError) throw promptError;
+
+      // 2. Save the agent with the new prompt_id
+      const agentToSave = {
         name: agentConfig.name,
         description: agentConfig.description,
-        category: agentConfig.category,
         model_id: agentConfig.modelId,
-        voice_id: agentConfig.voiceId,
-        system_prompt: agentConfig.systemPrompt,
-        user_prompt: agentConfig.userPrompt,
-        temperature: agentConfig.temperature,
-        max_tokens: agentConfig.maxTokens,
-        capabilities: agentConfig.capabilities,
-        enabled: true
+        voice_id: agentConfig.voiceId || null,
+        prompt_id: promptData.id,
+        status: 'active',
       };
 
-      // TODO: Implement actual save to database
-      console.log('Saving agent:', agentData);
-      
+      const { data: savedAgent, error: agentError } = await supabase
+        .from('agents')
+        .insert(agentToSave)
+        .select()
+        .single();
+
+      if (agentError) throw agentError;
+
       toast.success('Agent saved successfully');
-      onAgentCreated?.(agentData);
+      
+      if (onAgentCreated && savedAgent) {
+        onAgentCreated({
+          id: savedAgent.id,
+          name: savedAgent.name,
+          description: savedAgent.description || '',
+          modelId: savedAgent.model_id,
+          voiceId: savedAgent.voice_id || undefined,
+          promptId: savedAgent.prompt_id || undefined,
+          isActive: savedAgent.status === 'active',
+          createdAt: savedAgent.created_at,
+          updatedAt: savedAgent.updated_at || savedAgent.created_at,
+        });
+      }
     } catch (error) {
       console.error('Failed to save agent:', error);
       toast.error('Failed to save agent');

@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { logError, logInfo } from "@/lib/logging";
+import { Json } from "@/types/supabase";
 
 export interface EngagementMetrics {
   user_id: string;
@@ -8,6 +9,7 @@ export interface EngagementMetrics {
   monthly_sessions: number;
   engagement_score: number;
   churn_risk_score: number;
+  features_used?: string[];
 }
 
 export interface RevenueMetrics {
@@ -27,6 +29,30 @@ export interface ChurnPrediction {
   churn_reasons: string[];
 }
 
+export interface FunnelMetric {
+    id: string;
+    funnel_name: string;
+    step_number: number;
+    step_name: string;
+    users_reached: number;
+    users_completed: number;
+    conversion_rate: number;
+    recorded_date: string;
+}
+
+export interface HeatmapData {
+    id: string;
+    page_url: string;
+    element_selector: string;
+    recorded_date: string;
+    click_count: number;
+    hover_count: number;
+    scroll_depth: number;
+}
+
+export type CohortAnalysis = Record<string, unknown>;
+export type RetentionRate = Record<string, unknown>;
+
 class AnalyticsService {
   /**
    * Track user activity
@@ -36,7 +62,7 @@ class AnalyticsService {
     activityType: string,
     featureName: string,
     durationSeconds?: number,
-    metadata?: any
+    metadata?: Json
   ): Promise<void> {
     try {
       const { error } = await supabase
@@ -290,7 +316,7 @@ class AnalyticsService {
   /**
    * Get funnel metrics
    */
-  async getFunnelMetrics(funnelName: string): Promise<any[]> {
+  async getFunnelMetrics(funnelName: string): Promise<FunnelMetric[]> {
     try {
       const { data, error } = await supabase
         .from("funnel_analytics")
@@ -362,7 +388,7 @@ class AnalyticsService {
     eventName: string,
     eventCategory: string,
     eventValue?: number,
-    metadata?: any
+    metadata?: Json
   ): Promise<void> {
     try {
       const { error } = await supabase
@@ -386,7 +412,7 @@ class AnalyticsService {
   /**
    * Get cohort analysis
    */
-  async getCohortAnalysis(cohortStartDate: string): Promise<any> {
+  async getCohortAnalysis(cohortStartDate: string): Promise<CohortAnalysis | null> {
     try {
       const { data, error } = await supabase
         .from("cohort_analysis")
@@ -405,7 +431,7 @@ class AnalyticsService {
   /**
    * Get retention rates
    */
-  async getRetentionRates(startDate: string, endDate: string): Promise<any[]> {
+  async getRetentionRates(startDate: string, endDate: string): Promise<RetentionRate[]> {
     try {
       const { data, error } = await supabase
         .from("retention_rates")
@@ -442,7 +468,7 @@ class AnalyticsService {
         .single();
 
       if (existing) {
-        const updates: any = { recorded_date: today };
+        const updates: Partial<HeatmapData> = { recorded_date: today };
         if (eventType === 'click') updates.click_count = existing.click_count + 1;
         if (eventType === 'hover') updates.hover_count = existing.hover_count + 1;
         if (scrollDepth !== undefined) updates.scroll_depth = scrollDepth;
@@ -452,7 +478,7 @@ class AnalyticsService {
           .update(updates)
           .eq("id", existing.id);
       } else {
-        const data: any = {
+        const data: Partial<HeatmapData> = {
           page_url: pageUrl,
           element_selector: elementSelector,
           recorded_date: today

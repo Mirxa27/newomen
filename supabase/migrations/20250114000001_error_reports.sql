@@ -32,9 +32,9 @@ CREATE POLICY "Admins can view all error reports"
   FOR SELECT
   USING (
     EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE id = auth.uid() 
-      AND (is_admin = true OR subscription_tier = 'admin')
+      SELECT 1 FROM public.user_profiles
+      WHERE user_id = auth.uid()
+      AND role = 'admin'
     )
   );
 
@@ -44,9 +44,9 @@ CREATE POLICY "Admins can update error reports"
   FOR UPDATE
   USING (
     EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE id = auth.uid() 
-      AND (is_admin = true OR subscription_tier = 'admin')
+      SELECT 1 FROM public.user_profiles
+      WHERE user_id = auth.uid()
+      AND role = 'admin'
     )
   );
 
@@ -166,9 +166,9 @@ AS $$
 BEGIN
   -- Check if user has admin privileges
   IF NOT EXISTS (
-    SELECT 1 FROM user_profiles 
-    WHERE id = resolver_user_id 
-    AND (is_admin = true OR subscription_tier = 'admin')
+    SELECT 1 FROM public.user_profiles
+    WHERE user_id = resolver_user_id
+    AND role = 'admin'
   ) THEN
     RAISE EXCEPTION 'Insufficient privileges to resolve error reports';
   END IF;

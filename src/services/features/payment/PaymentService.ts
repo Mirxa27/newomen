@@ -1,7 +1,8 @@
 // Comprehensive payment service for Newomen platform
 import { supabase } from '@/integrations/supabase/client';
-import { errorHandler, ErrorFactory } from '@/utils/error-handling';
+import { errorHandler, ErrorFactory } from '@/utils/shared/core/error-handling';
 import type { PaymentCreate, Payment, APIResponse } from '@/types/validation';
+import { Json } from '@/integrations/supabase/types';
 
 export interface PaymentConfig {
   paypalClientId: string;
@@ -36,6 +37,12 @@ export interface SubscriptionPlan {
   isPopular: boolean;
   stripePriceId?: string;
   paypalPlanId?: string;
+}
+
+interface PayPalOrder {
+    id: string;
+    status: 'CREATED' | 'SAVED' | 'APPROVED' | 'VOIDED' | 'COMPLETED' | 'PAYER_ACTION_REQUIRED';
+    // Add other properties as needed from the PayPal API response
 }
 
 export class PaymentService {
@@ -440,7 +447,7 @@ export class PaymentService {
   }
 
   // Private helper methods
-  private async createPayPalOrder(paymentData: PaymentCreate): Promise<any> {
+  private async createPayPalOrder(paymentData: PaymentCreate): Promise<PayPalOrder> {
     const response = await fetch(`${this.getPayPalBaseUrl()}/v2/checkout/orders`, {
       method: 'POST',
       headers: {
@@ -470,7 +477,7 @@ export class PaymentService {
     return await response.json();
   }
 
-  private async capturePayPalOrder(orderId: string): Promise<{ success: boolean; data?: any }> {
+  private async capturePayPalOrder(orderId: string): Promise<{ success: boolean; data?: PayPalOrder }> {
     const response = await fetch(`${this.getPayPalBaseUrl()}/v2/checkout/orders/${orderId}/capture`, {
       method: 'POST',
       headers: {
@@ -521,7 +528,7 @@ export class PaymentService {
     if (error) throw error;
   }
 
-  private async logPaymentEvent(eventType: string, data: any): Promise<void> {
+  private async logPaymentEvent(eventType: string, data: Json): Promise<void> {
     try {
       await supabase
         .from('payment_events')
@@ -535,7 +542,7 @@ export class PaymentService {
     }
   }
 
-  private async triggerGamificationEvent(eventType: string, userId: string, metadata: any): Promise<void> {
+  private async triggerGamificationEvent(eventType: string, userId: string, metadata: Json): Promise<void> {
     try {
       await supabase.functions.invoke('gamification-engine', {
         body: {

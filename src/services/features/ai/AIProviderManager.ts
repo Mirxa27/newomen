@@ -17,6 +17,28 @@ import type {
   ProviderAuth 
 } from './providers/types';
 
+type ProviderServiceClassConstructor = new (
+  providerData: AIProvider,
+  auth: ProviderAuth,
+  endpoints: object,
+  options: object
+) => BaseProviderService;
+
+type ProviderTableRow = Database['public']['Tables']['providers']['Row'];
+type ModelTableRow = Database['public']['Tables']['models']['Row'];
+type VoiceTableRow = Database['public']['Tables']['voices']['Row'];
+type HealthTableRow = Database['public']['Tables']['provider_health']['Row'];
+
+interface ProviderCapabilities {
+    models: boolean;
+    voices: boolean;
+    streaming: boolean;
+    realtime: boolean;
+    embeddings: boolean;
+    vision: boolean;
+    tools: boolean;
+}
+
 export class AIProviderManager {
   private providers = new Map<string, BaseProviderService>();
   private skippedProviders = new Set<string>();
@@ -69,7 +91,7 @@ export class AIProviderManager {
       };
 
       // Determine provider service based on name or base URL
-      let ProviderServiceClass: new (...args: unknown[]) => BaseProviderService;
+      let ProviderServiceClass: ProviderServiceClassConstructor;
       let endpoints: object;
       let options: object;
 
@@ -317,22 +339,22 @@ export class AIProviderManager {
       if (error) throw error;
 
       // Transform database data to AIProvider format
-      return (data || []).map((provider: Record<string, unknown>) => ({
-        id: provider.id as string,
-        name: provider.name as string,
-        type: this.getProviderTypeCategory(provider.type as string),
-        baseUrl: provider.api_base as string || '',
-        status: (provider.status as string) === 'active' ? 'active' : 'inactive',
-        lastSynced: provider.last_synced_at as string | undefined,
-        capabilities: this.getProviderCapabilities(provider.type as string),
+      return (data || []).map((provider: ProviderTableRow) => ({
+        id: provider.id,
+        name: provider.name,
+        type: this.getProviderTypeCategory(provider.type),
+        baseUrl: provider.api_base || '',
+        status: (provider.status) === 'active' ? 'active' : 'inactive',
+        lastSynced: provider.last_synced_at || undefined,
+        capabilities: this.getProviderCapabilities(provider.type),
         config: {
-          maxTokens: provider.max_tokens as number || 4096,
-          temperature: parseFloat(provider.temperature as string || '0.7'),
-          topP: parseFloat(provider.top_p as string || '1.0'),
-          frequencyPenalty: parseFloat(provider.frequency_penalty as string || '0.0'),
-          presencePenalty: parseFloat(provider.presence_penalty as string || '0.0'),
-          stopSequences: provider.stop_sequences as string[] || [],
-          systemInstructions: provider.system_instructions as string || '',
+          maxTokens: provider.max_tokens || 4096,
+          temperature: provider.temperature ?? 0.7,
+          topP: provider.top_p ?? 1.0,
+          frequencyPenalty: provider.frequency_penalty ?? 0.0,
+          presencePenalty: provider.presence_penalty ?? 0.0,
+          stopSequences: (provider.stop_sequences as string[]) || [],
+          systemInstructions: provider.system_instructions || '',
           rateLimits: {
             requestsPerMinute: 60,
             tokensPerMinute: 90000
@@ -356,16 +378,16 @@ export class AIProviderManager {
       const { data, error } = await query;
       if (error) throw error;
       
-      return (data || []).map((model: Record<string, unknown>) => ({
-        id: model.id as string,
-        providerId: model.provider_id as string,
-        modelId: model.model_id as string,
-        displayName: model.display_name as string,
-        modality: (model.modality as 'text' | 'audio' | 'image' | 'multimodal' | 'embedding') || 'text',
-        contextLimit: model.context_limit as number,
-        latencyMs: model.latency_hint_ms as number,
-        isRealtime: model.is_realtime as boolean,
-        enabled: model.enabled as boolean,
+      return (data || []).map((model: ModelTableRow) => ({
+        id: model.id,
+        providerId: model.provider_id,
+        modelId: model.model_id,
+        displayName: model.display_name,
+        modality: model.modality || 'text',
+        contextLimit: model.context_limit,
+        latencyMs: model.latency_hint_ms,
+        isRealtime: model.is_realtime,
+        enabled: model.enabled,
         capabilities: {
           streaming: true,
           tools: true,
@@ -392,16 +414,16 @@ export class AIProviderManager {
       const { data, error } = await query;
       if (error) throw error;
       
-      return (data || []).map((voice: Record<string, unknown>) => ({
-        id: voice.id as string,
-        providerId: voice.provider_id as string,
-        voiceId: voice.voice_id as string,
-        name: voice.name as string,
-        locale: voice.locale as string,
-        language: (voice.locale as string)?.split('-')[0] || 'en',
-        gender: (voice.gender as 'male' | 'female' | 'neutral') || 'neutral',
-        latencyMs: voice.latency_hint_ms as number,
-        enabled: voice.enabled as boolean
+      return (data || []).map((voice: VoiceTableRow) => ({
+        id: voice.id,
+        providerId: voice.provider_id,
+        voiceId: voice.voice_id,
+        name: voice.name,
+        locale: voice.locale,
+        language: voice.locale?.split('-')[0] || 'en',
+        gender: voice.gender || 'neutral',
+        latencyMs: voice.latency_hint_ms,
+        enabled: voice.enabled
       }));
     } catch (error) {
       console.error('Failed to fetch voices:', error);
@@ -418,13 +440,13 @@ export class AIProviderManager {
       
       if (error) throw error;
       
-      return (data || []).map((health: Record<string, unknown>) => ({
-        providerId: health.provider_id as string,
-        endpoint: health.endpoint as string,
-        responseTime: health.response_time_ms as number,
-        isHealthy: health.is_healthy as boolean,
-        timestamp: health.last_checked_at as string,
-        error: health.error_message as string | undefined
+      return (data || []).map((health: HealthTableRow) => ({
+        providerId: health.provider_id,
+        endpoint: health.endpoint,
+        responseTime: health.response_time_ms,
+        isHealthy: health.is_healthy,
+        timestamp: health.last_checked_at,
+        error: health.error_message || undefined
       }));
     } catch (error) {
       console.error('Failed to fetch health status:', error);
@@ -957,24 +979,24 @@ export class AIProviderManager {
       if (error) throw error;
       if (!data || data.length === 0) return null;
       
-      const providerData: Record<string, unknown> = data[0];
+      const providerData: ProviderTableRow = data[0];
 
       return {
-        id: providerData.id as string,
-        name: providerData.name as string,
-        type: this.getProviderTypeCategory(providerData.type as string),
-        baseUrl: providerData.api_base as string || '',
-        status: (providerData.status as string) === 'active' ? 'active' : 'inactive',
-        lastSynced: providerData.last_synced_at as string | undefined,
-        capabilities: this.getProviderCapabilities(providerData.type as string),
+        id: providerData.id,
+        name: providerData.name,
+        type: this.getProviderTypeCategory(providerData.type),
+        baseUrl: providerData.api_base || '',
+        status: (providerData.status) === 'active' ? 'active' : 'inactive',
+        lastSynced: providerData.last_synced_at || undefined,
+        capabilities: this.getProviderCapabilities(providerData.type),
         config: {
-          maxTokens: providerData.max_tokens as number || 4096,
-          temperature: parseFloat(providerData.temperature as string || '0.7'),
-          topP: parseFloat(providerData.top_p as string || '1.0'),
-          frequencyPenalty: parseFloat(providerData.frequency_penalty as string || '0.0'),
-          presencePenalty: parseFloat(providerData.presence_penalty as string || '0.0'),
-          stopSequences: providerData.stop_sequences as string[] || [],
-          systemInstructions: providerData.system_instructions as string || '',
+          maxTokens: providerData.max_tokens || 4096,
+          temperature: providerData.temperature ?? 0.7,
+          topP: providerData.top_p ?? 1.0,
+          frequencyPenalty: providerData.frequency_penalty ?? 0.0,
+          presencePenalty: providerData.presence_penalty ?? 0.0,
+          stopSequences: (providerData.stop_sequences as string[]) || [],
+          systemInstructions: providerData.system_instructions || '',
           rateLimits: {
             requestsPerMinute: 60,
             tokensPerMinute: 90000
@@ -1045,7 +1067,7 @@ export class AIProviderManager {
     return 'llm'; // Default to language model
   }
 
-  private getProviderCapabilities(type: string): any { // eslint-disable-line @typescript-eslint/no-explicit-any
+  private getProviderCapabilities(type: string): ProviderCapabilities {
     const lowerType = type?.toLowerCase() || '';
     
     switch (lowerType) {

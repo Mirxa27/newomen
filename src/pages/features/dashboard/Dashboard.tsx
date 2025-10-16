@@ -18,14 +18,7 @@ import { useToast } from "@/hooks/shared/ui/use-toast";
 import { useUserProfile } from "@/hooks/features/auth/useUserProfile";
 import type { Database } from "@/integrations/supabase/types";
 import { trackDailyLogin } from "@/lib/features/assessment/gamification-events";
-
-const AFFIRMATIONS = [
-  "You are capable of amazing things. Every step forward is progress.",
-  "Your journey is unique and beautiful.",
-  "Today is filled with possibilities for growth.",
-  "You have the strength to overcome any challenge.",
-  "Your potential is limitless.",
-];
+import { AffirmationService } from "@/services/features/wellness/AffirmationService";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -64,7 +57,23 @@ const Dashboard = () => {
     if (profile) {
       void loadGamificationData();
     }
-    setAffirmation(AFFIRMATIONS[Math.floor(Math.random() * AFFIRMATIONS.length)]);
+    
+    const loadAffirmation = async () => {
+      try {
+        const todayAffirmation = await AffirmationService.getTodaysAffirmation();
+        if (todayAffirmation) {
+          setAffirmation(todayAffirmation.content);
+        } else {
+          setAffirmation("You are capable of amazing things.");
+        }
+      } catch (error) {
+        console.error("Failed to load affirmation", error);
+        setAffirmation("Your journey is unique and beautiful.");
+      }
+    };
+
+    void loadAffirmation();
+
   }, [profile, toast]);
 
   const handleSignOut = async () => {

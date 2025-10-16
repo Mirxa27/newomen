@@ -7,7 +7,10 @@ import {
   ModelListResponse, 
   VoiceListResponse, 
   ProviderTestResult,
-  SyncResult 
+  SyncResult,
+  AIProvider,
+  ProviderAuth,
+  ProviderEndpoints,
 } from './types';
 import { BaseProviderService } from './BaseProviderService';
 
@@ -28,7 +31,7 @@ interface DeepgramModelsResponse {
 }
 
 export class DeepgramProviderService extends BaseProviderService {
-  constructor(provider: any, auth: any, endpoints: any) {
+  constructor(provider: AIProvider, auth: ProviderAuth, endpoints: ProviderEndpoints) {
     super(provider, auth, endpoints);
   }
 
@@ -110,7 +113,7 @@ export class DeepgramProviderService extends BaseProviderService {
   async syncAll(): Promise<SyncResult> {
     const startedAt = new Date().toISOString();
     let modelsDiscovered = 0;
-    let voicesDiscovered = 0;
+    const voicesDiscovered = 0;
     const errors: string[] = [];
 
     try {

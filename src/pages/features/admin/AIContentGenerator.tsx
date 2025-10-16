@@ -12,6 +12,7 @@ import { Loader2, Sparkles, FileText, Heart, BookOpen, Trash2, Eye, Edit } from 
 import { toast } from 'sonner';
 import { aiContentGenerationService, AIContentGenerationRequest } from '@/services/features/ai/AIContentGenerationService';
 import { supabase } from '@/integrations/supabase/client';
+import { useCallback } from 'react';
 
 interface GeneratedContent {
   id: string;
@@ -25,6 +26,20 @@ interface GeneratedContent {
   ai_generated: boolean;
   created_at: string;
   status: string;
+}
+
+interface ContentRow {
+  id: string;
+  title: string;
+  description?: string | null;
+  category?: string | null;
+  difficulty?: string | null;
+  difficulty_level?: string | null;
+  estimated_duration?: number | null;
+  tags?: string[] | null;
+  ai_generated?: boolean | null;
+  created_at: string;
+  status?: string | null;
 }
 
 export default function AIContentGenerator() {
@@ -44,16 +59,12 @@ export default function AIContentGenerator() {
     additionalInstructions: ''
   });
 
-  useEffect(() => {
-    loadGeneratedContent();
-  }, [selectedType]);
-
-  const loadGeneratedContent = async () => {
+  const loadGeneratedContent = useCallback(async () => {
     try {
       const table = selectedType === 'assessment' ? 'assessments_enhanced' : selectedType === 'wellness_resource' ? 'wellness_resources' : 'couples_challenges';
       const { data, error } = await supabase.from(table).select('*').order('created_at', { ascending: false });
       if (error) throw error;
-      const mapped: GeneratedContent[] = (data || []).map((row: any) => ({
+      const mapped: GeneratedContent[] = (data || []).map((row: ContentRow) => ({
         id: row.id,
         title: row.title,
         description: row.description || '',
@@ -71,7 +82,11 @@ export default function AIContentGenerator() {
       console.error('Error loading generated content:', error);
       toast.error('Failed to load generated content');
     }
-  };
+  }, [selectedType]);
+
+  useEffect(() => {
+    loadGeneratedContent();
+  }, [loadGeneratedContent]);
 
   const handleGenerate = async () => {
     if (!formData.topic || !formData.description) {
@@ -171,7 +186,7 @@ export default function AIContentGenerator() {
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'generate' | 'manage')}>
         <TabsList>
           <TabsTrigger value="generate">Generate Content</TabsTrigger>
           <TabsTrigger value="manage">Manage Generated</TabsTrigger>
@@ -193,7 +208,7 @@ export default function AIContentGenerator() {
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="type">Content Type</Label>
-                    <Select value={selectedType} onValueChange={(value) => setSelectedType(value as any)}>
+                    <Select value={selectedType} onValueChange={(value) => setSelectedType(value as 'assessment' | 'wellness_resource' | 'couples_challenge')}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -240,7 +255,7 @@ export default function AIContentGenerator() {
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="difficulty">Difficulty Level</Label>
-                    <Select value={formData.difficulty} onValueChange={(value) => setFormData({ ...formData, difficulty: value as any })}>
+                    <Select value={formData.difficulty} onValueChange={(value) => setFormData({ ...formData, difficulty: value as 'beginner' | 'intermediate' | 'advanced' })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -313,7 +328,7 @@ export default function AIContentGenerator() {
                 <div>
                   <Label htmlFor="content-type-filter">Content Type</Label>
                   <Select value={selectedType} onValueChange={(value) => {
-                    setSelectedType(value as any);
+                    setSelectedType(value as 'assessment' | 'wellness_resource' | 'couples_challenge');
                   }}>
                     <SelectTrigger>
                       <SelectValue />

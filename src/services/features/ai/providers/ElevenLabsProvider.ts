@@ -7,7 +7,10 @@ import {
   ModelListResponse, 
   VoiceListResponse, 
   ProviderTestResult,
-  ElevenLabsConfig 
+  ElevenLabsConfig,
+  AIProvider,
+  ProviderAuth,
+  ProviderEndpoints,
 } from './types';
 import { BaseProviderService } from './BaseProviderService';
 
@@ -58,7 +61,7 @@ interface ElevenLabsModelsResponse {
 export class ElevenLabsProviderService extends BaseProviderService {
   private config: ElevenLabsConfig;
 
-  constructor(provider: any, auth: any, endpoints: any, config: ElevenLabsConfig) {
+  constructor(provider: AIProvider, auth: ProviderAuth, endpoints: ProviderEndpoints, config: ElevenLabsConfig) {
     super(provider, auth, endpoints);
     this.config = config;
   }

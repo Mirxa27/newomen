@@ -10,9 +10,12 @@ import { notificationService } from '@/services/features/wellness/NotificationSe
 import { useAuth } from '@/hooks/features/auth/useAuth';
 import { toast } from 'sonner';
 
+type NotificationTab = 'inbox' | 'preferences';
+type NotificationChannel = 'push' | 'email' | 'in_app';
+
 export default function NotificationsCenter() {
   const { user } = useAuth();
-  const [selectedTab, setSelectedTab] = useState<'inbox' | 'preferences'>('inbox');
+  const [selectedTab, setSelectedTab] = useState<NotificationTab>('inbox');
 
   // Fetch notifications
   const { data: notifications = [], refetch: refetchNotifications } = useQuery({
@@ -66,10 +69,10 @@ export default function NotificationsCenter() {
     }
   };
 
-  const handlePreferenceChange = async (notificationType: string, channel: string, enabled: boolean) => {
+  const handlePreferenceChange = async (notificationType: string, channel: NotificationChannel, enabled: boolean) => {
     if (!user?.id) return;
     try {
-      await notificationService.setNotificationPreference(user.id, notificationType, channel as any, enabled);
+      await notificationService.setNotificationPreference(user.id, notificationType, channel, enabled);
       toast.success('Preferences updated');
     } catch (error) {
       toast.error('Failed to update preferences');
@@ -129,7 +132,7 @@ export default function NotificationsCenter() {
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => setSelectedTab(tab.id as any)}
+              onClick={() => setSelectedTab(tab.id as NotificationTab)}
               className={`px-4 py-2 font-medium border-b-2 transition-colors ${
                 selectedTab === tab.id
                   ? 'border-purple-600 text-purple-600'
@@ -269,7 +272,7 @@ export default function NotificationsCenter() {
                             <label className="text-gray-700 dark:text-gray-300 font-medium">{ch.label}</label>
                             <Switch
                               checked={pref?.enabled ?? true}
-                              onCheckedChange={(checked) => handlePreferenceChange(notifType.type, ch.channel, checked)}
+                              onCheckedChange={(checked) => handlePreferenceChange(notifType.type, ch.channel as NotificationChannel, checked)}
                             />
                           </div>
                         );

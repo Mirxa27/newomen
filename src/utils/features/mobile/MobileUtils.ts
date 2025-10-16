@@ -140,7 +140,7 @@ export class MobileUtils {
 
   // Check if device is low-end (for performance optimization)
   static isLowEndDevice(): boolean {
-    const connection = (navigator as any).connection;
+    const connection = (navigator as { connection?: { effectiveType: string } }).connection;
     if (connection) {
       return connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g';
     }
@@ -153,7 +153,7 @@ export class MobileUtils {
     downlink: number;
     rtt: number;
   } | null {
-    const connection = (navigator as any).connection;
+    const connection = (navigator as { connection?: { effectiveType: string; downlink: number; rtt: number } }).connection;
     if (connection) {
       return {
         effectiveType: connection.effectiveType || 'unknown',

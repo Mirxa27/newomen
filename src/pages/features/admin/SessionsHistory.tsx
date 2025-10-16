@@ -134,7 +134,7 @@ export default function SessionsHistory() {
           return {
             ...session,
             message_count: messageCount || 0
-          } as any; // Bypassing type error due to relation issue
+          } as SessionHistoryRow;
         })
       );
 
@@ -188,7 +188,7 @@ export default function SessionsHistory() {
       const conversationsWithDetails = data?.map(conv => ({
         ...conv,
         message_count: conv.message_count || 0,
-      })) as any[]; // Bypassing type error due to relation issue
+      })) as NewMeConversationRow[];
 
       setNewMeConversations(conversationsWithDetails as NewMeConversationRow[]);
       setTotalItems((prevCount) => Math.max(prevCount || 0, count || 0));

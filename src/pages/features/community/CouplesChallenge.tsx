@@ -7,6 +7,7 @@ import { Badge } from "@/components/shared/ui/badge";
 import { Loader2, ArrowLeft, Heart } from "lucide-react";
 import { useToast } from "@/hooks/shared/ui/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
+import React from "react";
 
 type ChallengeTemplate = Tables<'challenge_templates'> & {
   questions: string[];
@@ -19,11 +20,7 @@ export default function CouplesChallenge() {
   const [templates, setTemplates] = useState<ChallengeTemplate[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadTemplates();
-  }, []);
-
-  const loadTemplates = async () => {
+  const loadTemplates = React.useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -44,7 +41,11 @@ export default function CouplesChallenge() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    loadTemplates();
+  }, [loadTemplates]);
 
   const startChallenge = async (templateId: string) => {
     try {

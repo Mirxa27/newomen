@@ -16,12 +16,20 @@ type Provider = Database["public"]["Tables"]["providers"]["Row"];
 type Model = Database["public"]["Tables"]["models"]["Row"];
 type Voice = Database["public"]["Tables"]["voices"]["Row"];
 
+type ModelWithProvider = Model & {
+  providers: { name: string } | null;
+};
+
+type VoiceWithProvider = Voice & {
+  providers: { name: string } | null;
+};
+
 type FormState<T> = Partial<T> & { type: "provider" | "model" | "voice" };
 
 export default function AIProviderManagement() {
   const [providers, setProviders] = useState<Provider[]>([]);
-  const [models, setModels] = useState<Model[]>([]);
-  const [voices, setVoices] = useState<Voice[]>([]);
+  const [models, setModels] = useState<ModelWithProvider[]>([]);
+  const [voices, setVoices] = useState<VoiceWithProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -44,8 +52,8 @@ export default function AIProviderManagement() {
       if (voicesRes.error) throw voicesRes.error;
 
       setProviders(providersRes.data || []);
-      setModels(modelsRes.data as Model[] || []);
-      setVoices(voicesRes.data as Voice[] || []);
+      setModels((modelsRes.data as ModelWithProvider[]) || []);
+      setVoices((voicesRes.data as VoiceWithProvider[]) || []);
     } catch (error) {
       console.error("Error loading data:", error);
       toast.error("Failed to load AI provider data.");
@@ -363,7 +371,7 @@ export default function AIProviderManagement() {
                     <TableRow key={m.id}>
                       <TableCell>{m.display_name}</TableCell>
                       <TableCell className="font-mono text-xs">{m.model_id}</TableCell>
-                      <TableCell>{(m as any).providers?.name}</TableCell>
+                      <TableCell>{m.providers?.name}</TableCell>
                       <TableCell>
                         <Button variant="ghost" size="icon" onClick={() => openEditDialog(m, "model")}><Edit className="w-4 h-4" /></Button>
                         <Button variant="ghost" size="icon" onClick={() => confirmDelete({ id: m.id, name: m.display_name || m.model_id || '' }, "model")}><Trash2 className="w-4 h-4" /></Button>
@@ -400,7 +408,7 @@ export default function AIProviderManagement() {
                     <TableRow key={v.id}>
                       <TableCell>{v.name}</TableCell>
                       <TableCell className="font-mono text-xs">{v.voice_id}</TableCell>
-                      <TableCell>{(v as any).providers?.name}</TableCell>
+                      <TableCell>{v.providers?.name}</TableCell>
                       <TableCell>{v.gender}</TableCell>
                       <TableCell>{v.enabled ? "Yes" : "No"}</TableCell>
                       <TableCell>

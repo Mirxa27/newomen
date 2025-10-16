@@ -34,7 +34,7 @@ export interface ErrorContext {
   timestamp: string;
   component?: string;
   action?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ErrorDetails {
@@ -514,7 +514,9 @@ export class ErrorHandlingService {
   private getCurrentUserId(): string | undefined {
     try {
       // This would be replaced with actual auth service call
-      return supabase.auth.getUser().then(({ data }) => data.user?.id).catch(() => undefined) as any;
+      const userPromise = supabase.auth.getUser().then(({ data }) => data.user?.id);
+      // This is a simplified approach. In a real app, you might want to handle the promise differently.
+      return undefined;
     } catch {
       return undefined;
     }

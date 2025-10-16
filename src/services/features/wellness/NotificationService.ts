@@ -22,6 +22,16 @@ export interface NotificationPreference {
   quiet_hours_end?: string;
 }
 
+interface ScheduledNotification {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  notification_type: Notification['type'];
+  scheduled_time: string;
+  status: 'pending' | 'sent' | 'failed';
+}
+
 class NotificationService {
   /**
    * Send in-app notification
@@ -66,7 +76,7 @@ class NotificationService {
     userId: string,
     title: string,
     message: string,
-    payload?: Record<string, any>
+    payload?: Record<string, unknown>
   ): Promise<void> {
     try {
       // Check if user has push notifications enabled
@@ -108,7 +118,7 @@ class NotificationService {
     token: string,
     title: string,
     message: string,
-    payload?: Record<string, any>
+    payload?: Record<string, unknown>
   ): Promise<void> {
     try {
       // This would integrate with your push notification service (Firebase Cloud Messaging, OneSignal, etc.)
@@ -192,7 +202,7 @@ class NotificationService {
     message: string,
     type: Notification['type'],
     scheduledTime: Date
-  ): Promise<any> {
+  ): Promise<ScheduledNotification | null> {
     try {
       const { data, error } = await supabase
         .from("scheduled_notifications")

@@ -57,7 +57,7 @@ serve(async (req) => {
     let result;
 
     switch (operation) {
-      case 'create_post':
+      case 'create_post': {
         const { title, content, postType, tags, mediaUrls } = payload;
         
         if (!title || !content) {
@@ -108,8 +108,8 @@ serve(async (req) => {
 
         result = { success: true, post: newPost };
         break;
-
-      case 'like_post':
+      }
+      case 'like_post': {
         const { postId: likePostId } = payload;
         
         if (!likePostId) {
@@ -138,8 +138,8 @@ serve(async (req) => {
           result = { success: true, message: 'Post liked' };
         }
         break;
-
-      case 'unlike_post':
+      }
+      case 'unlike_post': {
         const { postId: unlikePostId } = payload;
         
         if (!unlikePostId) {
@@ -155,8 +155,8 @@ serve(async (req) => {
         if (unlikeError) throw unlikeError;
         result = { success: true, message: 'Post unliked' };
         break;
-
-      case 'comment':
+      }
+      case 'comment': {
         const { postId: commentPostId, content: commentContent, parentCommentId } = payload;
         
         if (!commentPostId || !commentContent) {
@@ -184,8 +184,8 @@ serve(async (req) => {
         if (commentError) throw commentError;
         result = { success: true, comment: newComment };
         break;
-
-      case 'follow':
+      }
+      case 'follow': {
         const { targetUserId: followUserId } = payload;
         
         if (!followUserId) {
@@ -230,8 +230,8 @@ serve(async (req) => {
           result = { success: true, message: 'User followed' };
         }
         break;
-
-      case 'unfollow':
+      }
+      case 'unfollow': {
         const { targetUserId: unfollowUserId } = payload;
         
         if (!unfollowUserId) {
@@ -264,34 +264,48 @@ serve(async (req) => {
         if (unfollowError) throw unfollowError;
         result = { success: true, message: 'User unfollowed' };
         break;
+      }
+      case 'get_feed': {
+        const { filterType, limit, offset, tag } = payload;
 
-      case 'get_feed':
-        const { filterType, limit, offset } = payload;
+        let query = supabase
+          .from('community_posts')
+          .select(`
+            *,
+            user_profiles!community_posts_user_id_fkey (
+              nickname,
+              avatar_url,
+              email,
+              id
+            ),
+            community_post_likes(user_id)
+          `)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(limit || 20)
+          .offset(offset || 0);
 
-        // Get user profile
-        const { data: userProfile } = await supabase
-          .from('user_profiles')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
-
-        if (!userProfile) {
-          throw new Error('User profile not found');
+        if (filterType && filterType !== 'all') {
+          query = query.eq('post_type', filterType);
         }
 
-        const { data: feedPosts, error: feedError } = await supabase
-          .rpc('get_community_feed', {
-            requesting_user_id: userProfile.id,
-            filter_type: filterType || 'all',
-            limit_count: limit || 20,
-            offset_count: offset || 0
-          });
+        if (tag) {
+          query = query.contains('tags', [tag]);
+        }
+        
+        const { data: feedPosts, error: feedError } = await query;
 
         if (feedError) throw feedError;
-        result = { success: true, posts: feedPosts };
-        break;
 
-      case 'get_post':
+        const postsWithLikes = feedPosts.map(p => ({
+          ...p,
+          is_liked_by_user: p.community_post_likes.some(like => like.user_id === user.id)
+        }));
+
+        result = { success: true, posts: postsWithLikes };
+        break;
+      }
+      case 'get_post': {
         const { postId: getPostId } = payload;
         
         if (!getPostId) {
@@ -338,8 +352,8 @@ serve(async (req) => {
           }
         };
         break;
-
-      case 'get_user_posts':
+      }
+      case 'get_user_posts': {
         const { userId: getUserId } = payload;
         
         if (!getUserId) {
@@ -364,7 +378,7 @@ serve(async (req) => {
         if (userPostsError) throw userPostsError;
         result = { success: true, posts: userPosts };
         break;
-
+      }
       default:
         throw new Error(`Unknown operation: ${operation}`);
     }

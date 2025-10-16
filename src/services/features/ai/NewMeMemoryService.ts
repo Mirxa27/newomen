@@ -18,6 +18,34 @@ import type {
   CreateEmotionalSnapshotInput,
   UpdateAssessmentTrackingInput,
 } from '@/types/features/ai/newme-memory-types';
+import type { Database } from '@/integrations/supabase/types';
+
+type GlimmerPattern = {
+  note: string;
+  frequency: number;
+  emotions: string[];
+  dates: string[];
+};
+
+type AuthenticityPattern = {
+  metadata: {
+    context: string;
+    faked_feeling: string;
+    real_feeling: string;
+    pattern_date: string;
+  };
+  created_at: string;
+};
+
+type MicroAssessmentPattern = {
+  memory_key: string;
+  memory_value: string;
+  metadata: {
+    assessment_type: string;
+    [key: string]: unknown;
+  };
+  created_at: string;
+};
 
 export class NewMeMemoryService {
   /**
@@ -44,7 +72,7 @@ export class NewMeMemoryService {
     try {
       const { data, error } = await supabase
         .from('newme_conversations')
-        .insert(input as any)
+        .insert(input)
         .select()
         .single();
 
@@ -66,7 +94,7 @@ export class NewMeMemoryService {
     try {
       const { error } = await supabase
         .from('newme_conversations')
-        .update(updates as any)
+        .update(updates)
         .eq('id', conversationId);
 
       if (error) throw error;
@@ -132,7 +160,7 @@ export class NewMeMemoryService {
     try {
       const { data, error } = await supabase
         .from('newme_messages')
-        .insert(input as any)
+        .insert(input)
         .select()
         .single();
 
@@ -212,7 +240,7 @@ export class NewMeMemoryService {
           .insert({
             ...input,
             importance_score: input.importance_score ?? 5,
-          } as any)
+          } as Database['public']['Tables']['newme_user_memories']['Insert'])
           .select()
           .single();
 
@@ -278,7 +306,7 @@ export class NewMeMemoryService {
     try {
       const { data, error } = await supabase
         .from('newme_emotional_snapshots')
-        .insert(input as any)
+        .insert(input)
         .select()
         .single();
 
@@ -353,7 +381,7 @@ export class NewMeMemoryService {
     try {
       const { error } = await supabase
         .from('newme_assessment_tracking')
-        .update(updates as any)
+        .update(updates)
         .eq('id', trackingId);
 
       if (error) throw error;
@@ -552,7 +580,7 @@ export class NewMeMemoryService {
   /**
    * Get glimmer patterns for analysis
    */
-  async getGlimmerPatterns(userId: string, days: number = 30): Promise<any[]> {
+  async getGlimmerPatterns(userId: string, days: number = 30): Promise<GlimmerPattern[]> {
     try {
       const { data, error } = await supabase
         .from('newme_user_memories')
@@ -566,8 +594,8 @@ export class NewMeMemoryService {
       if (error) throw error;
 
       // Group by memory_value (note) and analyze patterns
-      const patterns: { [key: string]: any } = {};
-      data?.forEach((memory: any) => {
+      const patterns: { [key: string]: GlimmerPattern } = {};
+      data?.forEach((memory: { memory_value: string; metadata: { emotion?: string }; created_at: string }) => {
         const note = memory.memory_value;
         if (!patterns[note]) {
           patterns[note] = {
@@ -578,12 +606,14 @@ export class NewMeMemoryService {
           };
         }
         patterns[note].frequency++;
-        patterns[note].emotions.push(memory.metadata?.emotion);
+        if (memory.metadata?.emotion) {
+          patterns[note].emotions.push(memory.metadata.emotion);
+        }
         patterns[note].dates.push(memory.created_at);
       });
 
       // Return patterns with frequency >= 3
-      return Object.values(patterns).filter((pattern: any) => pattern.frequency >= 3);
+      return Object.values(patterns).filter((pattern: GlimmerPattern) => pattern.frequency >= 3);
     } catch (error) {
       console.error('Error fetching glimmer patterns:', error);
       return [];
@@ -593,7 +623,7 @@ export class NewMeMemoryService {
   /**
    * Get authenticity patterns for analysis
    */
-  async getAuthenticityPatterns(userId: string, days: number = 30): Promise<any[]> {
+  async getAuthenticityPatterns(userId: string, days: number = 30): Promise<AuthenticityPattern[]> {
     try {
       const { data, error } = await supabase
         .from('newme_user_memories')
@@ -605,7 +635,7 @@ export class NewMeMemoryService {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      return (data as AuthenticityPattern[]) || [];
     } catch (error) {
       console.error('Error fetching authenticity patterns:', error);
       return [];
@@ -615,7 +645,7 @@ export class NewMeMemoryService {
   /**
    * Get micro-assessment patterns
    */
-  async getMicroAssessmentPatterns(userId: string, assessmentType?: string): Promise<any[]> {
+  async getMicroAssessmentPatterns(userId: string, assessmentType?: string): Promise<MicroAssessmentPattern[]> {
     try {
       let query = supabase
         .from('newme_user_memories')
@@ -632,7 +662,7 @@ export class NewMeMemoryService {
       const { data, error } = await query;
 
       if (error) throw error;
-      return data || [];
+      return (data as MicroAssessmentPattern[]) || [];
     } catch (error) {
       console.error('Error fetching micro-assessment patterns:', error);
       return [];
@@ -658,7 +688,7 @@ export class NewMeMemoryService {
     const glimmerPatterns = await this.getGlimmerPatterns(userId);
     if (glimmerPatterns.length > 0) {
       context.push(`\n### GLIMMER PATTERNS:`);
-      glimmerPatterns.forEach((pattern: any) => {
+      glimmerPatterns.forEach((pattern: GlimmerPattern) => {
         context.push(`- ${pattern.note}: ${pattern.frequency} times (emotions: ${pattern.emotions.join(', ')})`);
       });
     }
@@ -667,7 +697,7 @@ export class NewMeMemoryService {
     const authPatterns = await this.getAuthenticityPatterns(userId);
     if (authPatterns.length > 0) {
       context.push(`\n### AUTHENTICITY PATTERNS:`);
-      authPatterns.slice(0, 3).forEach((pattern: any) => {
+      authPatterns.slice(0, 3).forEach((pattern: AuthenticityPattern) => {
         const meta = pattern.metadata;
         context.push(`- Context: ${meta?.context}, Faked: ${meta?.faked_feeling}, Real: ${meta?.real_feeling}`);
       });

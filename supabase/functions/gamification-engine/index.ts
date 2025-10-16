@@ -44,7 +44,7 @@ serve(async (req) => {
         relatedEntityType = 'assessment';
         break;
 
-      case 'daily_login':
+      case 'daily_login': {
         if (!payload.userId) {
           throw new Error('Missing userId');
         }
@@ -69,7 +69,7 @@ serve(async (req) => {
         source = 'daily_login';
         description = 'Daily login bonus';
         break;
-
+      }
       case 'complete_conversation':
         if (!payload.userId || !payload.conversationId) {
           throw new Error('Missing userId or conversationId');

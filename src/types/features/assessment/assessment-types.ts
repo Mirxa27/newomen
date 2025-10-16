@@ -47,5 +47,5 @@ export interface AIProcessingResult {
   score: number;
   feedback: string;
   is_passing: boolean;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }

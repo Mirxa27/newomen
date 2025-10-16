@@ -9,9 +9,11 @@ import { buddyService } from '@/services/features/wellness/BuddyService';
 import { useAuth } from '@/hooks/features/auth/useAuth';
 import { toast } from 'sonner';
 
+type BuddyHubTab = 'find' | 'my-buddies' | 'requests' | 'challenges';
+
 export default function BuddyHub() {
   const { user } = useAuth();
-  const [selectedTab, setSelectedTab] = useState<'find' | 'my-buddies' | 'requests' | 'challenges'>('find');
+  const [selectedTab, setSelectedTab] = useState<BuddyHubTab>('find');
 
   // Fetch buddy recommendations
   const { data: recommendations = [] } = useQuery({
@@ -76,7 +78,7 @@ export default function BuddyHub() {
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => setSelectedTab(tab.id as any)}
+              onClick={() => setSelectedTab(tab.id as BuddyHubTab)}
               className={`px-4 py-2 font-medium flex items-center gap-2 border-b-2 transition-colors ${
                 selectedTab === tab.id
                   ? 'border-purple-600 text-purple-600'

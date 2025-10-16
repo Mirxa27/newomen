@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { logError, logInfo } from "@/lib/logging";
+import { Json } from "@/types/supabase";
 
 export interface DashboardMetric {
   id: string;
@@ -24,6 +25,45 @@ export interface AdminUser {
   warning_count: number;
   is_suspended: boolean;
   suspension_reason?: string;
+}
+
+export interface ContentItem {
+  id: string;
+  content_type: string;
+  status: string;
+  created_at: string;
+  is_featured: boolean;
+  feature_position: number;
+  featured_until?: string;
+}
+
+export interface AuditLog {
+    id: string;
+    admin_user_id: string;
+    action: string;
+    target_type: string;
+    target_id: string;
+    changes: Json;
+    created_at: string;
+}
+
+export interface SystemSetting {
+    setting_key: string;
+    setting_value: Json;
+    description: string;
+    is_active: boolean;
+}
+
+export interface BulkOperation {
+    id: string;
+    operation_type: string;
+    total_count: number;
+    performed_by: string;
+    status: string;
+    successful_count: number;
+    failed_count: number;
+    completed_at?: string;
+    created_at: string;
 }
 
 class AdminPanelService {
@@ -216,7 +256,7 @@ class AdminPanelService {
   /**
    * Get content management items
    */
-  async getContentItems(contentType?: string, status?: string): Promise<any[]> {
+  async getContentItems(contentType?: string, status?: string): Promise<ContentItem[]> {
     try {
       let query = supabase
         .from("admin_content_management")
@@ -284,7 +324,7 @@ class AdminPanelService {
   /**
    * Get audit log
    */
-  async getAuditLog(limit = 100): Promise<any[]> {
+  async getAuditLog(limit = 100): Promise<AuditLog[]> {
     try {
       const { data, error } = await supabase
         .from("admin_audit_log")
@@ -308,7 +348,7 @@ class AdminPanelService {
     action: string,
     targetType: string,
     targetId: string,
-    changes?: any
+    changes?: Json
   ): Promise<void> {
     try {
       const { error } = await supabase
@@ -333,7 +373,7 @@ class AdminPanelService {
   /**
    * Get system settings
    */
-  async getSystemSettings(): Promise<any> {
+  async getSystemSettings(): Promise<Record<string, Json>> {
     try {
       const { data, error } = await supabase
         .from("admin_system_settings")
@@ -342,8 +382,8 @@ class AdminPanelService {
 
       if (error) throw error;
 
-      const settings: any = {};
-      (data || []).forEach(item => {
+      const settings: Record<string, Json> = {};
+      (data || []).forEach((item: SystemSetting) => {
         settings[item.setting_key] = item.setting_value;
       });
 
@@ -357,7 +397,7 @@ class AdminPanelService {
   /**
    * Update system setting
    */
-  async updateSystemSetting(key: string, value: any, description?: string): Promise<void> {
+  async updateSystemSetting(key: string, value: Json, description?: string): Promise<void> {
     try {
       const { error } = await supabase
         .from("admin_system_settings")
@@ -409,7 +449,7 @@ class AdminPanelService {
   /**
    * Get bulk operations
    */
-  async getBulkOperations(): Promise<any[]> {
+  async getBulkOperations(): Promise<BulkOperation[]> {
     try {
       const { data, error } = await supabase
         .from("admin_bulk_operations")

@@ -418,7 +418,7 @@ async function discoverCartesiaModels(apiKey: string): Promise<ModelRecord[]> {
     }
 
     const data = await response.json();
-    return data.models?.map((model: any) => ({
+    return data.models?.map((model: { id: string; name?: string; context_length?: number; latency_hint?: number; realtime?: boolean }) => ({
       provider_id: "", // Will be set by caller
       model_id: model.id,
       display_name: model.name || model.id,
@@ -448,7 +448,7 @@ async function discoverCartesiaVoices(apiKey: string): Promise<VoiceRecord[]> {
     }
 
     const data = await response.json();
-    return data.voices?.map((voice: any) => ({
+    return data.voices?.map((voice: { id: string; name?: string; locale?: string; gender?: string; latency_hint?: number }) => ({
       provider_id: "", // Will be set by caller
       voice_id: voice.id,
       name: voice.name || voice.id,

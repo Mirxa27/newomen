@@ -1,6 +1,14 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 
+interface ZaiChatCompletion {
+    choices: {
+        message: {
+            content: string;
+        };
+    }[];
+}
+
 export interface PartnerQualityData {
   userId: string;
   partnerName: string;
@@ -55,19 +63,14 @@ export class AICouplesChallengeService {
 
     try {
       // Use the correct function name from the types
-      interface RPCResponse {
-        data: string | null;
-        error: Error | null;
-      }
-      
-      const { data, error } = await (supabase.rpc as unknown as (functionName: string, params: Record<string, unknown>) => Promise<RPCResponse>)('get_provider_api_key_by_type', { 
+      const { data, error } = await supabase.rpc('get_provider_api_key_by_type', { 
         p_provider_type: 'zai' 
       });
 
       if (error) throw error;
       if (!data) throw new Error('Z.AI API key not configured');
 
-      this.zaiApiKey = data;
+      this.zaiApiKey = data as string;
       return this.zaiApiKey;
     } catch (err) {
       console.error('Error retrieving Z.AI API key:', err);
@@ -135,7 +138,7 @@ Make the question engaging, thought-provoking, and relationship-building.`;
       throw new Error(`Z.AI API error: ${errorText}`);
     }
 
-    const result = await response.json();
+    const result: ZaiChatCompletion = await response.json();
     return JSON.parse(result.choices[0].message.content);
   }
 
@@ -215,7 +218,7 @@ Focus on deep psychological insights that will help them understand each other b
       throw new Error(`Z.AI API error: ${errorText}`);
     }
 
-    const result = await response.json();
+    const result: ZaiChatCompletion = await response.json();
     return JSON.parse(result.choices[0].message.content);
   }
 
@@ -286,7 +289,7 @@ This should help both partners understand if the psychological insights resonate
       throw new Error(`Z.AI API error: ${errorText}`);
     }
 
-    const result = await response.json();
+    const result: ZaiChatCompletion = await response.json();
     return JSON.parse(result.choices[0].message.content);
   }
 
@@ -351,7 +354,7 @@ Keep it supportive, constructive, and focused on growth.`;
       throw new Error(`Z.AI API error: ${errorText}`);
     }
 
-    const result = await response.json();
+    const result: ZaiChatCompletion = await response.json();
     return JSON.parse(result.choices[0].message.content);
   }
 
@@ -430,7 +433,7 @@ Make it supportive, actionable, and focused on growth.`;
       throw new Error(`Z.AI API error: ${errorText}`);
     }
 
-    const result = await response.json();
+    const result: ZaiChatCompletion = await response.json();
     return JSON.parse(result.choices[0].message.content);
   }
 }

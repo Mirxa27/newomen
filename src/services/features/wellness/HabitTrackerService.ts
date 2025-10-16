@@ -4,6 +4,14 @@ import type { Database } from "@/integrations/supabase/types";
 export type Habit = Database["public"]["Tables"]["habits"]["Row"];
 export type HabitLog = Database["public"]["Tables"]["habit_logs"]["Row"];
 
+interface HabitStat {
+  id: string;
+  title: string | null;
+  currentStreak: number;
+  longestStreak: number | null;
+  completions: number;
+}
+
 export class HabitTrackerService {
   static async createHabit(userId: string, habit: Omit<Habit, "id" | "created_at" | "updated_at">) {
     try {
@@ -232,7 +240,7 @@ export class HabitTrackerService {
         totalHabits: habits.length,
         totalStreak: 0,
         averageCompletion: 0,
-        habits: [] as any[],
+        habits: [] as HabitStat[],
       };
 
       for (const habit of habits) {

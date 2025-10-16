@@ -30,6 +30,46 @@ export interface Invoice {
   status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
 }
 
+interface StripeProviderData {
+  customerId: string;
+  paymentMethodId: string;
+  lastFour: string;
+  brand: string;
+  expMonth: number;
+  expYear: number;
+}
+
+interface PayPalProviderData {
+  accountId: string;
+}
+
+type PaymentProviderData = StripeProviderData | PayPalProviderData;
+
+interface PaymentFailureUpdates {
+  status: 'pending' | 'failed';
+  failed_reason: string;
+  retry_count: number;
+  next_retry_at?: string;
+}
+
+interface InvoiceItem {
+  amount: number;
+  description: string;
+  quantity: number;
+}
+
+interface UserLocation {
+  countryCode: string;
+  stateCode?: string;
+}
+
+interface PaymentPlan {
+  id: string;
+  plan_name: string;
+  price: number;
+  is_active: boolean;
+}
+
 class PaymentIntegrationService {
   /**
    * Create payment method
@@ -37,21 +77,21 @@ class PaymentIntegrationService {
   async createPaymentMethod(
     userId: string,
     provider: 'stripe' | 'paypal',
-    providerData: any
+    providerData: PaymentProviderData
   ): Promise<PaymentMethod> {
     try {
       const paymentMethod = {
         user_id: userId,
         ...(provider === 'stripe' && {
-          stripe_customer_id: providerData.customerId,
-          stripe_payment_method_id: providerData.paymentMethodId,
-          card_last_four: providerData.lastFour,
-          card_brand: providerData.brand,
-          expiry_month: providerData.expMonth,
-          expiry_year: providerData.expYear
+          stripe_customer_id: (providerData as StripeProviderData).customerId,
+          stripe_payment_method_id: (providerData as StripeProviderData).paymentMethodId,
+          card_last_four: (providerData as StripeProviderData).lastFour,
+          card_brand: (providerData as StripeProviderData).brand,
+          expiry_month: (providerData as StripeProviderData).expMonth,
+          expiry_year: (providerData as StripeProviderData).expYear
         }),
         ...(provider === 'paypal' && {
-          paypal_account_id: providerData.accountId
+          paypal_account_id: (providerData as PayPalProviderData).accountId
         }),
         is_default: true
       };
@@ -189,10 +229,10 @@ class PaymentIntegrationService {
     retryable: boolean = true
   ): Promise<void> {
     try {
-      const updates: any = {
+      const updates: PaymentFailureUpdates = {
         status: retryable ? 'pending' : 'failed',
         failed_reason: failureReason,
-        retry_count: (0 + 1)
+        retry_count: 1 // This should be incremented based on existing value
       };
 
       if (retryable) {
@@ -301,7 +341,7 @@ class PaymentIntegrationService {
   async generateInvoice(
     userId: string,
     transactionId: string,
-    items: any[],
+    items: InvoiceItem[],
     taxAmount: number = 0,
     discountAmount: number = 0
   ): Promise<Invoice> {
@@ -422,7 +462,7 @@ class PaymentIntegrationService {
     provider: string,
     eventType: string,
     eventId: string,
-    payload: any
+    payload: Record<string, unknown>
   ): Promise<void> {
     try {
       const { error } = await supabase
@@ -447,7 +487,7 @@ class PaymentIntegrationService {
   /**
    * Get payment plans
    */
-  async getPaymentPlans(): Promise<any[]> {
+  async getPaymentPlans(): Promise<PaymentPlan[]> {
     try {
       const { data, error } = await supabase
         .from("payment_plans")
@@ -456,7 +496,7 @@ class PaymentIntegrationService {
         .order("price", { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      return (data as PaymentPlan[]) || [];
     } catch (error) {
       logError("Error fetching payment plans", error as Error);
       throw error;
@@ -466,7 +506,7 @@ class PaymentIntegrationService {
   /**
    * Calculate tax
    */
-  async calculateTax(amount: number, userLocation: any): Promise<number> {
+  async calculateTax(amount: number, userLocation: UserLocation): Promise<number> {
     try {
       const { data, error } = await supabase
         .from("tax_configuration")

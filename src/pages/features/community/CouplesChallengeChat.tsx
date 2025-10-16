@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/shared/ui/button";
@@ -59,7 +59,7 @@ export default function CouplesChallengeChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const loadChallenge = async () => {
+  const loadChallenge = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const currentUserId = user?.id || null;
@@ -115,7 +115,7 @@ export default function CouplesChallengeChat() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [challengeId, toast]);
 
   useEffect(() => {
     loadChallenge();
@@ -147,7 +147,7 @@ export default function CouplesChallengeChat() {
       supabase.removeChannel(channel);
       window.clearInterval(pollingId);
     };
-  }, [challengeId]);
+  }, [challengeId, loadChallenge]);
 
   useEffect(() => {
     scrollToBottom();

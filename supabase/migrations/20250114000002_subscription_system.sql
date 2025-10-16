@@ -291,7 +291,7 @@ CREATE POLICY "Admins can manage subscription plans"
     EXISTS (
       SELECT 1 FROM user_profiles 
       WHERE user_id = auth.uid() 
-      AND (is_admin = true OR role = 'admin')
+      AND role = 'admin'
     )
   );
 

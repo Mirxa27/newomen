@@ -30,6 +30,28 @@ export interface AIConfiguration {
   cost_per_1k_output_tokens?: number;
 }
 
+interface AIConfigurationTableRow {
+    id: string;
+    name: string;
+    provider: 'openai' | 'anthropic' | 'google' | 'azure' | 'custom' | 'elevenlabs' | 'cartesia' | 'deepgram' | 'hume' | 'zai';
+    provider_name?: string;
+    model_name: string;
+    api_key_encrypted?: string;
+    api_base_url?: string;
+    api_version?: string;
+    temperature: number | string;
+    max_tokens: number;
+    top_p?: number | string;
+    frequency_penalty?: number | string;
+    presence_penalty?: number | string;
+    system_prompt?: string;
+    is_default?: boolean;
+    is_active?: boolean;
+    custom_headers?: Record<string, string> | string;
+    cost_per_1k_prompt_tokens?: number | string;
+    cost_per_1k_completion_tokens?: number | string;
+}
+
 export interface AIResponse {
   success: boolean;
   content?: string;
@@ -81,7 +103,7 @@ export class AIService {
       if (error) throw error;
 
       this.configurations.clear();
-      data?.forEach(config => {
+      (data || []).forEach((config: AIConfigurationTableRow) => {
         this.configurations.set(config.id, {
           id: config.id,
           name: config.name,
@@ -128,6 +150,7 @@ export class AIService {
           frequencyPenalty: 0.0,
           presencePenalty: 0.6,
           systemPrompt: NEWME_SYSTEM_PROMPT,
+          isDefault: false,
         });
       }
     } catch (dbError) {
@@ -145,6 +168,7 @@ export class AIService {
         frequencyPenalty: 0.0,
         presencePenalty: 0.6,
         systemPrompt: NEWME_SYSTEM_PROMPT,
+        isDefault: false,
       });
     }
   }

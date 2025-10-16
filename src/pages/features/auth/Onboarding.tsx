@@ -22,6 +22,7 @@ import {
   Moon,
   Music
 } from 'lucide-react';
+import React from 'react';
 
 interface OnboardingData {
   nickname: string;
@@ -59,11 +60,7 @@ const OnboardingPage = () => {
     expectations: ''
   });
 
-  useEffect(() => {
-    checkUser();
-  }, []);
-
-  const checkUser = async () => {
+  const checkUser = React.useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       navigate('/');
@@ -82,7 +79,11 @@ const OnboardingPage = () => {
       // User has completed onboarding, redirect to dashboard
       navigate('/dashboard');
     }
-  };
+  }, [navigate]);
+
+  useEffect(() => {
+    checkUser();
+  }, [checkUser]);
 
   const updateFormData = (field: keyof OnboardingData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));

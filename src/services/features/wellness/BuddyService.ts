@@ -19,6 +19,54 @@ export interface BuddyPair {
   check_in_frequency: 'daily' | 'weekly' | 'monthly';
 }
 
+export interface BuddyMessage {
+    id: string;
+    from_user_id: string;
+    to_user_id: string;
+    message_text: string;
+    is_read: boolean;
+    created_at: string;
+}
+
+export interface BuddyChallenge {
+    id: string;
+    user_a_id: string;
+    user_b_id: string;
+    goal: string;
+    duration_days: number;
+    start_date: string;
+    end_date: string;
+    status: 'active' | 'completed' | 'cancelled';
+}
+
+export interface BuddyCheckin {
+    id: string;
+    challenge_id: string;
+    user_id: string;
+    notes: string;
+    check_in_date: string;
+}
+
+export interface BuddyChallengeWithCheckins extends BuddyChallenge {
+    buddy_checkins: BuddyCheckin[];
+}
+
+export interface BuddyInsights {
+    totalChallenges: number;
+    completedChallenges: number;
+    completionRate: number;
+    totalCheckIns: number;
+    avgCheckInsPerChallenge: number;
+}
+
+export interface BuddyRecommendation {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+    avatar_url: string;
+    goals: string[];
+}
+
 class BuddyService {
   /**
    * Send buddy request
@@ -156,7 +204,7 @@ class BuddyService {
   /**
    * Send message to buddy
    */
-  async sendMessage(fromUserId: string, toUserId: string, message: string): Promise<any> {
+  async sendMessage(fromUserId: string, toUserId: string, message: string): Promise<BuddyMessage> {
     try {
       const { data, error } = await supabase
         .from("buddy_messages")
@@ -182,7 +230,7 @@ class BuddyService {
   /**
    * Get messages with buddy
    */
-  async getMessages(userId: string, buddyId: string): Promise<any[]> {
+  async getMessages(userId: string, buddyId: string): Promise<BuddyMessage[]> {
     try {
       const { data, error } = await supabase
         .from("buddy_messages")
@@ -219,7 +267,7 @@ class BuddyService {
   /**
    * Create accountability challenge
    */
-  async createChallenge(userId: string, buddyId: string, goal: string, durationDays: number): Promise<any> {
+  async createChallenge(userId: string, buddyId: string, goal: string, durationDays: number): Promise<BuddyChallenge> {
     try {
       const endDate = new Date();
       endDate.setDate(endDate.getDate() + durationDays);
@@ -274,7 +322,7 @@ class BuddyService {
   /**
    * Get challenge progress
    */
-  async getChallengeProgress(challengeId: string): Promise<any> {
+  async getChallengeProgress(challengeId: string): Promise<BuddyChallengeWithCheckins> {
     try {
       const { data, error } = await supabase
         .from("buddy_challenges")
@@ -320,7 +368,7 @@ class BuddyService {
   /**
    * Get buddy insights/statistics
    */
-  async getBuddyInsights(userId: string, buddyId: string): Promise<any> {
+  async getBuddyInsights(userId: string, buddyId: string): Promise<BuddyInsights> {
     try {
       const { data: challenges } = await supabase
         .from("buddy_challenges")
@@ -347,7 +395,7 @@ class BuddyService {
   /**
    * Recommend buddy matches (based on goals, interests)
    */
-  async getBuddyRecommendations(userId: string): Promise<any[]> {
+  async getBuddyRecommendations(userId: string): Promise<BuddyRecommendation[]> {
     try {
       const { data: userProfile } = await supabase
         .from("user_profiles")

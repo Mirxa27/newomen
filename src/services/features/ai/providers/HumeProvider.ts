@@ -8,7 +8,10 @@ import {
   VoiceListResponse, 
   ProviderTestResult,
   HumeConfig,
-  SyncResult 
+  SyncResult,
+  AIProvider,
+  ProviderAuth,
+  ProviderEndpoints,
 } from './types';
 import { BaseProviderService } from './BaseProviderService';
 
@@ -28,7 +31,7 @@ interface HumeModelsResponse {
 export class HumeProviderService extends BaseProviderService {
   private config: HumeConfig;
 
-  constructor(provider: any, auth: any, endpoints: any, config: HumeConfig) {
+  constructor(provider: AIProvider, auth: ProviderAuth, endpoints: ProviderEndpoints, config: HumeConfig) {
     super(provider, auth, endpoints);
     this.config = config;
   }
@@ -111,7 +114,7 @@ export class HumeProviderService extends BaseProviderService {
   async syncAll(): Promise<SyncResult> {
     const startedAt = new Date().toISOString();
     let modelsDiscovered = 0;
-    let voicesDiscovered = 0;
+    const voicesDiscovered = 0;
     const errors: string[] = [];
 
     try {

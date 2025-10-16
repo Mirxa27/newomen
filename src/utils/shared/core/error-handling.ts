@@ -30,7 +30,7 @@ export class NewomenError extends Error {
   public readonly severity: ErrorSeverity;
   public readonly code: string;
   public readonly statusCode: number;
-  public readonly details?: any;
+  public readonly details?: unknown;
   public readonly timestamp: string;
   public readonly requestId?: string;
 
@@ -40,7 +40,7 @@ export class NewomenError extends Error {
     severity: ErrorSeverity = ErrorSeverity.MEDIUM,
     code?: string,
     statusCode: number = 500,
-    details?: any,
+    details?: unknown,
     requestId?: string
   ) {
     super(message);
@@ -62,14 +62,14 @@ export class NewomenError extends Error {
 
 // Error factory functions
 export const ErrorFactory = {
-  validation: (message: string, field?: string, details?: any): NewomenError => {
+  validation: (message: string, field?: string, details?: unknown): NewomenError => {
     return new NewomenError(
       message,
       ErrorType.VALIDATION,
       ErrorSeverity.LOW,
       'VALIDATION_FAILED',
       400,
-      { field, ...details }
+      { field, ...(details as Record<string, unknown>) }
     );
   },
 
@@ -104,7 +104,7 @@ export const ErrorFactory = {
     );
   },
 
-  conflict: (message: string, details?: any): NewomenError => {
+  conflict: (message: string, details?: unknown): NewomenError => {
     return new NewomenError(
       message,
       ErrorType.CONFLICT,
@@ -136,25 +136,25 @@ export const ErrorFactory = {
     );
   },
 
-  aiService: (message: string, provider?: string, details?: any): NewomenError => {
+  aiService: (message: string, provider?: string, details?: unknown): NewomenError => {
     return new NewomenError(
       message,
       ErrorType.AI_SERVICE,
       ErrorSeverity.HIGH,
       'AI_SERVICE_ERROR',
       502,
-      { provider, ...details }
+      { provider, ...(details as Record<string, unknown>) }
     );
   },
 
-  payment: (message: string, provider?: string, details?: any): NewomenError => {
+  payment: (message: string, provider?: string, details?: unknown): NewomenError => {
     return new NewomenError(
       message,
       ErrorType.PAYMENT,
       ErrorSeverity.HIGH,
       'PAYMENT_ERROR',
       402,
-      { provider, ...details }
+      { provider, ...(details as Record<string, unknown>) }
     );
   },
 
@@ -169,7 +169,7 @@ export const ErrorFactory = {
     );
   },
 
-  internal: (message: string, details?: any): NewomenError => {
+  internal: (message: string, details?: unknown): NewomenError => {
     return new NewomenError(
       message,
       ErrorType.INTERNAL,
@@ -184,7 +184,7 @@ export const ErrorFactory = {
 // Error handler class
 export class ErrorHandler {
   private static instance: ErrorHandler;
-  private errorLog: Array<{ error: NewomenError; timestamp: string; context?: any }> = [];
+  private errorLog: Array<{ error: NewomenError; timestamp: string; context?: unknown }> = [];
 
   private constructor() {}
 
@@ -196,7 +196,7 @@ export class ErrorHandler {
   }
 
   // Handle and log errors
-  public handle(error: Error | NewomenError, context?: any): NewomenError {
+  public handle(error: Error | NewomenError, context?: unknown): NewomenError {
     const newomenError = error instanceof NewomenError ? error : this.wrapError(error);
     
     // Log error
@@ -232,7 +232,7 @@ export class ErrorHandler {
   }
 
   // Log error
-  private logError(error: NewomenError, context?: any): void {
+  private logError(error: NewomenError, context?: unknown): void {
     this.errorLog.push({
       error,
       timestamp: new Date().toISOString(),
@@ -270,7 +270,7 @@ export class ErrorHandler {
   }
 
   // Report critical errors
-  private reportCriticalError(error: NewomenError, context?: any): void {
+  private reportCriticalError(error: NewomenError, context?: unknown): void {
     // In production, this would send to monitoring service
     console.error('🚨 CRITICAL ERROR REPORTED:', {
       error: error.message,
@@ -325,14 +325,14 @@ export class ErrorHandler {
 // Error boundary for React components
 export class ErrorBoundary extends Error {
   public readonly component: string;
-  public readonly props?: any;
-  public readonly state?: any;
+  public readonly props?: unknown;
+  public readonly state?: unknown;
 
   constructor(
     message: string,
     component: string,
-    props?: any,
-    state?: any,
+    props?: unknown,
+    state?: unknown,
     originalError?: Error
   ) {
     super(message);

@@ -1,6 +1,6 @@
 // Comprehensive business logic for assessment system
 import { supabase } from '@/integrations/supabase/client';
-import { errorHandler, ErrorFactory } from '@/utils/error-handling';
+import { errorHandler, ErrorFactory } from '@/utils/shared/core/error-handling';
 import type { 
   AssessmentCreate, 
   AssessmentAttempt, 
@@ -8,6 +8,14 @@ import type {
   AIAnalysisResult,
   APIResponse 
 } from '@/types/validation';
+import type { Database } from '@/integrations/supabase/types';
+import { Json } from '@/integrations/supabase/types';
+
+type AssessmentAttemptWithRelations = Database['public']['Tables']['assessment_attempts']['Row'] & {
+    assessments: (Database['public']['Tables']['assessments']['Row'] & {
+      questions: Database['public']['Tables']['assessment_questions']['Row'][];
+    }) | null;
+};
 
 export interface AssessmentBusinessRules {
   maxAttemptsPerAssessment: number;
@@ -176,7 +184,7 @@ export class AssessmentBusinessLogic {
   public async submitAssessmentResponse(
     attemptId: string,
     questionId: string,
-    response: any,
+    response: unknown,
     userId: string
   ): Promise<APIResponse<{ success: boolean }>> {
     try {
@@ -277,7 +285,7 @@ export class AssessmentBusinessLogic {
       }
 
       // Validate completion
-      const completionValidation = this.validateAssessmentCompletion(attempt);
+      const completionValidation = this.validateAssessmentCompletion(attempt as AssessmentAttemptWithRelations);
       if (!completionValidation.isValid) {
         throw ErrorFactory.validation(completionValidation.error);
       }
@@ -299,7 +307,7 @@ export class AssessmentBusinessLogic {
       if (updateError) throw updateError;
 
       // Process with AI
-      const aiResult = await this.processAssessmentWithAI(attempt);
+      const aiResult = await this.processAssessmentWithAI(attempt as AssessmentAttemptWithRelations);
 
       // Update attempt with AI results
       const { error: aiUpdateError } = await supabase
@@ -410,7 +418,7 @@ export class AssessmentBusinessLogic {
     return { isValid: true };
   }
 
-  private validateResponse(response: any): { isValid: boolean; error?: string } {
+  private validateResponse(response: unknown): { isValid: boolean; error?: string } {
     if (response === null || response === undefined) {
       return { isValid: false, error: 'Response cannot be empty' };
     }
@@ -422,11 +430,11 @@ export class AssessmentBusinessLogic {
     return { isValid: true };
   }
 
-  private validateAssessmentCompletion(attempt: any): { isValid: boolean; error?: string } {
-    const responses = attempt.raw_responses || {};
-    const requiredQuestions = attempt.assessments?.questions?.filter((q: any) => q.required) || [];
+  private validateAssessmentCompletion(attempt: AssessmentAttemptWithRelations): { isValid: boolean; error?: string } {
+    const responses = (attempt.raw_responses as Record<string, unknown>) || {};
+    const requiredQuestions = attempt.assessments?.questions?.filter((q) => q.required) || [];
     
-    const completedRequired = requiredQuestions.every((q: any) => responses[q.id]);
+    const completedRequired = requiredQuestions.every((q) => responses[q.id]);
     
     if (!completedRequired) {
       return { isValid: false, error: 'All required questions must be answered' };
@@ -452,7 +460,7 @@ export class AssessmentBusinessLogic {
     return count || 0;
   }
 
-  private async getActiveAttempt(assessmentId: string, userId: string): Promise<any> {
+  private async getActiveAttempt(assessmentId: string, userId: string): Promise<Database['public']['Tables']['assessment_attempts']['Row'] | null> {
     const { data, error } = await supabase
       .from('assessment_attempts')
       .select('*')
@@ -477,10 +485,10 @@ export class AssessmentBusinessLogic {
     return Math.floor((now - start) / (1000 * 60)); // Convert to minutes
   }
 
-  private async processAssessmentWithAI(attempt: any): Promise<AIAnalysisResult> {
+  private async processAssessmentWithAI(attempt: AssessmentAttemptWithRelations): Promise<AIAnalysisResult> {
     try {
       // Call the real AI assessment processor Edge Function
-      const { data, error } = await supabase.functions.invoke('ai-assessment-processor', {
+      const { data, error } = await supabase.functions.invoke<{success: boolean; error?: string; result: AIAnalysisResult}>('ai-assessment-processor', {
         body: {
           assessment_id: attempt.assessment_id,
           user_id: attempt.user_id,
@@ -495,7 +503,7 @@ export class AssessmentBusinessLogic {
         throw new Error(`AI assessment processing failed: ${error.message}`);
       }
 
-      if (!data.success) {
+      if (!data.success || !data.result) {
         throw new Error(data.error || 'AI assessment processing failed');
       }
 
@@ -529,7 +537,7 @@ export class AssessmentBusinessLogic {
     }
   }
 
-  private async logAssessmentEvent(eventType: string, data: any): Promise<void> {
+  private async logAssessmentEvent(eventType: string, data: Json): Promise<void> {
     try {
       await supabase
         .from('assessment_events')
@@ -543,7 +551,7 @@ export class AssessmentBusinessLogic {
     }
   }
 
-  private async triggerGamificationEvent(eventType: string, userId: string, metadata: any): Promise<void> {
+  private async triggerGamificationEvent(eventType: string, userId: string, metadata: Json): Promise<void> {
     try {
       await supabase.functions.invoke('gamification-engine', {
         body: {

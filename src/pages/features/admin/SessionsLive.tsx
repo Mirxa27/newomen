@@ -71,7 +71,7 @@ export default function SessionsLive() {
       
       if (error) throw error;
       
-      const typedData: SessionRow[] = ((data as any[]) || []).map((item) => ({
+      const typedData: SessionRow[] = (data as SessionResponse[] || []).map((item) => ({
         id: item.id,
         agent_id: item.agent_id,
         start_ts: item.start_ts,

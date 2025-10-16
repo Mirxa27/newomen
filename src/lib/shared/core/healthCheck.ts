@@ -1,6 +1,7 @@
 import { logger } from '@/lib/logging';
 import { HealthCheckError, ServiceUnavailableError } from '@/lib/errors';
 import { CircuitBreakerHealthCheck } from '@/lib/resilience/circuitBreaker';
+import fs from 'fs';
 
 // Health check status
 export enum HealthStatus {
@@ -15,7 +16,7 @@ export interface HealthCheckResult {
   name: string;
   status: HealthStatus;
   message?: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   responseTime: number;
   timestamp: Date;
   error?: Error;
@@ -70,7 +71,7 @@ export abstract class BaseHealthCheck implements HealthCheck {
   protected createResult(
     status: HealthStatus,
     message?: string,
-    details?: Record<string, any>,
+    details?: Record<string, unknown>,
     error?: Error,
     responseTime = 0
   ): HealthCheckResult {
@@ -89,7 +90,7 @@ export abstract class BaseHealthCheck implements HealthCheck {
 // Database health check
 export class DatabaseHealthCheck extends BaseHealthCheck {
   constructor(
-    private dbClient: any,
+    private dbClient: { query: (sql: string) => Promise<unknown> },
     config: Partial<HealthCheckConfig> = {}
   ) {
     super('database', {
@@ -136,7 +137,7 @@ export class DatabaseHealthCheck extends BaseHealthCheck {
 // Redis health check
 export class RedisHealthCheck extends BaseHealthCheck {
   constructor(
-    private redisClient: any,
+    private redisClient: { ping: () => Promise<unknown> },
     config: Partial<HealthCheckConfig> = {}
   ) {
     super('redis', {
@@ -315,7 +316,6 @@ export class DiskSpaceHealthCheck extends BaseHealthCheck {
 
     try {
       // This is a simplified check - in a real implementation you'd use a proper disk space library
-      const fs = require('fs');
       const stats = fs.statSync(process.cwd());
       
       const responseTime = Date.now() - startTime;
@@ -566,7 +566,7 @@ export class HealthCheckManager {
 
   // Express middleware for health endpoint
   healthEndpoint() {
-    return async (req: any, res: any) => {
+    return async (req: unknown, res: { status: (code: number) => { json: (data: unknown) => void } }) => {
       try {
         const results = await this.runAllChecks();
         const overallHealth = this.getOverallHealth();
@@ -599,7 +599,7 @@ export class HealthCheckManager {
 
   // Liveness probe endpoint (minimal health check)
   livenessEndpoint() {
-    return async (req: any, res: any) => {
+    return async (req: unknown, res: { status: (code: number) => { json: (data: unknown) => void } }) => {
       res.status(200).json({
         status: 'alive',
         timestamp: new Date().toISOString(),
@@ -609,7 +609,7 @@ export class HealthCheckManager {
 
   // Readiness probe endpoint (checks if service is ready to serve traffic)
   readinessEndpoint() {
-    return async (req: any, res: any) => {
+    return async (req: unknown, res: { status: (code: number) => { json: (data: unknown) => void } }) => {
       const overallHealth = this.getOverallHealth();
       
       // Only critical checks must pass for readiness
@@ -636,11 +636,11 @@ export class HealthCheckManager {
 
 // Health check factory
 export class HealthCheckFactory {
-  static createDatabaseCheck(dbClient: any, config?: Partial<HealthCheckConfig>): DatabaseHealthCheck {
+  static createDatabaseCheck(dbClient: { query: (sql: string) => Promise<unknown> }, config?: Partial<HealthCheckConfig>): DatabaseHealthCheck {
     return new DatabaseHealthCheck(dbClient, config);
   }
 
-  static createRedisCheck(redisClient: any, config?: Partial<HealthCheckConfig>): RedisHealthCheck {
+  static createRedisCheck(redisClient: { ping: () => Promise<unknown> }, config?: Partial<HealthCheckConfig>): RedisHealthCheck {
     return new RedisHealthCheck(redisClient, config);
   }
 

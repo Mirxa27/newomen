@@ -99,9 +99,33 @@ export class MemoryRateLimitStore implements RateLimitStore {
 
 // Redis-based rate limit store (for distributed systems)
 export class RedisRateLimitStore implements RateLimitStore {
-  private redis: any; // Redis client instance
+  private redis: { 
+    pipeline: () => {
+      zremrangebyscore: (key: string, min: number, max: number) => void;
+      zadd: (key: string, score: number, member: string) => void;
+      expire: (key: string, seconds: number) => void;
+      zcard: (key: string) => void;
+      exec: () => Promise<[Error | null, number][]>;
+    };
+    ttl: (key: string) => Promise<number>;
+    zrange: (key: string, start: number, stop: number) => Promise<string[]>;
+    zrem: (key: string, member: string) => Promise<void>;
+    del: (key: string) => Promise<void>;
+  };
 
-  constructor(redisClient: any) {
+  constructor(redisClient: { 
+    pipeline: () => {
+      zremrangebyscore: (key: string, min: number, max: number) => void;
+      zadd: (key: string, score: number, member: string) => void;
+      expire: (key: string, seconds: number) => void;
+      zcard: (key: string) => void;
+      exec: () => Promise<[Error | null, number][]>;
+    };
+    ttl: (key: string) => Promise<number>;
+    zrange: (key: string, start: number, stop: number) => Promise<string[]>;
+    zrem: (key: string, member: string) => Promise<void>;
+    del: (key: string) => Promise<void>;
+  }) {
     this.redis = redisClient;
   }
 
@@ -184,7 +208,7 @@ export class RateLimiter {
     return `rate_limit:${identifier}`;
   }
 
-  protected getIdentifier(req: any): string {
+  protected getIdentifier(req: { ip: string }): string {
     return req.ip;
   }
 
@@ -227,7 +251,24 @@ export class RateLimiter {
 
   // Express middleware
   middleware() {
-    return async (req: any, res: any, next: any) => {
+    return async (
+      req: { ip: string; method: string; path: string },
+      res: {
+        setHeader: (key: string, value: string | number) => void;
+        send: (body: unknown) => unknown;
+        statusCode: number;
+        status: (code: number) => {
+          json: (body: {
+            error: {
+              code: string | undefined;
+              message: string;
+              retryAfter: number | undefined;
+            };
+          }) => void;
+        };
+      },
+      next: (error?: Error) => void
+    ) => {
       try {
         // Generate identifier based on request
         const identifier = this.getIdentifier(req);
@@ -245,27 +286,34 @@ export class RateLimiter {
         }
 
         if (!allowed) {
-          const error = new RateLimitError(this.config.message, limitInfo.retryAfter);
+          const error = new RateLimitError(
+            this.config.message,
+            limitInfo.retryAfter
+          );
           return res.status(this.config.statusCode).json({
             error: {
               code: error.code,
               message: error.message,
               retryAfter: limitInfo.retryAfter,
-            }
+            },
           });
         }
 
         // Track response for skip options
         const originalSend = res.send;
-        res.send = (body: any) => {
+        res.send = (body: unknown) => {
           res.send = originalSend;
           
           if (this.config.skipSuccessfulRequests && res.statusCode < 400) {
-            this.store.decrement(this.config.keyGenerator(identifier)).catch(() => {});
+            this.store
+              .decrement(this.config.keyGenerator(identifier))
+              .catch(() => {});
           }
           
           if (this.config.skipFailedRequests && res.statusCode >= 400) {
-            this.store.decrement(this.config.keyGenerator(identifier)).catch(() => {});
+            this.store
+              .decrement(this.config.keyGenerator(identifier))
+              .catch(() => {});
           }
           
           return res.send(body);
@@ -274,7 +322,7 @@ export class RateLimiter {
         next();
       } catch (error) {
         logger.error('Rate limit middleware error', { error });
-        next(error);
+        next(error as Error);
       }
     };
   }
@@ -366,7 +414,7 @@ export class UserRateLimiter extends RateLimiter {
     });
   }
 
-  getIdentifier(req: any): string {
+  getIdentifier(req: { user?: { id: string }; headers: { [key: string]: string }; ip: string }): string {
     return req.user?.id || req.headers['x-user-id'] || req.ip;
   }
 }
@@ -380,7 +428,7 @@ export class APIRateLimiter extends RateLimiter {
     });
   }
 
-  getIdentifier(req: any): string {
+  getIdentifier(req: { method: string; path: string }): string {
     return `${req.method}:${req.path}`;
   }
 }
@@ -394,8 +442,14 @@ export class GeographicRateLimiter extends RateLimiter {
     });
   }
 
-  getIdentifier(req: any): string {
-    return req.headers['cf-ipcountry'] || req.headers['x-country-code'] || 'unknown';
+  getIdentifier(req: {
+    headers: { [key: string]: string | string[] | undefined };
+  }): string {
+    return (
+      (req.headers['cf-ipcountry'] as string) ||
+      (req.headers['x-country-code'] as string) ||
+      'unknown'
+    );
   }
 }
 
@@ -439,13 +493,13 @@ export class AdaptiveRateLimiter extends RateLimiter {
     if (load > 0.8) {
       // High load - decrease limit
       this.currentLimit = Math.max(
-        (this.config as any).minLimit || 10,
+        (this.config as { minLimit?: number }).minLimit || 10,
         Math.floor(this.currentLimit * 0.9)
       );
     } else if (load < 0.3) {
       // Low load - increase limit
       this.currentLimit = Math.min(
-        (this.config as any).maxLimit || 1000,
+        (this.config as { maxLimit?: number }).maxLimit || 1000,
         Math.floor(this.currentLimit * 1.1)
       );
     }
@@ -467,30 +521,42 @@ export class AdaptiveRateLimiter extends RateLimiter {
 
 // Rate limiting utilities
 export class RateLimitingUtils {
-  static getClientIP(req: any): string {
-    return req.headers['x-forwarded-for']?.split(',')[0] ||
-           req.headers['x-real-ip'] ||
-           req.connection?.remoteAddress ||
-           req.socket?.remoteAddress ||
-           'unknown';
+  static getClientIP(req: {
+    headers: { [key: string]: string | string[] | undefined };
+    connection?: { remoteAddress?: string };
+    socket?: { remoteAddress?: string };
+  }): string {
+    return (
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0] ||
+      (req.headers['x-real-ip'] as string) ||
+      req.connection?.remoteAddress ||
+      req.socket?.remoteAddress ||
+      'unknown'
+    );
   }
 
-  static getUserAgent(req: any): string {
-    return req.headers['user-agent'] || 'unknown';
+  static getUserAgent(req: {
+    headers: { [key: string]: string | string[] | undefined };
+  }): string {
+    return (req.headers['user-agent'] as string) || 'unknown';
   }
 
   static createRateLimitKey(...parts: string[]): string {
     return parts.filter(Boolean).join(':');
   }
 
-  static parseRateLimitHeaders(headers: any): RateLimitInfo | null {
+  static parseRateLimitHeaders(headers: {
+    [key: string]: string | string[] | undefined;
+  }): RateLimitInfo | null {
     if (!headers['x-ratelimit-limit']) return null;
 
     return {
-      limit: parseInt(headers['x-ratelimit-limit'], 10),
-      remaining: parseInt(headers['x-ratelimit-remaining'], 10),
-      reset: new Date(headers['x-ratelimit-reset']),
-      retryAfter: headers['retry-after'] ? parseInt(headers['retry-after'], 10) : undefined,
+      limit: parseInt(headers['x-ratelimit-limit'] as string, 10),
+      remaining: parseInt(headers['x-ratelimit-remaining'] as string, 10),
+      reset: new Date(headers['x-ratelimit-reset'] as string),
+      retryAfter: headers['retry-after']
+        ? parseInt(headers['retry-after'] as string, 10)
+        : undefined,
     };
   }
 }

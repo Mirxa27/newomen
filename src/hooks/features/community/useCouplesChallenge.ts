@@ -68,7 +68,7 @@ export function useCouplesChallenge() {
         from: (table: string) => { 
           select: (columns: string) => { 
             eq: (column: string, value: boolean) => { 
-              order: (column: string, options: { ascending: boolean }) => Promise<{ data: RawChallengeTemplate[]; error: any }> 
+              order: (column: string, options: { ascending: boolean }) => Promise<{ data: RawChallengeTemplate[] | null; error: Error | null }> 
             } 
           } 
         } 
@@ -145,7 +145,7 @@ export function useCouplesChallenge() {
         from: (table: string) => { 
           select: (columns: string) => { 
             eq: (column: string, value: string) => { 
-              single: () => Promise<{ data: RawChallengeTemplate; error: any }> 
+              single: () => Promise<{ data: RawChallengeTemplate | null; error: Error | null }> 
             } 
           } 
         } 

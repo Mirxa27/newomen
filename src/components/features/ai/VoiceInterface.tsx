@@ -200,16 +200,18 @@ export function VoiceInterface({
 
   // Cleanup on unmount
   useEffect(() => {
+    const recognition = recognitionRef.current;
+    const synthesis = synthesisRef.current;
     return () => {
-      if (recognitionRef.current) {
+      if (recognition) {
         try {
-          recognitionRef.current.stop();
+          recognition.stop();
         } catch (error) {
           console.error('Error stopping recognition on cleanup:', error);
         }
       }
-      if (synthesisRef.current) {
-        synthesisRef.current.cancel();
+      if (synthesis) {
+        synthesis.cancel();
       }
     };
   }, []);

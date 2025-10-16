@@ -3,37 +3,43 @@ import { useAuth } from "@/hooks/features/auth/useAuth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/shared/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shared/ui/card";
 import { Button } from "@/components/shared/ui/button";
-import { Heart, Brain, Sparkles, Book, Wand2, Zap, Infinity } from "lucide-react";
+import { Heart, Brain, Sparkles, Book, Wand2, Zap, Infinity as InfinityIcon } from "lucide-react";
 import { MeditationService } from "@/services/features/wellness/MeditationService";
 import { AffirmationService } from "@/services/features/wellness/AffirmationService";
 import { HabitTrackerService } from "@/services/features/wellness/HabitTrackerService";
 import { DiaryService } from "@/services/features/wellness/DiaryService";
 import { CardReadingService } from "@/services/features/wellness/CardReadingService";
+import MeditationLibrary from "@/components/features/wellness/MeditationLibrary";
+import Affirmations from "@/components/features/wellness/Affirmations";
+import HabitTracker from "@/components/features/wellness/HabitTracker";
+import Diaries from "@/components/features/wellness/Diaries";
+import CardReading from "@/components/features/wellness/CardReading";
+import AudioLibrary from "@/components/features/wellness/AudioLibrary";
+import MeditationRecipes from "@/components/features/wellness/MeditationRecipes";
+import CommunityFeed from "@/components/features/community/CommunityFeed";
 
 export default function WellnessHub() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("meditations");
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<{
+    meditationStats: { totalSessions: number; totalMinutes: number; } | null;
+    habitStats: { totalHabits: number; averageCompletion: number; } | null;
+    diaryStats: { totalGratitudeEntries: string; totalStateEntries: string; averageMood: number; } | null;
+  }>({
     meditationStats: null,
     habitStats: null,
     diaryStats: null,
   });
-  const [todayAffirmation, setTodayAffirmation] = useState(null);
+  const [todayAffirmation, setTodayAffirmation] = useState<{ content: string; category: string; } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user?.id) {
-      loadStats();
-      loadTodayAffirmation();
-    }
-  }, [user?.id]);
-
-  const loadStats = async () => {
+  const loadStats = React.useCallback(async () => {
+    if (!user) return;
     try {
       const [meditationStats, habitStats, diaryStats] = await Promise.all([
-        MeditationService.getMeditationStats(user!.id),
-        HabitTrackerService.getHabitStats(user!.id),
-        DiaryService.getUserDiaryStats(user!.id),
+        MeditationService.getMeditationStats(user.id),
+        HabitTrackerService.getHabitStats(user.id),
+        DiaryService.getUserDiaryStats(user.id),
       ]);
 
       setStats({
@@ -46,16 +52,22 @@ export default function WellnessHub() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
-  const loadTodayAffirmation = async () => {
+  const loadTodayAffirmation = React.useCallback(async () => {
+    if (!user) return;
     try {
       const affirmation = await AffirmationService.getTodaysAffirmation();
       setTodayAffirmation(affirmation);
     } catch (error) {
       console.error("Error loading today's affirmation:", error);
     }
-  };
+  }, [user]);
+
+  React.useEffect(() => {
+    loadStats();
+    loadTodayAffirmation();
+  }, [loadStats, loadTodayAffirmation]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
@@ -191,7 +203,7 @@ export default function WellnessHub() {
               <span className="hidden sm:inline">Audio</span>
             </TabsTrigger>
             <TabsTrigger value="recipes" className="flex items-center gap-1">
-              <Infinity className="w-4 h-4" />
+              <InfinityIcon className="w-4 h-4" />
               <span className="hidden sm:inline">Recipes</span>
             </TabsTrigger>
             <TabsTrigger value="community" className="flex items-center gap-1">
@@ -202,146 +214,42 @@ export default function WellnessHub() {
 
           {/* Meditations Tab */}
           <TabsContent value="meditations">
-            <Card>
-              <CardHeader>
-                <CardTitle>Meditation Library</CardTitle>
-                <CardDescription>
-                  Guided sessions, silent meditations, and brainwave practices
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Brain className="w-16 h-16 mx-auto mb-4 text-blue-400 opacity-50" />
-                  <p>Meditations component coming soon</p>
-                </div>
-              </CardContent>
-            </Card>
+            <MeditationLibrary />
           </TabsContent>
 
           {/* Affirmations Tab */}
           <TabsContent value="affirmations">
-            <Card>
-              <CardHeader>
-                <CardTitle>Daily Affirmations</CardTitle>
-                <CardDescription>
-                  Empowering messages for motivation, abundance, and personal growth
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Sparkles className="w-16 h-16 mx-auto mb-4 text-pink-400 opacity-50" />
-                  <p>Affirmations component coming soon</p>
-                </div>
-              </CardContent>
-            </Card>
+            <Affirmations />
           </TabsContent>
 
           {/* Habits Tab */}
           <TabsContent value="habits">
-            <Card>
-              <CardHeader>
-                <CardTitle>Habit Tracker</CardTitle>
-                <CardDescription>
-                  Build and maintain positive habits with streak tracking
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Zap className="w-16 h-16 mx-auto mb-4 text-orange-400 opacity-50" />
-                  <p>Habit Tracker component coming soon</p>
-                </div>
-              </CardContent>
-            </Card>
+            <HabitTracker />
           </TabsContent>
 
           {/* Diaries Tab */}
           <TabsContent value="diaries">
-            <Card>
-              <CardHeader>
-                <CardTitle>Personal Diaries</CardTitle>
-                <CardDescription>
-                  Gratitude, state tracking, and progress journaling
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Book className="w-16 h-16 mx-auto mb-4 text-green-400 opacity-50" />
-                  <p>Diary components coming soon</p>
-                </div>
-              </CardContent>
-            </Card>
+            <Diaries />
           </TabsContent>
 
           {/* Cards Tab */}
           <TabsContent value="cards">
-            <Card>
-              <CardHeader>
-                <CardTitle>Tarot & Osho Zen Cards</CardTitle>
-                <CardDescription>
-                  Draw cards for guidance and daily wisdom
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Wand2 className="w-16 h-16 mx-auto mb-4 text-purple-400 opacity-50" />
-                  <p>Card Reading components coming soon</p>
-                </div>
-              </CardContent>
-            </Card>
+            <CardReading />
           </TabsContent>
 
           {/* Audio Tab */}
           <TabsContent value="audio">
-            <Card>
-              <CardHeader>
-                <CardTitle>Audio Library</CardTitle>
-                <CardDescription>
-                  Melodies, nature sounds, and brainwave frequencies
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Heart className="w-16 h-16 mx-auto mb-4 text-red-400 opacity-50" />
-                  <p>Audio Library components coming soon</p>
-                </div>
-              </CardContent>
-            </Card>
+            <AudioLibrary />
           </TabsContent>
 
           {/* Recipes Tab */}
           <TabsContent value="recipes">
-            <Card>
-              <CardHeader>
-                <CardTitle>Meditation Recipes</CardTitle>
-                <CardDescription>
-                  200+ curated meditation collections for specific situations
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Infinity className="w-16 h-16 mx-auto mb-4 text-cyan-400 opacity-50" />
-                  <p>Meditation Recipes components coming soon</p>
-                </div>
-              </CardContent>
-            </Card>
+            <MeditationRecipes />
           </TabsContent>
 
           {/* Community Tab */}
           <TabsContent value="community">
-            <Card>
-              <CardHeader>
-                <CardTitle>Community Engagement</CardTitle>
-                <CardDescription>
-                  Connect with local communities and attend wellness events
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Heart className="w-16 h-16 mx-auto mb-4 text-rose-400 opacity-50" />
-                  <p>Community components coming soon</p>
-                </div>
-              </CardContent>
-            </Card>
+            <CommunityFeed />
           </TabsContent>
         </Tabs>
       </div>

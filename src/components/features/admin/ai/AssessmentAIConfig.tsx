@@ -31,6 +31,7 @@ import {
   Award,
   Lightbulb
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 // Import services
 import { aiProviderManager } from '@/services/features/ai/AIProviderManager';
@@ -290,11 +291,54 @@ export function AssessmentAIConfig({ onConfigSaved, onConfigUpdated }: Assessmen
     }
 
     try {
-      // TODO: Implement actual save to database
-      console.log('Saving assessment AI config:', config);
+      const configToSave = {
+        name: config.name,
+        description: config.description,
+        assessment_type: config.assessmentType,
+        scoring_model_id: config.scoringModel,
+        feedback_model_id: config.feedbackModel,
+        voice_model_id: config.voiceModel || null,
+        is_enabled: config.enabled,
+        scoring_prompt: config.scoringPrompt,
+        scoring_criteria: config.scoringCriteria,
+        scoring_weights: config.scoringWeights,
+        feedback_prompt: config.feedbackPrompt,
+        feedback_tone: config.feedbackTone,
+        include_recommendations: config.includeRecommendations,
+        voice_enabled: config.voiceEnabled,
+        voice_settings: config.voiceSettings,
+        temperature: config.temperature,
+        max_tokens: config.maxTokens,
+        timeout_ms: config.timeout,
+      };
+
+      let savedConfig;
+      if (config.id) {
+        const { data, error } = await supabase
+          .from('ai_assessment_configs')
+          .update(configToSave)
+          .eq('id', config.id)
+          .select()
+          .single();
+        if (error) throw error;
+        savedConfig = data;
+        const updatedConfig = { ...config, id: savedConfig.id };
+        setConfig(updatedConfig);
+        onConfigUpdated?.(updatedConfig);
+      } else {
+        const { data, error } = await supabase
+          .from('ai_assessment_configs')
+          .insert(configToSave)
+          .select()
+          .single();
+        if (error) throw error;
+        savedConfig = data;
+        const newConfig = { ...config, id: savedConfig.id };
+        setConfig(newConfig);
+        onConfigSaved?.(newConfig);
+      }
       
       toast.success('Assessment AI configuration saved successfully');
-      onConfigSaved?.(config);
     } catch (error) {
       console.error('Failed to save assessment AI config:', error);
       toast.error('Failed to save configuration');

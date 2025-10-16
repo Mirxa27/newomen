@@ -5,12 +5,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/shared/ui/use-toast";
 import { Loader2, RefreshCw, Database, Sparkles } from "lucide-react";
 import { Badge } from "@/components/shared/ui/badge";
+import { Tables } from "@/integrations/supabase/types";
+
+interface DiscoveryResults {
+  providers: number;
+  models: number;
+  voices: number;
+  errors?: string[];
+}
+
+interface ProviderWithCounts extends Tables<'providers'> {
+  models: { count: number }[];
+  voices: { count: number }[];
+}
 
 export default function ProviderManagement() {
   const { toast } = useToast();
   const [isDiscovering, setIsDiscovering] = useState(false);
-  const [discoveryResults, setDiscoveryResults] = useState<any>(null);
-  const [providers, setProviders] = useState<any[]>([]);
+  const [discoveryResults, setDiscoveryResults] = useState<DiscoveryResults | null>(null);
+  const [providers, setProviders] = useState<ProviderWithCounts[]>([]);
   const [isLoadingProviders, setIsLoadingProviders] = useState(false);
 
   const handleDiscoverProviders = async () => {

@@ -1,4 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
+import path from 'path';
 
 // Log levels
 export enum LogLevel {
@@ -144,15 +146,15 @@ export class StructuredLogger {
     };
 
     if (this.config.enableRequestId && typeof window !== 'undefined') {
-      entry.requestId = (window as any).__requestId || uuidv4();
+      entry.requestId = (window as { __requestId?: string }).__requestId || uuidv4();
     }
 
     if (this.config.enableUserId && typeof window !== 'undefined') {
-      entry.userId = (window as any).__userId;
+      entry.userId = (window as { __userId?: string }).__userId;
     }
 
     if (this.config.enableSessionId && typeof window !== 'undefined') {
-      entry.sessionId = (window as any).__sessionId;
+      entry.sessionId = (window as { __sessionId?: string }).__sessionId;
     }
 
     return entry;
@@ -285,14 +287,11 @@ export class ConsoleTransport implements LogTransport {
 
 // File transport (Node.js only)
 export class FileTransport implements LogTransport {
-  private writeStream: any;
+  private writeStream: { write: (line: string) => void; end: (callback: () => void) => void } | undefined;
 
   constructor(private config: Required<LoggerConfig>) {
     if (typeof window === 'undefined') {
       // Node.js environment
-      const fs = require('fs');
-      const path = require('path');
-      
       const logDir = path.dirname(this.config.filePath);
       if (!fs.existsSync(logDir)) {
         fs.mkdirSync(logDir, { recursive: true });
@@ -403,13 +402,28 @@ export class RemoteTransport implements LogTransport {
 // Request logger middleware
 export class RequestLogger {
   static middleware() {
-    return (req: any, res: any, next: any) => {
+    return (
+      req: {
+        id?: string;
+        __requestId?: string;
+        method: string;
+        url: string;
+        headers: { [key: string]: string | string[] | undefined };
+        ip?: string;
+        connection?: { remoteAddress?: string };
+      },
+      res: {
+        end: (chunk: unknown, encoding?: unknown) => void;
+        statusCode: number;
+      },
+      next: () => void
+    ) => {
       const startTime = Date.now();
       const requestId = uuidv4();
       
       // Add request ID to request object
       req.id = requestId;
-      (req as any).__requestId = requestId;
+      req.__requestId = requestId;
 
       // Log request
       logger.info('Incoming request', {
@@ -421,7 +435,7 @@ export class RequestLogger {
 
       // Override res.end to log response
       const originalEnd = res.end;
-      res.end = function(chunk: any, encoding?: any) {
+      res.end = function (chunk: unknown, encoding?: unknown) {
         const duration = Date.now() - startTime;
         
         logger.info('Request completed', {
@@ -486,7 +500,15 @@ export class PerformanceLogger {
     p95: number;
     p99: number;
   }> {
-    const summary: Record<string, any> = {};
+    const summary: Record<string, {
+      count: number;
+      average: number;
+      min: number;
+      max: number;
+      p50: number;
+      p95: number;
+      p99: number;
+    }> = {};
     
     for (const [name, values] of this.metrics) {
       if (values.length === 0) continue;

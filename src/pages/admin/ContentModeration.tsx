@@ -8,13 +8,21 @@ import { Button } from '@/components/shared/ui/button';
 import { Textarea } from '@/components/shared/ui/textarea';
 import { AlertCircle, Check, X } from 'lucide-react';
 
+interface ModerationItem {
+  id: string;
+  content_type: string;
+  reason: string;
+  created_at: string;
+  status: 'pending' | 'approved' | 'rejected' | 'flagged';
+}
+
 export default function ContentModeration() {
   const queryClient = useQueryClient();
-  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [selectedItem, setSelectedItem] = useState<ModerationItem | null>(null);
   const [notes, setNotes] = useState('');
 
   // Fetch moderation queue
-  const { data: queue = [] } = useQuery({
+  const { data: queue = [] } = useQuery<ModerationItem[]>({
     queryKey: ['moderation-queue-full'],
     queryFn: () => adminPanelService.getModerationQueue(),
     refetchInterval: 5000, // Refetch every 5 seconds
@@ -58,7 +66,7 @@ export default function ContentModeration() {
   const rejectedItems = queue.filter(item => item.status === 'rejected');
   const flaggedItems = queue.filter(item => item.status === 'flagged');
 
-  const renderItem = (item: any) => (
+  const renderItem = (item: ModerationItem) => (
     <div
       key={item.id}
       onClick={() => setSelectedItem(item)}

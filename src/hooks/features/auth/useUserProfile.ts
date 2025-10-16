@@ -14,6 +14,11 @@ type UseUserProfileOptions = {
   redirectToAuth?: boolean;
 };
 
+export interface LifeBalanceData {
+  category: string;
+  score: number;
+}
+
 export function useUserProfile(options: UseUserProfileOptions = {}) {
   const navigate = useNavigate();
   const { redirectToAuth = true } = options;
@@ -22,6 +27,7 @@ export function useUserProfile(options: UseUserProfileOptions = {}) {
   const [achievements, setAchievements] = useState<UserAchievement[]>([]);
   const [levelThresholds, setLevelThresholds] = useState<Tables<'level_thresholds'>[]>([]);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [lifeBalance, setLifeBalance] = useState<LifeBalanceData[]>([]);
 
   const loadProfile = useCallback(async () => {
     setLoading(true);
@@ -66,6 +72,8 @@ export function useUserProfile(options: UseUserProfileOptions = {}) {
       if (achievementsError) throw achievementsError;
       setAchievements((achievementsData as unknown as UserAchievement[]) ?? []);
 
+      await loadLifeBalanceData(profileData.id);
+
     } catch (error) {
       console.error('Error loading profile:', error);
       toast.error('Failed to load profile data.');
@@ -73,6 +81,52 @@ export function useUserProfile(options: UseUserProfileOptions = {}) {
       setLoading(false);
     }
   }, [navigate, redirectToAuth]);
+
+  const loadLifeBalanceData = async (profileId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('assessment_attempts')
+        .select(`
+          status,
+          ai_analysis,
+          assessments (
+            category
+          )
+        `)
+        .eq('user_id', profileId)
+        .eq('status', 'completed');
+
+      if (error) {
+        throw error;
+      }
+      
+      const scoresByCategory = data.reduce((acc, attempt) => {
+        if (attempt.ai_analysis && attempt.assessments) {
+          const score = (attempt.ai_analysis as Record<string, unknown>)?.score;
+          const category = (attempt.assessments as Record<string, unknown>)?.category;
+          if (typeof score === 'number' && category) {
+            if (!acc[category]) {
+              acc[category] = { totalScore: 0, count: 0 };
+            }
+            acc[category].totalScore += score;
+            acc[category].count++;
+          }
+        }
+        return acc;
+      }, {} as Record<string, { totalScore: number; count: number }>);
+
+      const lifeBalanceData = Object.entries(scoresByCategory).map(([category, { totalScore, count }]) => ({
+        category: category.charAt(0).toUpperCase() + category.slice(1),
+        score: totalScore / count,
+      }));
+
+      setLifeBalance(lifeBalanceData);
+
+    } catch(error) {
+      console.error('Error loading life balance data:', error);
+      toast.error('Could not load life balance data.');
+    }
+  };
 
   useEffect(() => {
     void loadProfile();
@@ -131,6 +185,7 @@ export function useUserProfile(options: UseUserProfileOptions = {}) {
     profile,
     achievements,
     levelThresholds,
+    lifeBalance,
     uploadingAvatar,
     loadProfile,
     updateProfile,

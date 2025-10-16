@@ -24,25 +24,26 @@ export class AssessmentServiceOptimized {
   async getAssessments(filters?: AssessmentFilters): Promise<Assessment[]> {
     try {
       // Use Supabase's query builder directly and let TypeScript infer the type
-      let query: any = supabase
+      const query = supabase
         .from(this.assessmentsTable)
         .select("id, title, type, category, description, status, is_public, difficulty_level, time_limit_minutes, max_attempts, created_at, updated_at, questions, scoring_logic, outcome_descriptions");
 
       // Apply filters
+      let filteredQuery = query;
       if (filters?.is_public !== undefined) {
-        query = query.eq("is_public", filters.is_public);
+        filteredQuery = query.eq("is_public", filters.is_public);
       }
       if (filters?.category) {
-        query = query.eq("category", filters.category);
+        filteredQuery = query.eq("category", filters.category);
       }
       if (filters?.type) {
-        query = query.eq("type", filters.type);
+        filteredQuery = query.eq("type", filters.type);
       }
       if (filters?.status) {
-        query = query.eq("status", filters.status);
+        filteredQuery = query.eq("status", filters.status);
       }
 
-      const { data, error } = await query;
+      const { data, error } = await filteredQuery;
 
       if (error) {
         console.error("Error fetching assessments:", error);

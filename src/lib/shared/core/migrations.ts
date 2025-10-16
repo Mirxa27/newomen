@@ -3,6 +3,7 @@ import { Database } from '@/integrations/supabase/types';
 import { logger } from '@/lib/logging';
 import { DatabaseError, MigrationError } from '@/lib/errors';
 import { withDatabasePool } from './pool';
+import { Tables } from '@/integrations/supabase/types';
 
 export interface Migration {
   version: string;
@@ -129,7 +130,7 @@ export class MigrationManager {
       if (!options.dryRun) {
         const { error } = await this.client
           .from('schema_migrations')
-          .insert(record as any);
+          .insert(record as unknown as Tables<'schema_migrations'>);
 
         if (error) {
           throw new DatabaseError('Failed to record migration');

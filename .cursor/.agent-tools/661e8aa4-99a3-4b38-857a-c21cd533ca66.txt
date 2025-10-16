@@ -1,0 +1,50 @@
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add/rm <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+        modified:   deno.lock
+        modified:   deploy-web.sh
+        modified:   ios/App/App/AppDelegate.swift
+        modified:   ios/App/App/Base.lproj/Main.storyboard
+        modified:   ios/App/Podfile
+        modified:   ios/App/Podfile.lock
+        modified:   pnpm-lock.yaml
+        modified:   scripts/verify-mcp-connection.ts
+        modified:   src/App.tsx
+        modified:   src/components/features/admin/ai/AgentBuilder.tsx
+        modified:   src/components/features/admin/ai/AssessmentAIConfig.tsx
+        modified:   src/components/features/ai/VoiceInterface.tsx
+        modified:   src/components/features/wellness/HabitTrackerWidget.tsx
+        modified:   src/components/features/wellness/MeditationLibrary.tsx
+        modified:   src/components/shared/ui/ErrorBoundary.tsx
+        modified:   src/components/shared/ui/toggle.tsx
+        modified:   src/hooks/features/auth/useAuth.tsx
+        modified:   src/hooks/features/auth/useUserProfile.ts
+        modified:   src/hooks/features/community/useCommunityPosts.ts
+        modified:   src/hooks/features/community/useCommunityReal.ts
+        modified:   src/hooks/features/community/useCouplesChallenge.ts
+        modified:   src/hooks/shared/mobile/useResponsive.ts
+        modified:   src/integrations/supabase/types.ts
+        modified:   src/lib/logging/index.ts
+        modified:   src/lib/shared/core/circuitBreaker.ts
+        modified:   src/lib/shared/core/cors.ts
+        modified:   src/lib/shared/core/healthCheck.ts
+        modified:   src/lib/shared/core/keyManager.ts
+        modified:   src/lib/shared/core/migrations.ts
+        modified:   src/lib/shared/core/openapi.ts
+        modified:   src/lib/shared/core/programStore.ts
+        modified:   src/lib/shared/core/rateLimiter.ts
+        modified:   src/lib/shared/core/retry.ts
+        modified:   src/lib/shared/core/sanitization.ts
+        modified:   src/lib/shared/core/supabase-utils.ts
+        modified:   src/pages/admin/ContentModeration.tsx
+        modified:   src/pages/admin/SystemHealth.tsx
+        modified:   src/pages/features/admin/AIContentGenerator.tsx
+        modified:   src/pages/features/admin/AIPrompting.tsx
+        modified:   src/pages/features/admin/AIProviderManagement.tsx
+        modified:   src/pages/features/admin/Agents.tsx
+        modified:   src/pages/features/admin/ContentManagement.tsx
+        modified:   src/pages/features/admin/ProviderManagement.tsx
+        modified:   src/pages/features/admin/ProvidersManagement.tsx

@@ -33,13 +33,15 @@ const AFFIRMATIONS = [
   "Your potential is limitless.",
 ];
 
+type DashboardTab = 'overview' | 'progress' | 'achievements';
+
 const MobileDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { profile, loading, getDisplayName } = useUserProfile();
   const [levelThresholds, setLevelThresholds] = useState<Database["public"]["Tables"]["level_thresholds"]["Row"][]>([]);
   const [affirmation, setAffirmation] = useState("");
-  const [activeTab, setActiveTab] = useState<'overview' | 'progress' | 'achievements'>('overview');
+  const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
 
   useEffect(() => {
     const loadGamificationData = async () => {
@@ -191,7 +193,7 @@ const MobileDashboard = () => {
           return (
             <MobileTouchOptimizer key={tab.id}>
               <button
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as DashboardTab)}
                 className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all duration-300 ${
                   activeTab === tab.id
                     ? 'bg-primary text-primary-foreground shadow-lg'

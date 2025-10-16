@@ -13,6 +13,7 @@ import { PostCard } from '@/components/features/community/PostCard';
 import { PostComposer } from '@/components/features/community/PostComposer';
 import { Announcements } from '@/components/features/community/Announcements';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/shared/ui/dialog';
+import { useNavigate } from 'react-router-dom';
 
 export default function Community() {
   const {
@@ -31,6 +32,7 @@ export default function Community() {
   const [activeTab, setActiveTab] = useState<'feed' | 'connections'>('feed');
   const [postFilter, setPostFilter] = useState<string>('all');
   const [showComposer, setShowComposer] = useState(false);
+  const [trendingTag, setTrendingTag] = useState<string | undefined>();
 
   const { 
     posts, 
@@ -40,7 +42,8 @@ export default function Community() {
     unlikePost,
     commentOnPost,
     refreshPosts
-  } = useCommunityPosts(postFilter);
+  } = useCommunityPosts(postFilter, trendingTag);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (debouncedSearchQuery) {
@@ -181,8 +184,7 @@ export default function Community() {
                         onUnlike={unlikePost}
                         onComment={commentOnPost}
                         onClick={(postId) => {
-                          // Navigate to post detail page
-                          console.log('Open post:', postId);
+                          navigate(`/post/${postId}`);
                         }}
                       />
                     ))}
@@ -205,8 +207,7 @@ export default function Community() {
                         variant="secondary"
                         className="bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 cursor-pointer"
                         onClick={() => {
-                          // Filter by tag
-                          console.log('Filter by tag:', tag);
+                          setTrendingTag(tag);
                         }}
                       >
                         #{tag}

@@ -111,7 +111,7 @@ export class AffirmationService {
 
   static async updateAffirmationTime(userId: string, time: string) {
     try {
-      return await this.createOrUpdateAffirmationSettings(userId, { preferred_time: time as any });
+      return await this.createOrUpdateAffirmationSettings(userId, { preferred_time: time });
     } catch (error) {
       console.error("Error updating affirmation time:", error);
       throw error;

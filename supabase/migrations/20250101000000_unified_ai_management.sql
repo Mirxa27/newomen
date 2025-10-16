@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS agents (
   system_prompt TEXT,
   temperature DECIMAL(3,2) DEFAULT 0.7,
   max_tokens INTEGER DEFAULT 1000,
-  is_active BOOLEAN DEFAULT true,
+  status VARCHAR(20) DEFAULT 'active',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -147,6 +147,7 @@ ALTER TABLE provider_sync_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE api_usage_tracking ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for providers
+DROP POLICY IF EXISTS "Admins can manage providers" ON providers;
 CREATE POLICY "Admins can manage providers"
   ON providers
   FOR ALL
@@ -160,6 +161,7 @@ CREATE POLICY "Admins can manage providers"
   );
 
 -- RLS Policies for provider_api_keys
+DROP POLICY IF EXISTS "Admins can manage provider API keys" ON provider_api_keys;
 CREATE POLICY "Admins can manage provider API keys"
   ON provider_api_keys
   FOR ALL
@@ -173,6 +175,7 @@ CREATE POLICY "Admins can manage provider API keys"
   );
 
 -- RLS Policies for models
+DROP POLICY IF EXISTS "Admins can manage models" ON models;
 CREATE POLICY "Admins can manage models"
   ON models
   FOR ALL
@@ -186,6 +189,7 @@ CREATE POLICY "Admins can manage models"
   );
 
 -- RLS Policies for voices
+DROP POLICY IF EXISTS "Admins can manage voices" ON voices;
 CREATE POLICY "Admins can manage voices"
   ON voices
   FOR ALL
@@ -199,6 +203,7 @@ CREATE POLICY "Admins can manage voices"
   );
 
 -- RLS Policies for agents
+DROP POLICY IF EXISTS "Admins can manage agents" ON agents;
 CREATE POLICY "Admins can manage agents"
   ON agents
   FOR ALL
@@ -212,6 +217,7 @@ CREATE POLICY "Admins can manage agents"
   );
 
 -- RLS Policies for ai_service_mappings
+DROP POLICY IF EXISTS "Admins can manage service mappings" ON ai_service_mappings;
 CREATE POLICY "Admins can manage service mappings"
   ON ai_service_mappings
   FOR ALL
@@ -225,6 +231,7 @@ CREATE POLICY "Admins can manage service mappings"
   );
 
 -- RLS Policies for provider_health
+DROP POLICY IF EXISTS "Admins can view provider health" ON provider_health;
 CREATE POLICY "Admins can view provider health"
   ON provider_health
   FOR ALL
@@ -238,6 +245,7 @@ CREATE POLICY "Admins can view provider health"
   );
 
 -- RLS Policies for provider_sync_logs
+DROP POLICY IF EXISTS "Admins can view sync logs" ON provider_sync_logs;
 CREATE POLICY "Admins can view sync logs"
   ON provider_sync_logs
   FOR ALL
@@ -251,6 +259,7 @@ CREATE POLICY "Admins can view sync logs"
   );
 
 -- RLS Policies for api_usage_tracking
+DROP POLICY IF EXISTS "Admins can view usage tracking" ON api_usage_tracking;
 CREATE POLICY "Admins can view usage tracking"
   ON api_usage_tracking
   FOR ALL
@@ -305,26 +314,31 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create triggers
+DROP TRIGGER IF EXISTS providers_updated_at ON providers;
 CREATE TRIGGER providers_updated_at
   BEFORE UPDATE ON providers
   FOR EACH ROW
   EXECUTE FUNCTION update_providers_updated_at();
 
+DROP TRIGGER IF EXISTS models_updated_at ON models;
 CREATE TRIGGER models_updated_at
   BEFORE UPDATE ON models
   FOR EACH ROW
   EXECUTE FUNCTION update_models_updated_at();
 
+DROP TRIGGER IF EXISTS voices_updated_at ON voices;
 CREATE TRIGGER voices_updated_at
   BEFORE UPDATE ON voices
   FOR EACH ROW
   EXECUTE FUNCTION update_voices_updated_at();
 
+DROP TRIGGER IF EXISTS agents_updated_at ON agents;
 CREATE TRIGGER agents_updated_at
   BEFORE UPDATE ON agents
   FOR EACH ROW
   EXECUTE FUNCTION update_agents_updated_at();
 
+DROP TRIGGER IF EXISTS ai_service_mappings_updated_at ON ai_service_mappings;
 CREATE TRIGGER ai_service_mappings_updated_at
   BEFORE UPDATE ON ai_service_mappings
   FOR EACH ROW
@@ -338,7 +352,7 @@ CREATE INDEX IF NOT EXISTS idx_models_enabled ON models(enabled);
 CREATE INDEX IF NOT EXISTS idx_voices_provider_id ON voices(provider_id);
 CREATE INDEX IF NOT EXISTS idx_voices_enabled ON voices(enabled);
 CREATE INDEX IF NOT EXISTS idx_agents_model_id ON agents(model_id);
-CREATE INDEX IF NOT EXISTS idx_agents_is_active ON agents(is_active);
+CREATE INDEX IF NOT EXISTS idx_agents_status ON agents(status);
 CREATE INDEX IF NOT EXISTS idx_ai_service_mappings_service_name ON ai_service_mappings(service_name);
 CREATE INDEX IF NOT EXISTS idx_ai_service_mappings_service_type ON ai_service_mappings(service_type);
 CREATE INDEX IF NOT EXISTS idx_ai_service_mappings_is_active ON ai_service_mappings(is_active);

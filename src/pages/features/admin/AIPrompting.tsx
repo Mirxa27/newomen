@@ -58,7 +58,7 @@ export default function AIPrompting() {
     setEditingPrompt({
       id: "", // Temporary ID for new prompt
       name: "New Prompt",
-      content: emptyPromptContent as any,
+      content: emptyPromptContent as unknown as Json,
       created_at: new Date().toISOString(),
       hosted_prompt_id: "",
       status: "draft",

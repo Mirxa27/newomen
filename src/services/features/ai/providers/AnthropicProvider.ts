@@ -8,14 +8,17 @@ import {
   VoiceListResponse, 
   ProviderTestResult,
   ModelCapabilities,
-  AnthropicConfig 
+  AnthropicConfig,
+  AIProvider,
+  ProviderAuth,
+  ProviderEndpoints,
 } from './types';
 import { BaseProviderService } from './BaseProviderService';
 
 export class AnthropicProviderService extends BaseProviderService {
   private config: AnthropicConfig;
 
-  constructor(provider: any, auth: any, endpoints: any, config: AnthropicConfig) {
+  constructor(provider: AIProvider, auth: ProviderAuth, endpoints: ProviderEndpoints, config: AnthropicConfig) {
     super(provider, auth, endpoints);
     this.config = config;
   }

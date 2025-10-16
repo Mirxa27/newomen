@@ -46,20 +46,48 @@ GRANT EXECUTE ON FUNCTION public.get_provider_api_key_by_type(text) TO authentic
 GRANT EXECUTE ON FUNCTION public.get_provider_api_key_by_type(text) TO service_role;
 
 -- Insert Z.AI provider if it doesn't exist
-INSERT INTO public.providers (id, name, type, api_base, status)
-VALUES (
-  '00000000-0000-0000-0000-000000000001'::uuid,
-  'Z.AI',
-  'zai',
-  'https://api.z.ai/api/coding/paas/v4',
-  'active'
-)
-ON CONFLICT (id) DO UPDATE SET
-  name = EXCLUDED.name,
-  type = EXCLUDED.type,
-  api_base = EXCLUDED.api_base,
-  status = EXCLUDED.status,
-  updated_at = now();
+DO $$
+BEGIN
+  -- Check if updated_at column exists
+  IF EXISTS (
+    SELECT 1 
+    FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'providers' 
+    AND column_name = 'updated_at'
+  ) THEN
+    -- Insert with updated_at
+    INSERT INTO public.providers (id, name, type, api_base, status)
+    VALUES (
+      '00000000-0000-0000-0000-000000000001'::uuid,
+      'Z.AI',
+      'zai',
+      'https://api.z.ai/api/coding/paas/v4',
+      'active'
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      name = EXCLUDED.name,
+      type = EXCLUDED.type,
+      api_base = EXCLUDED.api_base,
+      status = EXCLUDED.status,
+      updated_at = now();
+  ELSE
+    -- Insert without updated_at
+    INSERT INTO public.providers (id, name, type, api_base, status)
+    VALUES (
+      '00000000-0000-0000-0000-000000000001'::uuid,
+      'Z.AI',
+      'zai',
+      'https://api.z.ai/api/coding/paas/v4',
+      'active'
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      name = EXCLUDED.name,
+      type = EXCLUDED.type,
+      api_base = EXCLUDED.api_base,
+      status = EXCLUDED.status;
+  END IF;
+END $$;
 
 COMMENT ON FUNCTION public.get_provider_api_key_by_type(text) IS 'Retrieves API key for a provider by type or name (e.g., ''zai'', ''openai'')';
 

@@ -40,7 +40,7 @@ export const defaultRetryConfig: RetryConfig = {
       error.name === 'TimeoutError' ||
       error.name === 'ServiceUnavailableError' ||
       error.name === 'DatabaseError' ||
-      (error as any).statusCode >= 500
+      (error as { statusCode?: number }).statusCode >= 500
     );
   },
 };
@@ -403,8 +403,8 @@ export const retryPolicies = {
         error.name === 'NetworkError' ||
         error.name === 'TypeError' ||
         error.name === 'TimeoutError' ||
-        (error as any).code === 'ECONNREFUSED' ||
-        (error as any).code === 'ENOTFOUND'
+        (error as { code?: string }).code === 'ECONNREFUSED' ||
+        (error as { code?: string }).code === 'ENOTFOUND'
       );
     },
   }),
@@ -422,8 +422,8 @@ export const retryPolicies = {
         error.name === 'DatabaseError' ||
         error.name === 'ConnectionError' ||
         error.name === 'QueryTimeoutError' ||
-        (error as any).code === 'ECONNREFUSED' ||
-        (error as any).code === 'ENOTFOUND'
+        (error as { code?: string }).code === 'ECONNREFUSED' ||
+        (error as { code?: string }).code === 'ENOTFOUND'
       );
     },
   }),
@@ -441,8 +441,8 @@ export const retryPolicies = {
         error.name === 'ServiceUnavailableError' ||
         error.name === 'RateLimitError' ||
         error.name === 'TimeoutError' ||
-        (error as any).statusCode === 429 ||
-        (error as any).statusCode >= 500
+        (error as { statusCode?: number }).statusCode === 429 ||
+        (error as { statusCode?: number }).statusCode >= 500
       );
     },
   }),
@@ -460,7 +460,7 @@ export const retryPolicies = {
       return (
         error.name === 'NetworkError' ||
         error.name === 'TimeoutError' ||
-        (error as any).code === 'PAYMENT_NETWORK_ERROR'
+        (error as { code?: string }).code === 'PAYMENT_NETWORK_ERROR'
       );
     },
   }),
@@ -533,7 +533,7 @@ export class RetryUtils {
   // Retry with circuit breaker
   static withCircuitBreaker<T>(
     operation: () => Promise<T>,
-    circuitBreaker: any,
+    circuitBreaker: { execute: (op: () => Promise<T>) => Promise<T> },
     config: Partial<RetryConfig> = {}
   ): Promise<T> {
     return circuitBreaker.execute(() => RetryUtil.withRetry(operation, config));
@@ -543,13 +543,13 @@ export class RetryUtils {
 // Retry decorator for methods
 export function RetryDecorator(policy: RetryPolicy = retryPolicies.conservative) {
   return function (
-    target: any,
+    target: object,
     propertyKey: string,
     descriptor: PropertyDescriptor
   ) {
-    const originalMethod = descriptor.value;
+    const originalMethod = descriptor.value as (...args: unknown[]) => unknown;
 
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (...args: unknown[]) {
       return policy.execute(async () => {
         return originalMethod.apply(this, args);
       });

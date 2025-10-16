@@ -96,7 +96,17 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
+        "npm:@capacitor/android@6",
+        "npm:@capacitor/cli@6",
+        "npm:@capacitor/core@6",
+        "npm:@capacitor/haptics@6",
+        "npm:@capacitor/ios@^6.2.1",
+        "npm:@capacitor/keyboard@6",
+        "npm:@capacitor/local-notifications@6",
+        "npm:@capacitor/splash-screen@6",
+        "npm:@capacitor/status-bar@6",
         "npm:@eslint/js@^9.32.0",
+        "npm:@genkit-ai/mcp@^1.21.0",
         "npm:@hookform/resolvers@^3.10.0",
         "npm:@paypal/react-paypal-js@^8.9.2",
         "npm:@radix-ui/react-accordion@^1.2.11",
@@ -143,6 +153,7 @@
         "npm:eslint-plugin-react-hooks@^5.2.0",
         "npm:eslint-plugin-react-refresh@~0.4.20",
         "npm:eslint@^9.32.0",
+        "npm:framer-motion@^12.23.24",
         "npm:globals@^15.15.0",
         "npm:input-otp@^1.4.2",
         "npm:lucide-react@0.462",

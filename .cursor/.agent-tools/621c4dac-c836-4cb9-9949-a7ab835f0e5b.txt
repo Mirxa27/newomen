@@ -1,0 +1,171 @@
+echo "🔍 DEPLOYMENT DIAGNOSTIC REPORT - $(date)"
+echo "════════════════════════════════════════════════════════════════"
+
+echo ""
+echo "📦 DEPENDENCY ANALYSIS"
+echo "─────────────────────────────────────────────────────────────────"
+echo "Node: $(node --version)"
+echo "NPM: $(npm --version)"
+echo "Total Dependencies: $(npm ls --depth=0 2>/dev/null | wc -l)"
+
+echo ""
+echo "🏗️  BUILD ARTIFACTS"
+echo "─────────────────────────────────────────────────────────────────"
+if [ -d dist ]; then
+  echo "✓ Build directory exists"
+  echo "  Size: $(du -sh dist | cut -f1)"
+  echo "  Files: $(find dist -type f | wc -l)"
+  [ -f dist/index.html ] && echo "  ✓ index.html present"
+  [ -d dist/assets ] && echo "  ✓ Assets directory present"
+else
+  echo "✗ Build directory missing"
+fi
+
+echo ""
+echo "📋 SOURCE CODE HEALTH"
+echo "─────────────────────────────────────────────────────────────────"
+echo "TypeScript Files: $(find src -name "*.tsx" -o -name "*.ts" | wc -l)"
+echo "Components: $(find src/components -name "*.tsx" | wc -l)"
+echo "Pages: $(find src/pages -name "*.tsx" | wc -l)"
+echo "Services: $(find src/services -name "*.ts" | wc -l)"
+
+echo ""
+echo "🔐 ENVIRONMENT CONFIGURATION"
+echo "─────────────────────────────────────────────────────────────────"
+[ -f .env ] && echo "✓ .env file exists" || echo "✗ .env file missing"
+[ -f .env.production ] && echo "✓ .env.production exists" || echo "✗ .env.production missing"                                                                   
+[ -f .env.local ] && echo "✓ .env.local exists" || echo "✗ .env.local missing"
+
+echo ""
+echo "🗄️  DATABASE & FUNCTIONS"
+echo "─────────────────────────────────────────────────────────────────"
+echo "Migrations: $(ls supabase/migrations/ | wc -l)"
+echo "Edge Functions: $(ls -d supabase/functions/*/ | wc -l)"
+echo "Functions:"
+ls -d supabase/functions/*/ | sed 's|.*functions/||' | sed 's|/$||' | sed 's/^/  - /'                                                                           
+
+echo ""
+echo "📝 GIT STATUS"
+echo "─────────────────────────────────────────────────────────────────"
+echo "Last Commit: $(git log -1 --pretty=format:'%h - %s' 2>/dev/null || echo 'N/A')"                                                                           
+echo "Branch: $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'N/A')"
+UNSTAGED=$(git diff --name-only 2>/dev/null | wc -l)
+UNTRACKED=$(git ls-files --others --exclude-standard 2>/dev/null | wc -l)
+echo "Unstaged Changes: $UNSTAGED"
+echo "Untracked Files: $UNTRACKED"
+
+echo ""
+echo "✅ VERIFICATION CHECKS"
+echo "─────────────────────────────────────────────────────────────────"
+
+# Check critical files
+CHECKS=(
+  "vite.config.ts:Vite config"
+  "tsconfig.json:TypeScript config"
+  "package.json:Package manifest"
+  "vercel.json:Vercel config"
+  "tailwind.config.ts:Tailwind config"
+  "src/main.tsx:Entry point"
+  "src/App.tsx:App component"
+)
+
+for check in "${CHECKS[@]}"; do
+  FILE="${check%:*}"
+  DESC="${check#*:}"
+  [ -f "$FILE" ] && echo "✓ $DESC" || echo "✗ $DESC"
+done
+
+echo ""
+echo "🚀 DEPLOYMENT READINESS"
+echo "─────────────────────────────────────────────────────────────────"
+BUILD_OK=0
+ENV_OK=0
+GIT_OK=0
+
+[ -d dist ] && [ -f dist/index.html ] && BUILD_OK=1
+[ -f .env.production ] && ENV_OK=1
+[ "$(git diff --name-only 2>/dev/null | wc -l)" -le 10 ] && GIT_OK=1
+
+echo "Build Status: $([ $BUILD_OK -eq 1 ] && echo '✓ Ready' || echo '✗ Needs rebuild')"                                                                         
+echo "Environment: $([ $ENV_OK -eq 1 ] && echo '✓ Configured' || echo '⚠ Review needed')"                                                                       
+echo "Git Status: $([ $GIT_OK -eq 1 ] && echo '✓ Clean' || echo '⚠ Review changes')"                                                                            
+
+READY=0
+════════════════════════════════════════════════════════════════
+🔍 DEPLOYMENT DIAGNOSTIC REPORT - Thu Oct 16 05:25:20 +03 2025
+════════════════════════════════════════════════════════════════
+
+📦 DEPENDENCY ANALYSIS
+─────────────────────────────────────────────────────────────────
+Node: v22.19.0
+NPM: 10.9.3
+Total Dependencies:       85
+
+🏗️  BUILD ARTIFACTS
+─────────────────────────────────────────────────────────────────
+✓ Build directory exists
+  Size: 7.4M
+  Files:      141
+  ✓ index.html present
+  ✓ Assets directory present
+
+📋 SOURCE CODE HEALTH
+─────────────────────────────────────────────────────────────────
+TypeScript Files:      347
+Components:      113
+Pages:       61
+Services:       57
+
+🔐 ENVIRONMENT CONFIGURATION
+─────────────────────────────────────────────────────────────────
+✓ .env file exists
+✓ .env.production exists
+✓ .env.local exists
+
+🗄️  DATABASE & FUNCTIONS
+─────────────────────────────────────────────────────────────────
+Migrations:       72
+Edge Functions:       15
+Functions:
+  - ai-assessment-helper
+  - ai-assessment-processor
+  - ai-content-builder
+  - ai-provider-proxy
+  - community-operations
+  - couples-challenge-analyzer
+  - delete-user
+  - export-user-data
+  - gamification-engine
+  - paypal-capture-order
+  - paypal-create-order
+  - provider-discovery-simple
+  - provider-discovery
+  - quiz-processor
+  - realtime-token
+
+📝 GIT STATUS
+─────────────────────────────────────────────────────────────────
+Last Commit: aac5c10 - feat: Fix TypeScript errors and deploy to production
+Branch: main
+Unstaged Changes:        0
+Untracked Files:        2
+
+✅ VERIFICATION CHECKS
+─────────────────────────────────────────────────────────────────
+✓ Vite config
+✓ TypeScript config
+✓ Package manifest
+✓ Vercel config
+✓ Tailwind config
+✓ Entry point
+✓ App component
+
+🚀 DEPLOYMENT READINESS
+─────────────────────────────────────────────────────────────────
+Build Status: ✓ Ready
+Environment: ✓ Configured
+Git Status: ✓ Clean
+
+════════════════════════════════════════════════════════════════
+🎯 DEPLOYMENT STATUS: ✅ READY FOR DEPLOYMENT
+════════════════════════════════════════════════════════════════

@@ -262,7 +262,7 @@ export interface OpenAPICallback {
 
 // Zod to OpenAPI schema converter
 export class ZodToOpenAPIConverter {
-  static convert(schema: z.ZodType): OpenAPISchema {
+  static convert(schema: z.ZodType<unknown>): OpenAPISchema {
     if (schema instanceof z.ZodString) {
       return this.convertString(schema);
     } else if (schema instanceof z.ZodNumber) {
@@ -364,7 +364,7 @@ export class ZodToOpenAPIConverter {
     return result;
   }
 
-  private static convertArray(schema: z.ZodArray<any>): OpenAPISchema {
+  private static convertArray(schema: z.ZodArray<z.ZodType<unknown>>): OpenAPISchema {
     const result: OpenAPISchema = { 
       type: 'array',
       items: this.convert(schema._def.type)
@@ -383,7 +383,9 @@ export class ZodToOpenAPIConverter {
     return result;
   }
 
-  private static convertObject(schema: z.ZodObject<any>): OpenAPISchema {
+  private static convertObject(
+    schema: z.ZodObject<z.ZodRawShape>
+  ): OpenAPISchema {
     const result: OpenAPISchema = { type: 'object' };
     const shape = schema._def.shape();
     
@@ -391,10 +393,13 @@ export class ZodToOpenAPIConverter {
     result.required = [];
 
     for (const [key, value] of Object.entries(shape)) {
-      const propSchema = value as z.ZodType;
+      const propSchema = value as z.ZodType<unknown>;
       result.properties![key] = this.convert(propSchema);
       
-      if (!(propSchema instanceof z.ZodOptional) && !(propSchema instanceof z.ZodNullable)) {
+      if (
+        !(propSchema instanceof z.ZodOptional) &&
+        !(propSchema instanceof z.ZodNullable)
+      ) {
         result.required!.push(key);
       }
     }
@@ -406,7 +411,7 @@ export class ZodToOpenAPIConverter {
     return result;
   }
 
-  private static convertEnum(schema: z.ZodEnum<any>): OpenAPISchema {
+  private static convertEnum(schema: z.ZodEnum<[string, ...string[]]>): OpenAPISchema {
     const result: OpenAPISchema = { 
       type: 'string',
       enum: schema._def.values
@@ -419,9 +424,11 @@ export class ZodToOpenAPIConverter {
     return result;
   }
 
-  private static convertUnion(schema: z.ZodUnion<any>): OpenAPISchema {
+  private static convertUnion(schema: z.ZodUnion<[z.ZodType<unknown>, ...z.ZodType<unknown>[]]>): OpenAPISchema {
     const result: OpenAPISchema = {
-      oneOf: schema._def.options.map((option: z.ZodType) => this.convert(option))
+      oneOf: schema._def.options.map((option: z.ZodType) =>
+        this.convert(option)
+      ),
     };
 
     if (schema.description) {
@@ -431,7 +438,7 @@ export class ZodToOpenAPIConverter {
     return result;
   }
 
-  private static convertOptional(schema: z.ZodOptional<any>): OpenAPISchema {
+  private static convertOptional(schema: z.ZodOptional<z.ZodType<unknown>>): OpenAPISchema {
     const innerSchema = this.convert(schema._def.innerType);
     innerSchema.nullable = true;
     
@@ -442,7 +449,7 @@ export class ZodToOpenAPIConverter {
     return innerSchema;
   }
 
-  private static convertNullable(schema: z.ZodNullable<any>): OpenAPISchema {
+  private static convertNullable(schema: z.ZodNullable<z.ZodType<unknown>>): OpenAPISchema {
     const innerSchema = this.convert(schema._def.innerType);
     innerSchema.nullable = true;
     
@@ -1358,7 +1365,7 @@ export class APIDocumentationService {
       let hasOperation = false;
 
       for (const method of methods) {
-        const operation = (pathItem as any)[method];
+        const operation = (pathItem as Record<string, unknown>)[method] as OpenAPIOperation | undefined;
         if (operation) {
           hasOperation = true;
           

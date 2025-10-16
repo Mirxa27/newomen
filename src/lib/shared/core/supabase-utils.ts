@@ -9,16 +9,16 @@ import { supabase } from '@/integrations/supabase/client';
  * Type-safe update operation for Supabase tables
  * This handles the type casting issues with Supabase client
  */
-export async function safeUpdate<T = any>(
+export async function safeUpdate<T>(
   tableName: string,
   id: string,
   data: Partial<T>
 ): Promise<{ data: T | null; error: Error | null }> {
   try {
-    // @ts-ignore - Bypass stale Supabase types
+    // @ts-expect-error - Bypass stale Supabase types
     const { data: result, error } = await supabase
       .from(tableName)
-      .update(data as any)
+      .update(data)
       .eq('id', id)
       .select()
       .single();
@@ -33,15 +33,15 @@ export async function safeUpdate<T = any>(
  * Type-safe insert operation for Supabase tables
  * This handles the type casting issues with Supabase client
  */
-export async function safeInsert<T = any>(
+export async function safeInsert<T>(
   tableName: string,
   data: Partial<T>
 ): Promise<{ data: T | null; error: Error | null }> {
   try {
-    // @ts-ignore - Bypass stale Supabase types
+    // @ts-expect-error - Bypass stale Supabase types
     const { data: result, error } = await supabase
       .from(tableName)
-      .insert(data as any)
+      .insert(data)
       .select()
       .single();
 
@@ -54,7 +54,7 @@ export async function safeInsert<T = any>(
 /**
  * Type-safe select operation for Supabase tables
  */
-export async function safeSelect<T = any>(
+export async function safeSelect<T>(
   tableName: string,
   id: string
 ): Promise<{ data: T | null; error: Error | null }> {
@@ -74,14 +74,14 @@ export async function safeSelect<T = any>(
 /**
  * Type-safe select with custom query for Supabase tables
  */
-export async function safeSelectQuery<T = any>(
+export async function safeSelectQuery<T>(
   tableName: string,
-  query: any
+  query: Promise<{ data: T | null; error: Error | null }>
 ): Promise<{ data: T | null; error: Error | null }> {
   try {
     const { data: result, error } = await query;
 
-    return { data: result as T | null, error };
+    return { data: result, error };
   } catch (error) {
     return { data: null, error: error as Error };
   }

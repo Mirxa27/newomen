@@ -44,7 +44,7 @@ export interface PostComment {
   };
 }
 
-export const useCommunityPosts = (filterType: string = 'all') => {
+export const useCommunityPosts = (filterType: string = 'all', tag?: string) => {
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +68,7 @@ export const useCommunityPosts = (filterType: string = 'all') => {
         body: JSON.stringify({
           operation: 'get_feed',
           filterType: filterType,
+          tag: tag,
           limit: 50,
           offset: 0
         })
@@ -86,7 +87,7 @@ export const useCommunityPosts = (filterType: string = 'all') => {
     } finally {
       setLoading(false);
     }
-  }, [filterType]);
+  }, [filterType, tag]);
 
   useEffect(() => {
     fetchPosts();

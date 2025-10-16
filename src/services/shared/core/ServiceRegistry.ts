@@ -2,10 +2,10 @@
 // Central hub for all business logic services
 
 import { mobileService } from './MobileService';
-import { assessmentBusinessLogic } from './AssessmentBusinessLogic';
-import { paymentService } from './PaymentService';
-import { communityService } from './CommunityService';
-import { errorHandler } from '@/utils/error-handling';
+import { assessmentBusinessLogic } from '@/services/features/assessment/AssessmentBusinessLogic';
+import { paymentService } from '@/services/features/payment/PaymentService';
+import { communityService } from '@/services/features/community/CommunityService';
+import { errorHandler } from '@/utils/shared/core/error-handling';
 
 export interface ServiceStatus {
   name: string;
@@ -23,7 +23,7 @@ export interface PlatformHealth {
 
 export class ServiceRegistry {
   private static instance: ServiceRegistry;
-  private services: Map<string, any> = new Map();
+  private services: Map<string, unknown> = new Map();
   private serviceStatus: Map<string, ServiceStatus> = new Map();
   private startTime: number = Date.now();
 
@@ -81,12 +81,12 @@ export class ServiceRegistry {
   }
 
   // Get service by name
-  public getService<T = any>(name: string): T | null {
-    return this.services.get(name) || null;
+  public getService<T = unknown>(name: string): T | null {
+    return this.services.get(name) as T || null;
   }
 
   // Get all services
-  public getAllServices(): Map<string, any> {
+  public getAllServices(): Map<string, unknown> {
     return new Map(this.services);
   }
 

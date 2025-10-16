@@ -129,7 +129,7 @@ export default function ContentManagement() {
         category: newChallenge.category,
         questions: [newChallenge.question.trim()],
       } satisfies Partial<ChallengeTemplate> & { questions: string[] };
-      const { data, error } = await supabase.from("challenge_templates").insert(payload as any).select().single();
+      const { data, error } = await supabase.from("challenge_templates").insert(payload as Partial<Tables<'challenge_templates'>>).select().single();
       if (error) throw error;
       setChallenges((prev) => (data ? [data, ...prev] : prev));
       setNewChallenge({ title: "", question: "", category: newChallenge.category, description: "" });
@@ -164,8 +164,15 @@ export default function ContentManagement() {
       // Map visibility option to is_public
       const isPublic = assessmentFormData.is_public === 'public';
       
+      interface AIQuestion {
+        question: string;
+        type?: string;
+        options?: string[];
+        required?: boolean;
+        order?: number;
+      }
       // Convert the generated assessment structure to match our database schema
-      const questions = (data.questions || []).map((q: any) => ({
+      const questions = (data.questions || []).map((q: AIQuestion) => ({
         id: `q-${Math.random().toString(36).substr(2, 9)}`,
         question: q.question,
         type: q.type || 'multiple_choice',
@@ -303,7 +310,7 @@ export default function ContentManagement() {
                         <TableCell>{assessment.type}</TableCell>
                         <TableCell>{Array.isArray(assessment.questions) ? assessment.questions.length : 0}</TableCell>
                         <TableCell>
-                          <Badge variant={getVisibilityBadge(assessment.is_public ? 'public' : 'members_only').variant as any}>
+                          <Badge variant={getVisibilityBadge(assessment.is_public ? 'public' : 'members_only').variant}>
                             {getVisibilityBadge(assessment.is_public ? 'public' : 'members_only').label}
                           </Badge>
                         </TableCell>
@@ -526,7 +533,7 @@ export default function ContentManagement() {
 
               <div>
                 <Label htmlFor="visibility">Visibility</Label>
-                <Select value={assessmentFormData.is_public} onValueChange={(value) => setAssessmentFormData(prev => ({ ...prev, is_public: value as any }))}>
+                <Select value={assessmentFormData.is_public} onValueChange={(value) => setAssessmentFormData(prev => ({ ...prev, is_public: value as typeof VISIBILITY_OPTIONS[number] }))}>
                   <SelectTrigger className="glass mt-1">
                     <SelectValue />
                   </SelectTrigger>

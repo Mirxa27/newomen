@@ -178,7 +178,7 @@ export default function Assessment() {
     } catch (error) {
       console.error('AI answer generation failed:', error);
     }
-  }, [id]);
+  }, [id, aiAnswerOptions]);
 
   const loadAssessment = useCallback(async () => {
     if (!id) return;
@@ -264,7 +264,7 @@ export default function Assessment() {
     } finally {
       setLoading(false);
     }
-  }, [assessment, id, aiHealthCheck, generateAIAnswerOptions, toast]);
+  }, [assessment, id, requiresAI, aiHealthCheck, generateAIAnswerOptions, toast]);
 
   const submitAssessment = useCallback(async () => {
     if (!attempt || !assessment) return;

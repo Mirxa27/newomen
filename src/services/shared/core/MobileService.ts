@@ -241,7 +241,7 @@ export class MobileService {
   }
 
   // Show notification
-  public async showNotification(title: string, body: string, data?: any): Promise<void> {
+  public async showNotification(title: string, body: string, data?: Record<string, unknown>): Promise<void> {
     if (!this.config.enableNotifications || !this.deviceInfo?.isNative) return;
 
     try {

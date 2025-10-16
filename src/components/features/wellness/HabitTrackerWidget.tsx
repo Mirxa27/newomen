@@ -20,13 +20,8 @@ export default function HabitTrackerWidget() {
   const [habits, setHabits] = useState<HabitData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user?.id) {
-      loadHabits();
-    }
-  }, [user?.id]);
-
-  const loadHabits = async () => {
+  const loadHabits = React.useCallback(async () => {
+    if (!user?.id) return;
     try {
       setLoading(true);
       const data = await HabitTrackerService.getUserHabits(user!.id);
@@ -37,9 +32,14 @@ export default function HabitTrackerWidget() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    loadHabits();
+  }, [loadHabits]);
 
   const handleCompleteHabit = async (habitId: string) => {
+    if (!user?.id) return;
     try {
       await HabitTrackerService.logHabitCompletion(habitId, user!.id);
       await loadHabits();

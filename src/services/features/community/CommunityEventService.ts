@@ -31,6 +31,59 @@ export interface EventAttendee {
   created_at: string;
 }
 
+export interface CommunityChallenge {
+  id: string;
+  community_id: string;
+  title: string;
+  description: string;
+  challenge_type: string;
+  goal: number;
+  start_date: string;
+  end_date: string;
+  status: 'active' | 'completed' | 'cancelled';
+  created_at: string;
+}
+
+export interface ChallengeParticipant {
+    id: string;
+    challenge_id: string;
+    user_id: string;
+    current_value: number;
+    created_at: string;
+}
+
+export interface UserProfileBasic {
+    first_name: string;
+    last_name: string;
+    avatar_url: string;
+}
+
+export interface ChallengeParticipantWithProfile extends ChallengeParticipant {
+    user_profiles: UserProfileBasic;
+}
+
+export interface CommunityResource {
+    id: string;
+    community_id: string;
+    created_by_user_id: string;
+    title: string;
+    description: string;
+    resource_type: string;
+    resource_url: string;
+    is_approved: boolean;
+    created_at: string;
+}
+
+export interface CommunityGuideline {
+    id: string;
+    community_id: string;
+    title: string;
+    content: string;
+    is_active: boolean;
+    display_order: number;
+    created_at: string;
+}
+
 class CommunityEventService {
   /**
    * Get community events
@@ -149,7 +202,7 @@ class CommunityEventService {
   /**
    * Get community challenges
    */
-  async getChallenges(communityId: string): Promise<any[]> {
+  async getChallenges(communityId: string): Promise<CommunityChallenge[]> {
     try {
       const { data, error } = await supabase
         .from("community_challenges")
@@ -211,7 +264,7 @@ class CommunityEventService {
   /**
    * Get challenge leaderboard
    */
-  async getChallengeLeaderboard(challengeId: string): Promise<any[]> {
+  async getChallengeLeaderboard(challengeId: string): Promise<ChallengeParticipantWithProfile[]> {
     try {
       const { data, error } = await supabase
         .from("challenge_participants")
@@ -284,7 +337,7 @@ class CommunityEventService {
   /**
    * Get community resources
    */
-  async getResources(communityId: string): Promise<any[]> {
+  async getResources(communityId: string): Promise<CommunityResource[]> {
     try {
       const { data, error } = await supabase
         .from("community_resources")
@@ -304,7 +357,7 @@ class CommunityEventService {
   /**
    * Get community guidelines
    */
-  async getGuidelines(communityId: string): Promise<any[]> {
+  async getGuidelines(communityId: string): Promise<CommunityGuideline[]> {
     try {
       const { data, error } = await supabase
         .from("community_guidelines")

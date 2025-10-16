@@ -215,7 +215,7 @@ export default function AssessmentTest() {
         variant: "destructive",
       });
     }
-  }, [assessment, attempt, toast]);
+  }, [assessment, attempt, toast, responses, timeRemaining]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

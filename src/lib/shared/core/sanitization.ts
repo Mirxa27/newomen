@@ -13,7 +13,7 @@ export interface SanitizationConfig {
   removeStyles: boolean;
   allowDataAttributes: boolean;
   allowAriaAttributes: boolean;
-  customSanitizers?: Record<string, (value: any) => any>;
+  customSanitizers?: Record<string, (value: unknown) => unknown>;
 }
 
 // Default sanitization configuration
@@ -136,7 +136,7 @@ export class Sanitizer {
       return '';
     }
 
-    let sanitized = url.trim();
+    const sanitized = url.trim();
 
     // Check against allowed schemes
     const urlObj = this.parseUrl(sanitized);
@@ -178,7 +178,6 @@ export class Sanitizer {
       return '';
     }
 
-    // Remove all non-digit characters
     const sanitized = phone.replace(/\D/g, '');
 
     // Basic length validation
@@ -191,7 +190,7 @@ export class Sanitizer {
   }
 
   // Sanitize JSON input
-  sanitizeJson(json: string): any {
+  sanitizeJson(json: string): unknown {
     try {
       const parsed = JSON.parse(json);
       return this.sanitizeObject(parsed);
@@ -202,7 +201,7 @@ export class Sanitizer {
   }
 
   // Sanitize object recursively
-  sanitizeObject(obj: any): any {
+  sanitizeObject(obj: unknown): unknown {
     if (obj === null || obj === undefined) {
       return obj;
     }
@@ -216,7 +215,7 @@ export class Sanitizer {
     }
 
     if (typeof obj === 'object') {
-      const sanitized: any = {};
+      const sanitized: { [key: string]: unknown } = {};
       for (const [key, value] of Object.entries(obj)) {
         const sanitizedKey = this.sanitizeString(key);
         sanitized[sanitizedKey] = this.sanitizeObject(value);
@@ -229,7 +228,7 @@ export class Sanitizer {
 
   // Escape HTML entities
   private escapeHtml(text: string): string {
-    return text.replace(/[&<>"'`=\/]/g, (char) => htmlEntities[char] || char);
+    return text.replace(/[&<>"'`=/]/g, (char) => htmlEntities[char] || char);
   }
 
   // Remove script tags and content
@@ -333,11 +332,11 @@ export class Sanitizer {
 // XSS protection utilities
 export class XssProtector {
   static encodeForHtml(text: string): string {
-    return text.replace(/[&<>"'`=\/]/g, (char) => htmlEntities[char] || char);
+    return text.replace(/[&<>"'`=/]/g, (char) => htmlEntities[char] || char);
   }
 
   static encodeForAttribute(text: string): string {
-    return text.replace(/[&<>"'`=\/]/g, (char) => htmlEntities[char] || char);
+    return text.replace(/[&<>"'`=/]/g, (char) => htmlEntities[char] || char);
   }
 
   static encodeForJavaScript(text: string): string {
@@ -381,7 +380,7 @@ export class XssProtector {
           return false;
         }
       case 'phone':
-        return /^\+?[\d\s\-\(\)]+$/.test(input);
+        return /^\+?[\d\s()-]+$/.test(input);
       default:
         return typeof input === 'string' && input.length > 0;
     }
@@ -437,7 +436,7 @@ export class InputValidator {
   }
 
   static isValidPhoneNumber(phone: string): boolean {
-    const phoneRegex = /^\+?[\d\s\-\(\)]+$/;
+    const phoneRegex = /^\+?[\d\s()-]+$/;
     return phoneRegex.test(phone) && phone.replace(/\D/g, '').length >= 7;
   }
 

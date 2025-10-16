@@ -8,7 +8,10 @@ import {
   VoiceListResponse, 
   ProviderTestResult, 
   ModelCapabilities,
-  OpenAIConfig 
+  OpenAIConfig,
+  AIProvider,
+  ProviderAuth,
+  ProviderEndpoints,
 } from './types';
 import { BaseProviderService } from './BaseProviderService';
 
@@ -34,7 +37,7 @@ interface OpenAIVoice {
 export class OpenAIProviderService extends BaseProviderService {
   private config: OpenAIConfig;
 
-  constructor(provider: any, auth: any, endpoints: any, config: OpenAIConfig) {
+  constructor(provider: AIProvider, auth: ProviderAuth, endpoints: ProviderEndpoints, config: OpenAIConfig) {
     super(provider, auth, endpoints);
     this.config = config;
   }

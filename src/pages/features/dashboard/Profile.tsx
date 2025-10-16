@@ -13,6 +13,7 @@ import AchievementBadge from "@/components/features/community/AchievementBadge";
 import GamificationDisplay from "@/components/features/community/GamificationDisplay";
 import ImageCrop from "@/components/shared/ui/ImageCrop";
 import { useUserProfile } from "@/hooks/features/auth/useUserProfile";
+import LifeBalanceChart from "@/components/features/dashboard/LifeBalanceChart";
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -24,6 +25,7 @@ export default function Profile() {
     uploadingAvatar,
     updateProfile,
     uploadAvatar,
+    lifeBalance,
   } = useUserProfile();
 
   const [editMode, setEditMode] = useState(false);
@@ -256,9 +258,7 @@ export default function Profile() {
 
                       <div className="glass p-6 rounded-lg space-y-4">
                         <h3 className="font-semibold text-lg">Life Balance Areas</h3>
-                        <div className="text-center py-8 text-muted-foreground">
-                          <p>Your personalized life balance report will be available here after you complete more assessments.</p>
-                        </div>
+                        <LifeBalanceChart data={lifeBalance} />
                       </div>
                     </CardContent>
                   </Card>

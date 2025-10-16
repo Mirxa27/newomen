@@ -8,14 +8,17 @@ import {
   VoiceListResponse, 
   ProviderTestResult,
   ModelCapabilities,
-  GoogleConfig 
+  GoogleConfig,
+  AIProvider,
+  ProviderAuth,
+  ProviderEndpoints,
 } from './types';
 import { BaseProviderService } from './BaseProviderService';
 
 export class GoogleProviderService extends BaseProviderService {
   private config: GoogleConfig;
 
-  constructor(provider: any, auth: any, endpoints: any, config: GoogleConfig) {
+  constructor(provider: AIProvider, auth: ProviderAuth, endpoints: ProviderEndpoints, config: GoogleConfig) {
     super(provider, auth, endpoints);
     this.config = config;
   }

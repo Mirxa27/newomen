@@ -16,4 +16,4 @@ await supabase
 // Line 185: Fix RPC for award_crystals
 await supabase.rpc('award_crystals', {
   p_user_id: userId,
-} as any); // Fixed: Cast to any
+} as unknown);

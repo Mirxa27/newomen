@@ -21,7 +21,7 @@ const ZAI_MODEL_SUGGESTIONS = 'GLM-4.5-Air'; // For generating answer suggestion
 const ZAI_AUTH_TOKEN = 'b8979b7827034e8ab50df3d09f975ca7.fQUeGKyLX1xtGJgN';
 
 // Z.AI API Integration for Assessment Helper
-async function callZAI(prompt: string, systemPrompt: string, supabase: any) {
+async function callZAI(prompt: string, systemPrompt: string, supabase: ReturnType<typeof createClient>) {
   let zaiApiKey = ZAI_AUTH_TOKEN;
 
   if (!zaiApiKey) {

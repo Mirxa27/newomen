@@ -34,6 +34,28 @@ interface GetAIConfigForServiceResponse {
   cost_per_1k_completion_tokens: number;
 }
 
+interface AIAnalysis {
+    feedback?: string;
+    overall_assessment?: string;
+    explanation?: string;
+    insights?: string | string[] | Record<string, unknown>;
+    next_steps?: string;
+    detailed_insights?: Record<string, unknown>;
+    strengths?: string[];
+    areas_for_improvement?: string[];
+    areas_for_reflection?: string[];
+    recommendations?: string[];
+    score?: number;
+    passed?: boolean;
+}
+
+interface AIInvokeResponse {
+    success: boolean;
+    analysis?: AIAnalysis;
+    tokensUsed?: number;
+    cost?: number;
+}
+
 export class AIAssessmentService {
   /**
    * Get AI configuration for a specific service (e.g., 'assessment_scoring')
@@ -48,7 +70,7 @@ export class AIAssessmentService {
       if (error) throw error;
       
       // The RPC returns an array, even for a single expected result
-      const configData = data as unknown as GetAIConfigForServiceResponse[];
+      const configData = data as GetAIConfigForServiceResponse[];
       if (!configData || configData.length === 0) return null;
 
       const result = configData[0];
@@ -119,7 +141,7 @@ export class AIAssessmentService {
                        'attemptId' in answers ? answers.attemptId : null;
       const userId = 'user_id' in answers ? answers.user_id : 
                     'userId' in answers ? answers.userId : null;
-      const responses = 'responses' in answers ? answers.responses : answers;
+      const responses = 'responses' in answers ? answers.responses as Record<string, unknown> : answers;
       const timeSpentMinutes = 'time_spent_minutes' in answers ? answers.time_spent_minutes :
                               'timeSpentMinutes' in answers ? answers.timeSpentMinutes : 0;
       
@@ -127,11 +149,11 @@ export class AIAssessmentService {
         attemptId: attemptId as string,
         assessmentId,
         userId: userId as string,
-        responses: responses as Record<string, unknown>,
+        responses: responses,
         timeSpentMinutes: Number(timeSpentMinutes) || 0,
       };
 
-      const { data, error } = await supabase.functions.invoke('ai-assessment-processor', {
+      const { data, error } = await supabase.functions.invoke<AIInvokeResponse>('ai-assessment-processor', {
         body: payload,
       });
 

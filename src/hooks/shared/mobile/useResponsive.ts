@@ -93,7 +93,7 @@ export function useKeyboardVisible() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
-    const handleKeyboardShow = (event: any) => {
+    const handleKeyboardShow = (event: CustomEvent<{ height: number }>) => {
       setIsKeyboardOpen(true);
       setKeyboardHeight(event.detail?.height || 0);
     };
@@ -177,7 +177,7 @@ export function useNetworkInfo() {
   );
 
   useEffect(() => {
-    const connection = (navigator as any).connection;
+    const connection = (navigator as { connection?: { effectiveType: string, addEventListener: (event: string, callback: () => void) => void, removeEventListener: (event: string, callback: () => void) => void } }).connection;
     if (!connection) return;
 
     const handleChange = () => {

@@ -45,6 +45,43 @@ export interface FeatureAccess {
   access_expires_at: string | null;
 }
 
+export interface PromoCode {
+    id: string;
+    code: string;
+    discount_type: 'percentage' | 'fixed_amount';
+    discount_value: number;
+    max_uses: number;
+    current_uses: number;
+    is_active: boolean;
+    applicable_tiers?: string[];
+}
+
+export interface BillingInvoice {
+    id: string;
+    user_id: string;
+    amount: number;
+    status: 'paid' | 'unpaid' | 'failed';
+    billing_date: string;
+    pdf_url?: string;
+}
+
+export interface RefundRequest {
+    id: string;
+    user_id: string;
+    invoice_id: string;
+    amount: number;
+    reason: string;
+    status: 'pending' | 'approved' | 'rejected';
+}
+
+export interface SubscriptionUsage {
+    id: string;
+    user_id: string;
+    month: string;
+    [key: string]: string | number;
+}
+
+
 class SubscriptionService {
   /**
    * Get all active subscription plans
@@ -311,7 +348,7 @@ class SubscriptionService {
       logInfo(`Promo code ${code} applied to user ${userId}`);
       return { discount, tier: promoData.applicable_tiers?.[0] || 'lite' };
     } catch (error) {
-      logError(`Error applying promo code for user ${userId}`, error);
+      logError(`Error applying promo code for user ${userId}`, error as Error);
       throw error;
     }
   }
@@ -319,7 +356,7 @@ class SubscriptionService {
   /**
    * Get billing history for user
    */
-  async getBillingHistory(userId: string, limit: number = 12): Promise<any[]> {
+  async getBillingHistory(userId: string, limit: number = 12): Promise<UserSubscription[]> {
     try {
       const { data, error } = await supabase
         .from("subscription_history")
@@ -339,7 +376,7 @@ class SubscriptionService {
   /**
    * Get invoices for user
    */
-  async getInvoices(userId: string): Promise<any[]> {
+  async getInvoices(userId: string): Promise<BillingInvoice[]> {
     try {
       const { data, error } = await supabase
         .from("billing_invoices")
@@ -359,7 +396,7 @@ class SubscriptionService {
   /**
    * Request refund
    */
-  async requestRefund(userId: string, invoiceId: string, reason: string): Promise<any> {
+  async requestRefund(userId: string, invoiceId: string, reason: string): Promise<RefundRequest> {
     try {
       const { data: invoice } = await supabase
         .from("billing_invoices")
@@ -387,7 +424,7 @@ class SubscriptionService {
       logInfo(`Refund requested for user ${userId} on invoice ${invoiceId}`);
       return data;
     } catch (error) {
-      logError(`Error requesting refund for user ${userId}`, error);
+      logError(`Error requesting refund for user ${userId}`, error as Error);
       throw error;
     }
   }
@@ -408,15 +445,15 @@ class SubscriptionService {
         .single();
 
       if (existing) {
-        const updateData: any = {};
-        updateData[metric] = (existing[metric] || 0) + increment;
+        const updateData: Partial<SubscriptionUsage> = {};
+        updateData[metric] = ((existing as SubscriptionUsage)[metric] as number || 0) + increment;
         
         await supabase
           .from("subscription_usage")
           .update(updateData)
           .eq("id", existing.id);
       } else {
-        const insertData: any = {
+        const insertData: Partial<SubscriptionUsage> = {
           user_id: userId,
           month: month.toISOString()
         };
@@ -427,7 +464,7 @@ class SubscriptionService {
           .insert(insertData);
       }
     } catch (error) {
-      logError(`Error tracking subscription usage for user ${userId}`, error);
+      logError(`Error tracking subscription usage for user ${userId}`, error as Error);
     }
   }
 }

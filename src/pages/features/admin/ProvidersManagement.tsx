@@ -52,10 +52,17 @@ interface Voice {
   enabled: boolean;
 }
 
+interface DiscoveryResults {
+  providers: number;
+  models: number;
+  voices: number;
+  errors?: string[];
+}
+
 export default function ProvidersManagement() {
   const { toast } = useToast();
   const [isDiscovering, setIsDiscovering] = useState(false);
-  const [discoveryResults, setDiscoveryResults] = useState<any>(null);
+  const [discoveryResults, setDiscoveryResults] = useState<DiscoveryResults | null>(null);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [models, setModels] = useState<Model[]>([]);
   const [voices, setVoices] = useState<Voice[]>([]);
@@ -76,9 +83,9 @@ export default function ProvidersManagement() {
       if (modelsData.error) throw modelsData.error;
       if (voicesData.error) throw voicesData.error;
 
-      setProviders((providersData.data as any[]) || []);
-      setModels((modelsData.data as any[]) || []);
-      setVoices((voicesData.data as any[]) || []);
+      setProviders((providersData.data) || []);
+      setModels((modelsData.data) || []);
+      setVoices((voicesData.data) || []);
     } catch (error) {
       console.error("Error loading providers:", error);
       toast({

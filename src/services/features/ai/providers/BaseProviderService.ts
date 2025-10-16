@@ -17,15 +17,29 @@ import {
   RateLimitError,
   AuthenticationError
 } from './types';
+import type { Database } from '@/integrations/supabase/types';
 
-type DBInsertResult = { data?: unknown; error?: { message?: string } | null };
-type UntypedPostgrest = {
-  upsert: (rows: unknown, options?: { onConflict?: string; ignoreDuplicates?: boolean }) => Promise<DBInsertResult>;
-  insert: (row: unknown) => Promise<DBInsertResult>;
-};
-type UntypedSupabase = {
-  from: (table: string) => UntypedPostgrest;
-};
+interface ChatCompletionResponse {
+  choices: {
+    message?: {
+      content: string;
+    };
+    text?: string;
+  }[];
+  usage?: {
+    total_tokens?: number;
+    totalTokens?: number;
+    prompt_tokens?: number;
+    promptTokens?: number;
+    completion_tokens?: number;
+    completionTokens?: number;
+  };
+}
+
+interface TTSResponse {
+    audio?: string; // base64 or url
+    audio_base64?: string;
+}
 
 export abstract class BaseProviderService {
   protected provider: AIProvider;
@@ -285,7 +299,7 @@ export abstract class BaseProviderService {
     if (models.length === 0) return;
 
     try {
-      const rows = models.map((m) => ({
+      const rows: Database['public']['Tables']['models']['Insert'][] = models.map((m) => ({
         provider_id: this.provider.id,
         model_id: m.modelId,
         display_name: m.displayName,
@@ -297,8 +311,7 @@ export abstract class BaseProviderService {
         enabled: m.enabled,
       }));
 
-      const db = supabase as unknown as UntypedSupabase;
-      const { error } = await db
+      const { error } = await supabase
         .from('models')
         .upsert(rows, {
           onConflict: 'provider_id,model_id',
@@ -316,7 +329,7 @@ export abstract class BaseProviderService {
     if (voices.length === 0) return;
 
     try {
-      const rows = voices.map((v) => ({
+      const rows: Database['public']['Tables']['voices']['Insert'][] = voices.map((v) => ({
         provider_id: this.provider.id,
         voice_id: v.voiceId,
         name: v.name,
@@ -327,8 +340,7 @@ export abstract class BaseProviderService {
         enabled: v.enabled,
       }));
 
-      const db = supabase as unknown as UntypedSupabase;
-      const { error } = await db
+      const { error } = await supabase
         .from('voices')
         .upsert(rows, {
           onConflict: 'provider_id,voice_id',
@@ -344,8 +356,7 @@ export abstract class BaseProviderService {
 
   protected async saveSyncLog(syncResult: SyncResult): Promise<void> {
     try {
-      const db = supabase as unknown as UntypedSupabase;
-      const { error } = await db
+      const { error } = await supabase
         .from('provider_sync_logs')
         .insert({
           provider_id: this.provider.id,
@@ -454,7 +465,7 @@ export abstract class BaseProviderService {
       }
 
       // Extract content and usage from response
-      const data = response.data as any;
+      const data = response.data as ChatCompletionResponse;
       const content = data?.choices?.[0]?.message?.content || 
                      data?.choices?.[0]?.text || 
                      'No content returned';
@@ -529,7 +540,7 @@ export abstract class BaseProviderService {
       }
 
       // Extract audio data from response
-      const data = response.data as any;
+      const data = response.data as TTSResponse;
       const audioData = data?.audio || data?.audio_base64;
       let audioUrl: string | undefined;
       

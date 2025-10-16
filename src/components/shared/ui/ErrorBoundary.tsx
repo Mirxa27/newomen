@@ -341,6 +341,7 @@ export class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoun
 }
 
 // Hook for using error boundary context
+// eslint-disable-next-line react-refresh/only-export-components
 export function useErrorBoundary(): {
   reset: () => void;
   reportError: (error: Error) => void;
@@ -358,6 +359,7 @@ export function useErrorBoundary(): {
 }
 
 // Error boundary wrapper for async components
+// eslint-disable-next-line react-refresh/only-export-components
 export function withErrorBoundary<P extends object>(
   Component: React.ComponentType<P>,
   errorBoundaryProps?: Partial<ErrorBoundaryProps>

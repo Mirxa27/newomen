@@ -73,7 +73,7 @@ export default function UnifiedAIManagement() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadDashboardData]);
 
   // Load dashboard data
   const loadDashboardData = useCallback(async () => {

@@ -50,6 +50,16 @@ interface NarrativeAnalysis {
   transformationRoadmap: TransformationStep[];
 }
 
+interface NarrativeIdentityDBRow {
+  narrative_identity_data: string | {
+      answers?: Record<number, string>;
+      analysis?: NarrativeAnalysis | string;
+      completed_at?: string;
+  } | null;
+}
+
+type ExplorationState = 'loading' | 'intro' | 'questionnaire' | 'analysis';
+
 export default function NarrativeIdentityExploration() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -60,6 +70,7 @@ export default function NarrativeIdentityExploration() {
   const [analysisResult, setAnalysisResult] = useState<NarrativeAnalysis | null>(null);
   const [hasExistingExploration, setHasExistingExploration] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [explorationState, setExplorationState] = useState<ExplorationState>('loading');
 
   const checkExistingExploration = useCallback(async () => {
     try {
@@ -69,14 +80,18 @@ export default function NarrativeIdentityExploration() {
         return;
       }
 
-      const { data: existingData } = await supabase
+      const { data: existingData, error: dbError } = await supabase
         .from('user_memory_profiles')
         .select('narrative_identity_data')
         .eq('user_id', user.id)
         .single();
 
+      if (dbError && dbError.code !== 'PGRST116') { // Ignore 'No rows found' error
+        throw dbError;
+      }
+      
       if (existingData) {
-        const data = existingData as any;
+        const data = existingData as NarrativeIdentityDBRow;
         if (data.narrative_identity_data) {
           let parsedData: { answers?: Record<number, string>; analysis?: NarrativeAnalysis | string; completed_at?: string } | null = null;
           if (typeof data.narrative_identity_data === 'string') {
@@ -86,8 +101,9 @@ export default function NarrativeIdentityExploration() {
               console.error('Failed to parse narrative_identity_data as JSON:', e);
             }
           } else if (typeof data.narrative_identity_data === 'object' && data.narrative_identity_data !== null) {
-            parsedData = data.narrative_identity_data as any;
+            parsedData = data.narrative_identity_data;
           }
+
           if (parsedData?.analysis) {
             let analysisObj: NarrativeAnalysis | null = null;
             if (typeof parsedData.analysis === 'string') {
@@ -105,9 +121,13 @@ export default function NarrativeIdentityExploration() {
           }
         }
         setHasExistingExploration(true);
+        setExplorationState('intro');
+      } else {
+        setExplorationState('questionnaire');
       }
     } catch (error) {
       console.error('Error checking existing exploration:', error);
+      setExplorationState('questionnaire'); // Default to starting new on error
     } finally {
       setIsLoading(false);
     }
@@ -145,6 +165,15 @@ export default function NarrativeIdentityExploration() {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(prev => prev - 1);
     }
+  };
+
+  const startNewExploration = () => {
+    setAnswers({});
+    setCurrentAnswer('');
+    setCurrentQuestionIndex(0);
+    setAnalysisResult(null);
+    setHasExistingExploration(false);
+    setExplorationState('questionnaire');
   };
 
   const analyzeNarrative = async (allAnswers: Record<number, string>) => {
@@ -187,6 +216,7 @@ export default function NarrativeIdentityExploration() {
       });
 
       setAnalysisResult(analysis);
+      setExplorationState('analysis');
       void trackNarrativeExplorationCompletion(user.id, `narrative_${user.id}`);
       toast({
         title: "Analysis Complete!",
@@ -213,7 +243,27 @@ export default function NarrativeIdentityExploration() {
     );
   }
 
-  if (analysisResult) {
+  if (explorationState === 'intro') {
+    return (
+      <div className="min-h-screen p-8 flex items-center justify-center">
+        <Card className="glass-card max-w-lg text-center">
+          <CardHeader>
+            <CardTitle className="text-3xl font-bold gradient-text">Narrative Identity Exploration</CardTitle>
+            <CardDescription>You have a previously completed exploration.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p>Would you like to view your previous analysis or start a new journey?</p>
+            <div className="flex gap-4 justify-center">
+              <Button onClick={() => setExplorationState('analysis')} className="flex-1 clay-button">View Analysis</Button>
+              <Button onClick={startNewExploration} variant="outline" className="flex-1 glass">Start New</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (explorationState === 'analysis' && analysisResult) {
     return (
       <div className="min-h-screen p-8">
         <div className="max-w-4xl mx-auto space-y-8">
@@ -271,6 +321,7 @@ export default function NarrativeIdentityExploration() {
 
           <div className="flex gap-4">
             <Button onClick={() => navigate('/dashboard')} variant="outline" className="flex-1 glass-card">Return to Dashboard</Button>
+            <Button onClick={startNewExploration} variant="secondary" className="flex-1 glass-card">Start New Exploration</Button>
             <Button onClick={() => navigate('/chat')} className="flex-1 clay-button bg-gradient-to-r from-primary to-accent">Discuss with AI <ArrowRight className="ml-2 h-4 w-4" /></Button>
           </div>
         </div>
@@ -288,9 +339,6 @@ export default function NarrativeIdentityExploration() {
         <div className="text-center space-y-4">
           <h1 className="text-4xl font-bold gradient-text">Narrative Identity Exploration</h1>
           <p className="text-muted-foreground">Discover the stories that shape who you are.</p>
-          {hasExistingExploration && (
-            <Button variant="link" onClick={() => setAnalysisResult(analysisResult)}>View Previous Analysis</Button>
-          )}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Question {currentQuestionIndex + 1} of {questions.length}</span>

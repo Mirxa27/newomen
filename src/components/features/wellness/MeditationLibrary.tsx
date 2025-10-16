@@ -30,15 +30,7 @@ export default function MeditationLibrary() {
   const [selectedDifficulty, setSelectedDifficulty] = useState<string | undefined>();
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    loadMeditations();
-  }, []);
-
-  useEffect(() => {
-    filterMeditations();
-  }, [meditations, searchQuery, selectedCategory, selectedDifficulty]);
-
-  const loadMeditations = async () => {
+  const loadMeditations = React.useCallback(async () => {
     try {
       setLoading(true);
       const data = await MeditationService.getMeditations();
@@ -57,9 +49,9 @@ export default function MeditationLibrary() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
 
-  const filterMeditations = () => {
+  const filterMeditations = React.useCallback(() => {
     let filtered = meditations;
 
     if (searchQuery) {
@@ -78,7 +70,15 @@ export default function MeditationLibrary() {
     }
 
     setFilteredMeditations(filtered);
-  };
+  }, [meditations, searchQuery, selectedCategory, selectedDifficulty]);
+
+  useEffect(() => {
+    loadMeditations();
+  }, [loadMeditations]);
+
+  useEffect(() => {
+    filterMeditations();
+  }, [filterMeditations]);
 
   const handlePlayMeditation = (meditation: Meditation) => {
     if (!user?.id) return;

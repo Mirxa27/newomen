@@ -104,7 +104,7 @@ export interface SyncResult {
   modelsDiscovered: number;
   voicesDiscovered: number;
   errors: string[];
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 export interface ProviderTestResult {
@@ -115,7 +115,7 @@ export interface ProviderTestResult {
   isHealthy: boolean;
   error?: string;
   timestamp: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface APIUsage {
@@ -128,7 +128,7 @@ export interface APIUsage {
   userId?: string;
   sessionId?: string;
   usageDate: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ProviderAuth {
@@ -182,13 +182,13 @@ export interface HumeConfig extends ProviderConfig {
 }
 
 // API Response types
-export interface ProviderAPIResponse<T = any> {
+export interface ProviderAPIResponse<T = Record<string, unknown>> {
   success: boolean;
   data?: T;
   error?: string;
   statusCode?: number;
   headers?: Record<string, string>;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ModelListResponse {

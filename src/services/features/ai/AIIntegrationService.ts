@@ -4,6 +4,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { aiProviderManager } from './AIProviderManager';
 import type { AIProvider, AIModel, AIVoice } from './providers/types';
+import { Json } from '@/integrations/supabase/types';
 
 export interface FeatureAIConfig {
   feature: 'assessment' | 'couples' | 'wellness' | 'newme' | 'community';
@@ -16,9 +17,9 @@ export interface FeatureAIConfig {
   lastUpdated: string;
 }
 
-export interface AIIntegrationResult {
+export interface AIIntegrationResult<T = Json> {
   success: boolean;
-  data?: any;
+  data?: T;
   error?: string;
   usage?: {
     tokens: number;
@@ -86,9 +87,9 @@ export class AIIntegrationService {
   // Assessment AI Integration
   async generateAssessmentFeedback(
     assessmentId: string,
-    responses: Record<string, any>,
+    responses: Record<string, unknown>,
     scores: Record<string, number>
-  ): Promise<AIIntegrationResult> {
+  ): Promise<AIIntegrationResult<{ feedback: string | undefined; generatedAt: string }>> {
     try {
       const config = await this.getFeatureConfig('assessment');
       if (!config) {
@@ -118,12 +119,12 @@ Please provide personalized feedback based on these assessment results.`;
         return {
           success: true,
           data: {
-            feedback: response.data.content,
+            feedback: response.data?.content,
             generatedAt: new Date().toISOString()
           },
           usage: {
-            tokens: response.data.usage?.totalTokens || 0,
-            cost: response.data.cost || 0,
+            tokens: response.data?.usage?.totalTokens || 0,
+            cost: response.data?.cost || 0,
             latency: 0 // Would need to track this separately
           }
         };
@@ -144,9 +145,9 @@ Please provide personalized feedback based on these assessment results.`;
 
   // Couples Challenge AI Integration
   async generateCouplesAnalysis(
-    partnerData: any,
-    responses: any[]
-  ): Promise<AIIntegrationResult> {
+    partnerData: Record<string, unknown>,
+    responses: unknown[]
+  ): Promise<AIIntegrationResult<{ analysis: string | undefined; generatedAt: string }>> {
     try {
       const config = await this.getFeatureConfig('couples');
       if (!config) {
@@ -176,12 +177,12 @@ Please analyze this couples challenge data and provide insights.`;
         return {
           success: true,
           data: {
-            analysis: response.data.content,
+            analysis: response.data?.content,
             generatedAt: new Date().toISOString()
           },
           usage: {
-            tokens: response.data.usage?.totalTokens || 0,
-            cost: response.data.cost || 0,
+            tokens: response.data?.usage?.totalTokens || 0,
+            cost: response.data?.cost || 0,
             latency: 0
           }
         };
@@ -202,9 +203,9 @@ Please analyze this couples challenge data and provide insights.`;
 
   // Wellness AI Integration
   async generateWellnessInsights(
-    wellnessData: any,
+    wellnessData: Record<string, unknown>,
     goals: string[]
-  ): Promise<AIIntegrationResult> {
+  ): Promise<AIIntegrationResult<{ insights: string | undefined; generatedAt: string }>> {
     try {
       const config = await this.getFeatureConfig('wellness');
       if (!config) {
@@ -234,12 +235,12 @@ Please provide personalized wellness insights and recommendations.`;
         return {
           success: true,
           data: {
-            insights: response.data.content,
+            insights: response.data?.content,
             generatedAt: new Date().toISOString()
           },
           usage: {
-            tokens: response.data.usage?.totalTokens || 0,
-            cost: response.data.cost || 0,
+            tokens: response.data?.usage?.totalTokens || 0,
+            cost: response.data?.cost || 0,
             latency: 0
           }
         };
@@ -261,8 +262,8 @@ Please provide personalized wellness insights and recommendations.`;
   // NewMe Voice Agent Integration
   async generateVoiceResponse(
     userMessage: string,
-    context: any
-  ): Promise<AIIntegrationResult> {
+    context: Record<string, unknown>
+  ): Promise<AIIntegrationResult<{ text: string | undefined; audioUrl: string | undefined; generatedAt: string }>> {
     try {
       const config = await this.getFeatureConfig('newme');
       if (!config) {
@@ -313,13 +314,13 @@ Please respond as the NewMe voice agent.`;
         return {
           success: true,
           data: {
-            text: response.data.content,
+            text: response.data?.content,
             audioUrl,
             generatedAt: new Date().toISOString()
           },
           usage: {
-            tokens: response.data.usage?.totalTokens || 0,
-            cost: response.data.cost || 0,
+            tokens: response.data?.usage?.totalTokens || 0,
+            cost: response.data?.cost || 0,
             latency: 0
           }
         };
@@ -341,8 +342,8 @@ Please respond as the NewMe voice agent.`;
   // Community AI Integration
   async generateCommunityContent(
     topic: string,
-    context: any
-  ): Promise<AIIntegrationResult> {
+    context: Record<string, unknown>
+  ): Promise<AIIntegrationResult<{ content: string | undefined; generatedAt: string }>> {
     try {
       const config = await this.getFeatureConfig('community');
       if (!config) {
@@ -372,12 +373,12 @@ Please generate engaging community content.`;
         return {
           success: true,
           data: {
-            content: response.data.content,
+            content: response.data?.content,
             generatedAt: new Date().toISOString()
           },
           usage: {
-            tokens: response.data.usage?.totalTokens || 0,
-            cost: response.data.cost || 0,
+            tokens: response.data?.usage?.totalTokens || 0,
+            cost: response.data?.cost || 0,
             latency: 0
           }
         };
@@ -419,7 +420,7 @@ Please generate engaging community content.`;
   }
 
   // Test feature AI configuration
-  async testFeatureConfig(feature: FeatureAIConfig['feature']): Promise<AIIntegrationResult> {
+  async testFeatureConfig(feature: FeatureAIConfig['feature']): Promise<AIIntegrationResult<{ message: string; testResponse: string | undefined }>> {
     try {
       const config = await this.getFeatureConfig(feature);
       if (!config) {
