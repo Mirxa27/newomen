@@ -63,6 +63,49 @@ export type Database = {
         }
         Relationships: []
       }
+      ,
+      couples_challenges: {
+        Row: {
+          id: string
+          initiator_id: string
+          partner_id: string | null
+          partner_name?: string | null
+          status: string
+          question_set: Json | null
+          messages: Json[] | null
+          current_question_index: number | null
+          ai_analysis: Json | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          initiator_id: string
+          partner_id?: string | null
+          partner_name?: string | null
+          status?: string
+          question_set?: Json | null
+          messages?: Json[] | null
+          current_question_index?: number | null
+          ai_analysis?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          initiator_id?: string
+          partner_id?: string | null
+          partner_name?: string | null
+          status?: string
+          question_set?: Json | null
+          messages?: Json[] | null
+          current_question_index?: number | null
+          ai_analysis?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       // Additional tables would be here...
     }
     Views: {
