@@ -49,60 +49,6 @@ export function useCommunityReal() {
   const [searchResults, setSearchResults] = useState<SimpleUser[]>([]);
   const [searching, setSearching] = useState(false);
 
-  const fetchConnections = useCallback(async () => {
-    if (!profile?.id) return;
-    setLoading(true);
-    
-    try {
-      // Use RPC function to fetch connections with user details
-      const { data, error } = await supabase.rpc('get_user_connections', {
-        user_id: profile.id
-      });
-
-      if (error) {
-        console.error('Database error fetching connections:', error);
-        throw error;
-      }
-
-      interface RawConnection {
-        id: string;
-        requester_id: string;
-        receiver_id: string;
-        status: string;
-        requester_nickname?: string;
-        requester_avatar?: string;
-        receiver_nickname?: string;
-        receiver_avatar?: string;
-      }
-      const formattedConnections: SimpleConnection[] = (data || []).map((conn: RawConnection) => ({
-        id: conn.id,
-        requester_id: conn.requester_id,
-        receiver_id: conn.receiver_id,
-        status: conn.status as ConnectionStatus,
-        requester: conn.requester_nickname ? {
-          id: conn.requester_id,
-          nickname: conn.requester_nickname,
-          avatar_url: conn.requester_avatar
-        } : undefined,
-        receiver: conn.receiver_nickname ? {
-          id: conn.receiver_id,
-          nickname: conn.receiver_nickname,
-          avatar_url: conn.receiver_avatar
-        } : undefined
-      }));
-      
-      setConnections(formattedConnections);
-      console.log(`Loaded ${formattedConnections.length} connections from database`);
-    } catch (error) {
-      console.error('Error fetching connections:', error);
-      toast.error('Could not load community connections.');
-      // Fallback: try direct query if RPC fails
-      await fetchConnectionsDirect();
-    } finally {
-      setLoading(false);
-    }
-  }, [profile, fetchConnectionsDirect]);
-
   // Fallback method using direct SQL queries
   const fetchConnectionsDirect = useCallback(async () => {
     if (!profile?.id) return;
@@ -172,9 +118,96 @@ export function useCommunityReal() {
     }
   }, [profile]);
 
+  const fetchConnections = useCallback(async () => {
+    if (!profile?.id) return;
+    setLoading(true);
+    
+    try {
+      // Use RPC function to fetch connections with user details
+      const { data, error } = await supabase.rpc('get_user_connections', {
+        user_id: profile.id
+      });
+
+      if (error) {
+        console.error('Database error fetching connections:', error);
+        throw error;
+      }
+
+      interface RawConnection {
+        id: string;
+        requester_id: string;
+        receiver_id: string;
+        status: string;
+        requester_nickname?: string;
+        requester_avatar?: string;
+        receiver_nickname?: string;
+        receiver_avatar?: string;
+      }
+      const formattedConnections: SimpleConnection[] = (data || []).map((conn: RawConnection) => ({
+        id: conn.id,
+        requester_id: conn.requester_id,
+        receiver_id: conn.receiver_id,
+        status: conn.status as ConnectionStatus,
+        requester: conn.requester_nickname ? {
+          id: conn.requester_id,
+          nickname: conn.requester_nickname,
+          avatar_url: conn.requester_avatar
+        } : undefined,
+        receiver: conn.receiver_nickname ? {
+          id: conn.receiver_id,
+          nickname: conn.receiver_nickname,
+          avatar_url: conn.receiver_avatar
+        } : undefined
+      }));
+      
+      setConnections(formattedConnections);
+      console.log(`Loaded ${formattedConnections.length} connections from database`);
+    } catch (error) {
+      console.error('Error fetching connections:', error);
+      toast.error('Could not load community connections.');
+      // Fallback: try direct query if RPC fails
+      await fetchConnectionsDirect();
+    } finally {
+      setLoading(false);
+    }
+  }, [profile, fetchConnectionsDirect]);
+
   useEffect(() => {
     if (profile) void fetchConnections();
   }, [profile, fetchConnections]);
+
+  // Fallback user search
+  const searchUsersDirect = useCallback(async (query: string) => {
+    if (!profile?.id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('id, nickname, avatar_url')
+        .or(`nickname.ilike.%${query}%,full_name.ilike.%${query}%`)
+        .neq('id', profile.id)
+        .limit(20);
+
+      if (error) throw error;
+
+      interface DirectSearchUser {
+        id: string;
+        nickname: string;
+        avatar_url?: string;
+      }
+      const users: SimpleUser[] = (data || []).map((user: DirectSearchUser) => ({
+        id: user.id,
+        nickname: user.nickname,
+        avatar_url: user.avatar_url
+      }));
+      
+      setSearchResults(users);
+      console.log(`Found ${users.length} users using fallback search`);
+    } catch (error) {
+      console.error('Error in fallback user search:', error);
+      setSearchResults([]);
+    }
+  }, [profile]);
 
   const searchUsers = useCallback(async (query: string) => {
     if (!profile?.id || query.length < 3) {
@@ -218,69 +251,7 @@ export function useCommunityReal() {
     }
   }, [profile, searchUsersDirect]);
 
-  // Fallback user search
-  const searchUsersDirect = useCallback(async (query: string) => {
-    if (!profile?.id) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('id, nickname, avatar_url')
-        .or(`nickname.ilike.%${query}%,full_name.ilike.%${query}%`)
-        .neq('id', profile.id)
-        .limit(20);
-
-      if (error) throw error;
-
-      interface DirectSearchUser {
-        id: string;
-        nickname: string;
-        avatar_url?: string;
-      }
-      const users: SimpleUser[] = (data || []).map((user: DirectSearchUser) => ({
-        id: user.id,
-        nickname: user.nickname,
-        avatar_url: user.avatar_url
-      }));
-      
-      setSearchResults(users);
-      console.log(`Found ${users.length} users using fallback search`);
-    } catch (error) {
-      console.error('Error in fallback user search:', error);
-      setSearchResults([]);
-    }
-  }, [profile]);
-
-  const sendConnectionRequest = useCallback(async (receiverId: string) => {
-    if (!profile?.id) return;
-    
-    try {
-      // Use RPC for connection request
-      const { data, error } = await supabase.rpc('send_connection_request', {
-        sender_id: profile.id,
-        receiver_id: receiverId
-      });
-
-      if (error) {
-        if (error.message?.includes('already exists')) {
-          toast.error('Connection already exists with this user.');
-          return;
-        }
-        throw error;
-      }
-
-      toast.success('Connection request sent!');
-      void fetchConnections();
-      // Remove user from search results since connection is now pending
-      setSearchResults(prev => prev.filter(user => user.id !== receiverId));
-    } catch (error) {
-      console.error('Error sending connection request:', error);
-      // Fallback: direct insertion
-      await sendConnectionRequestDirect(receiverId);
-    }
-  }, [profile, fetchConnections, sendConnectionRequestDirect]);
-
-  // Fallback connection request method
+  // Fallback connection request method - defined first to avoid dependency issue
   const sendConnectionRequestDirect = useCallback(async (receiverId: string) => {
     if (!profile?.id) return;
 
@@ -320,41 +291,37 @@ export function useCommunityReal() {
     }
   }, [profile, fetchConnections]);
 
-  const updateConnectionStatus = useCallback(async (connectionId: string, status: ConnectionStatus) => {
+  const sendConnectionRequest = useCallback(async (receiverId: string) => {
     if (!profile?.id) return;
     
     try {
-      // Use RPC for status update
-      const { data, error } = await supabase.rpc('update_connection_status', {
-        connection_id: connectionId,
-        new_status: status,
-        user_id: profile.id
+      // Use RPC for connection request
+      const { data, error } = await supabase.rpc('send_connection_request', {
+        sender_id: profile.id,
+        receiver_id: receiverId
       });
 
       if (error) {
-        if (error.message?.includes('unauthorized')) {
-          toast.error('You can only update connection requests sent to you.');
+        if (error.message?.includes('already exists')) {
+          toast.error('Connection already exists with this user.');
           return;
         }
         throw error;
       }
 
-      const statusMessages = {
-        accepted: 'Connection accepted!',
-        declined: 'Connection declined.',
-        pending: 'Connection set to pending.'
-      };
-
-      toast.success(statusMessages[status]);
+      toast.success('Connection request sent!');
       void fetchConnections();
+      // Remove user from search results since connection is now pending
+      setSearchResults(prev => prev.filter(user => user.id !== receiverId));
     } catch (error) {
-      console.error('Error updating connection status:', error);
-      // Fallback: direct update
-      await updateConnectionStatusDirect(connectionId, status);
+      console.error('Error sending connection request:', error);
+      // Fallback: direct insertion
+      await sendConnectionRequestDirect(receiverId);
     }
-  }, [profile, fetchConnections, updateConnectionStatusDirect]);
+  }, [profile, fetchConnections, sendConnectionRequestDirect]);
 
-  // Fallback connection status update
+
+  // Fallback connection status update - defined first to avoid dependency issue
   const updateConnectionStatusDirect = useCallback(async (connectionId: string, status: ConnectionStatus) => {
     if (!profile?.id) return;
 
@@ -394,6 +361,41 @@ export function useCommunityReal() {
     }
   }, [profile, fetchConnections]);
 
+  const updateConnectionStatus = useCallback(async (connectionId: string, status: ConnectionStatus) => {
+    if (!profile?.id) return;
+    
+    try {
+      // Use RPC for status update
+      const { data, error } = await supabase.rpc('update_connection_status', {
+        connection_id: connectionId,
+        new_status: status,
+        user_id: profile.id
+      });
+
+      if (error) {
+        if (error.message?.includes('unauthorized')) {
+          toast.error('You can only update connection requests sent to you.');
+          return;
+        }
+        throw error;
+      }
+
+      const statusMessages = {
+        accepted: 'Connection accepted!',
+        declined: 'Connection declined.',
+        pending: 'Connection set to pending.'
+      };
+
+      toast.success(statusMessages[status]);
+      void fetchConnections();
+    } catch (error) {
+      console.error('Error updating connection status:', error);
+      // Fallback: direct update
+      await updateConnectionStatusDirect(connectionId, status);
+    }
+  }, [profile, fetchConnections, updateConnectionStatusDirect]);
+
+
   return {
     loading,
     connections,
@@ -405,3 +407,4 @@ export function useCommunityReal() {
     currentUserId: profile?.id || null,
   };
 }
+

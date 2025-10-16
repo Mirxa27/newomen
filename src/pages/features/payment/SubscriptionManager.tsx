@@ -87,8 +87,8 @@ export default function SubscriptionManager() {
         {/* Plans Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
           {plans.map((plan, index) => {
-            const isCurrentPlan = getCurrentTier() === plan.tier_name;
-            const price = billingPeriod === 'monthly' ? plan.monthly_price : plan.yearly_price;
+            const isCurrentPlan = getCurrentTier() === plan.name;
+            const price = plan.price;
             const isPopular = index === 2;
 
             return (
@@ -108,14 +108,14 @@ export default function SubscriptionManager() {
                   {/* Plan Name & Price */}
                   <div className="mb-6">
                     <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                      {plan.display_name}
+                      {plan.name}
                     </h3>
                     <div className="flex items-baseline gap-2">
                       <span className="text-4xl font-bold text-gray-900 dark:text-white">
                         ${price.toFixed(2)}
                       </span>
                       <span className="text-gray-600 dark:text-gray-400">
-                        /{billingPeriod === 'monthly' ? 'mo' : 'yr'}
+                        /{plan.currency || 'USD'}
                       </span>
                     </div>
                   </div>
@@ -134,7 +134,7 @@ export default function SubscriptionManager() {
 
                   {/* CTA Button */}
                   <Button
-                    onClick={() => handleUpgrade(plan.tier_name)}
+                    onClick={() => handleUpgrade(plan.name)}
                     disabled={isCurrentPlan}
                     className="w-full"
                     variant={isCurrentPlan ? 'outline' : 'default'}

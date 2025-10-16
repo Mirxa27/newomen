@@ -243,7 +243,7 @@ class NotificationService {
 
       // Get random affirmation from selected categories
       const { data: affirmations } = await supabase
-        .from("daily_affirmations")
+        .from("affirmations")
         .select("*")
         .in("category", categories)
         .eq("is_active", true)

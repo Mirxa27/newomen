@@ -10,7 +10,10 @@ import { Loader2, Copy, Check, Send, Heart, Users, ArrowLeft, Sparkles, Brain } 
 import { useToast } from "@/hooks/shared/ui/use-toast";
 import { Avatar } from "@/components/shared/ui/avatar";
 import { aiCouplesChallengeService } from "@/services/features/ai/AICouplesChallengeService";
+import { enhancedConflictResolutionService, type ConflictExercise } from "@/services/features/ai/EnhancedConflictResolutionService";
 import type { AIQuestionGeneration, AICouplesAnalysis } from "@/services/features/ai/AICouplesChallengeService";
+import ConflictDetectionAlert from "@/components/features/community/ConflictDetectionAlert";
+import ConflictResolutionExercise from "@/components/features/community/ConflictResolutionExercise";
 
 type Message = {
   id: string;
@@ -52,6 +55,8 @@ export default function CouplesChallengeChat() {
   const [aiQuestion, setAiQuestion] = useState<AIQuestionGeneration | null>(null);
   const [showAIInsight, setShowAIInsight] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [currentExercise, setCurrentExercise] = useState<ConflictExercise | null>(null);
+  const [conflictDetectionEnabled, setConflictDetectionEnabled] = useState(true);
 
   const shareUrl = `${window.location.origin}/couples-challenge/join/${challengeId}`;
 
@@ -225,6 +230,23 @@ export default function CouplesChallengeChat() {
       setMessages(updatedMessages);
       setInput("");
 
+      // Real-time conflict detection
+      if (conflictDetectionEnabled && partnerJoined) {
+        try {
+          const conflictAlert = await enhancedConflictResolutionService.detectRealTimeConflict(
+            challengeId!,
+            newMessage
+          );
+          
+          if (conflictAlert) {
+            console.log('Conflict pattern detected:', conflictAlert);
+            // The ConflictDetectionAlert component will handle displaying the alert
+          }
+        } catch (error) {
+          console.error('Error in conflict detection:', error);
+        }
+      }
+
       // Check if we need to ask next question or generate analysis
       await handleNextStep(updatedMessages);
 
@@ -277,8 +299,25 @@ export default function CouplesChallengeChat() {
           .eq("id", challengeId);
 
       } else {
-        // All questions answered, generate analysis
-        await generateAnalysis();
+        // Check if ALL questions have been answered by BOTH partners
+        const totalQuestions = questions.length;
+        const userResponses = userMessages.length;
+        const partnerResponses = partnerMessages.length;
+        
+        console.log('Checking completion:', {
+          totalQuestions,
+          userResponses,
+          partnerResponses,
+          currentIndex
+        });
+
+        if (userResponses >= totalQuestions && partnerResponses >= totalQuestions) {
+          // All questions answered by both partners, generate analysis
+          console.log('All questions completed, generating analysis');
+          await generateAnalysis();
+        } else {
+          console.log('Not all questions completed yet');
+        }
       }
     }
   };
@@ -338,6 +377,39 @@ export default function CouplesChallengeChat() {
     }
   };
 
+  const handleExerciseStart = (exercise: ConflictExercise) => {
+    setCurrentExercise(exercise);
+  };
+
+  const handleExerciseComplete = async (exerciseId: string, effectivenessScore: number) => {
+    try {
+      await enhancedConflictResolutionService.completeConflictExercise(
+        exerciseId,
+        { userResponse: 'completed' },
+        { partnerResponse: 'completed' },
+        effectivenessScore
+      );
+      
+      toast({
+        title: "Exercise Completed",
+        description: "Great job working through the conflict resolution exercise!",
+      });
+    } catch (error) {
+      console.error('Error completing exercise:', error);
+    } finally {
+      setCurrentExercise(null);
+    }
+  };
+
+  const handleExerciseClose = () => {
+    setCurrentExercise(null);
+  };
+
+  const handleAlertDismiss = (alertId: string) => {
+    // Remove alert from the service
+    enhancedConflictResolutionService.clearRealTimeAlerts();
+  };
+
   const generateAnalysis = async () => {
     try {
       const analysisMessage: Message = {
@@ -356,7 +428,7 @@ export default function CouplesChallengeChat() {
         .eq("id", challengeId);
 
       // Call edge function to generate AI analysis
-      const { data, error } = await supabase.functions.invoke('couples-challenge-analyzer', {
+      const { data, error } = await supabase.functions.invoke('couples-challenge-analyzer-minimal', {
         body: { challengeId },
       });
 
@@ -627,6 +699,25 @@ export default function CouplesChallengeChat() {
               </Button>
             </div>
           </div>
+        )}
+
+        {/* Conflict Detection Alert */}
+        {conflictDetectionEnabled && partnerJoined && (
+          <ConflictDetectionAlert
+            challengeId={challengeId!}
+            onExerciseStart={handleExerciseStart}
+            onAlertDismiss={handleAlertDismiss}
+          />
+        )}
+
+        {/* Conflict Resolution Exercise Modal */}
+        {currentExercise && (
+          <ConflictResolutionExercise
+            exercise={currentExercise}
+            challengeId={challengeId!}
+            onComplete={handleExerciseComplete}
+            onClose={handleExerciseClose}
+          />
         )}
       </div>
     </div>

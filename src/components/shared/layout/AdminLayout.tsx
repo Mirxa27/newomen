@@ -3,27 +3,35 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { Card } from '@/components/shared/ui/card';
 import { Button } from '@/components/shared/ui/button';
 import { Menu, X } from 'lucide-react';
+import { useUserRole } from '@/hooks/features/auth/useUserRole';
 
-const adminNavItems = [
-  { name: 'Analytics', path: '/admin/analytics' },
-  { name: 'Agents', path: '/admin/agents' },
-  { name: 'AI Providers', path: '/admin/ai-providers' },
-  { name: 'AI Config', path: '/admin/ai-config' },
-  { name: 'AI Prompts', path: '/admin/ai-prompts' },
-  { name: 'AI Assessments', path: '/admin/ai-assessments' },
-  { name: 'Voice Training', path: '/admin/voice-training' },
-  { name: 'Live Sessions', path: '/admin/sessions-live' },
-  { name: 'Session History', path: '/admin/sessions-history' },
-  { name: 'User Management', path: '/admin/user-management' },
-  { name: 'Wellness Library', path: '/admin/wellness-library' },
-  { name: 'Content Management', path: '/admin/content-management' },
-  { name: 'Gamification', path: '/admin/gamification-settings' },
-  { name: 'Branding', path: '/admin/branding' },
-  { name: 'API Settings', path: '/admin/api-settings' },
+const allAdminNavItems = [
+  { name: 'Analytics', path: '/admin/analytics', permission: 'canViewAnalytics' },
+  { name: 'Agents', path: '/admin/agents', permission: 'canManageAIProviders' },
+  { name: 'AI Providers', path: '/admin/ai-providers', permission: 'canManageAIProviders' },
+  { name: 'AI Config', path: '/admin/ai-config', permission: 'canManageSettings' },
+  { name: 'AI Prompts', path: '/admin/ai-prompts', permission: 'canManageSettings' },
+  { name: 'AI Assessments', path: '/admin/ai-assessments', permission: 'canManageAssessments' },
+  { name: 'Voice Training', path: '/admin/voice-training', permission: 'canManageAIProviders' },
+  { name: 'Live Sessions', path: '/admin/sessions-live', permission: 'canViewLiveSessions' },
+  { name: 'Session History', path: '/admin/sessions-history', permission: 'canViewHistory' },
+  { name: 'User Management', path: '/admin/user-management', permission: 'canManageUsers' },
+  { name: 'Wellness Library', path: '/admin/wellness-library', permission: 'canManageContent' },
+  { name: 'Content Management', path: '/admin/content-management', permission: 'canManageContent' },
+  { name: 'Gamification', path: '/admin/gamification-settings', permission: 'canManageCommunity' },
+  { name: 'Branding', path: '/admin/branding', permission: 'canManageSettings' },
+  { name: 'API Settings', path: '/admin/api-settings', permission: 'canManageAPIs' },
 ];
 
 const AdminLayout: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { permissions } = useUserRole();
+
+  // Filter navigation items based on user permissions
+  const adminNavItems = allAdminNavItems.filter(item => {
+    if (!permissions) return false;
+    return permissions[item.permission as keyof typeof permissions] === true;
+  });
 
   return (
     <div className="app-page-shell flex min-h-screen flex-col md:flex-row">

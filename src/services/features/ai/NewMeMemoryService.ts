@@ -177,6 +177,42 @@ export class NewMeMemoryService {
   }
 
   /**
+   * End a conversation and calculate duration
+   */
+  async endConversation(conversationId: string): Promise<boolean> {
+    try {
+      // Get the conversation start time
+      const { data: conversation, error: fetchError } = await supabase
+        .from('newme_conversations')
+        .select('started_at')
+        .eq('id', conversationId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const startTime = new Date(conversation.started_at);
+      const endTime = new Date();
+      const durationSeconds = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
+
+      // Update the conversation with end time and duration
+      const { error: updateError } = await supabase
+        .from('newme_conversations')
+        .update({
+          ended_at: endTime.toISOString(),
+          duration_seconds: durationSeconds
+        })
+        .eq('id', conversationId);
+
+      if (updateError) throw updateError;
+
+      return true;
+    } catch (error) {
+      console.error('Error ending conversation:', error);
+      return false;
+    }
+  }
+
+  /**
    * Get messages for a conversation
    */
   async getMessages(conversationId: string, limit?: number): Promise<NewMeMessage[]> {

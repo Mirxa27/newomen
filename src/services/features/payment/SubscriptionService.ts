@@ -9,20 +9,14 @@ import { logError, logInfo } from "@/lib/logging";
 
 export interface SubscriptionPlan {
   id: string;
-  tier_name: string;
-  display_name: string;
-  monthly_price: number;
-  yearly_price: number;
+  name: string;
   description: string;
+  price: number;
+  currency: string;
+  minutes_included: number;
   features: string[];
-  max_meditations: number;
-  max_affirmations: number;
-  max_habits: number;
-  has_podcasts: boolean;
-  has_buddy_system: boolean;
-  has_community_events: boolean;
-  has_ad_free: boolean;
   is_active: boolean;
+  sort_order: number;
 }
 
 export interface UserSubscription {
@@ -92,7 +86,7 @@ class SubscriptionService {
         .from("subscription_plans")
         .select("*")
         .eq("is_active", true)
-        .order("monthly_price", { ascending: true });
+        .order("price", { ascending: true });
 
       if (error) throw error;
       return data || [];
@@ -466,6 +460,46 @@ class SubscriptionService {
     } catch (error) {
       logError(`Error tracking subscription usage for user ${userId}`, error as Error);
     }
+  }
+
+  /**
+   * Format minutes into human readable time
+   */
+  formatMinutes(minutes: number): string {
+    if (!minutes || minutes < 0) {
+      return '0 minutes';
+    }
+    
+    if (minutes < 60) {
+      return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+    }
+    
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    
+    if (remainingMinutes === 0) {
+      return `${hours} hour${hours !== 1 ? 's' : ''}`;
+    }
+    
+    return `${hours} hour${hours !== 1 ? 's' : ''} ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}`;
+  }
+
+  /**
+   * Get cost per minute for a subscription plan
+   */
+  getCostPerMinute(plan: SubscriptionPlan): number {
+    if (plan.monthly_price === 0) return 0;
+    // This needs to be updated based on the actual plan structure
+    // For now, assuming plans have a minutes_included field
+    const minutesIncluded = (plan as any).minutes_included || 100;
+    return plan.monthly_price / minutesIncluded;
+  }
+
+  /**
+   * Get subscription plans (alias for compatibility)
+   */
+  async getPlans(): Promise<SubscriptionPlan[]> {
+    return this.getSubscriptionPlans();
   }
 }
 

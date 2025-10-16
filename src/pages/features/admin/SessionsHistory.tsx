@@ -45,11 +45,14 @@ type AnalyticsData = {
 export default function SessionsHistory() {
   const { permissions, loading: roleLoading } = useUserRole();
 
-  // Redirect if user doesn't have permission
+  // Restrict access to admin users with canViewHistory permission
   useEffect(() => {
-    if (!roleLoading && !permissions?.canViewHistory) {
-      toast.error("You don't have permission to view session history");
-      window.location.href = '/admin/analytics';
+    if (!roleLoading) {
+      // Allow users with canViewHistory permission (admins/superadmins)
+      if (!permissions?.canViewHistory) {
+        toast.error("Access denied. Only admins can view user conversations and activities.");
+        window.location.href = '/admin/analytics';
+      }
     }
   }, [permissions, roleLoading]);
 
@@ -96,59 +99,77 @@ export default function SessionsHistory() {
 
   const loadSessions = async () => {
     try {
+      // Load NewMe conversations (which have the real data) instead of empty legacy sessions
+      // Load without JOIN to avoid schema cache issues, then load user profiles separately
       let query = supabase
-        .from("sessions")
-        .select(`
-          *,
-          user_profiles!inner(nickname, email, avatar_url, subscription_tier),
-          agents(name)
-        `, { count: 'exact' });
+        .from("newme_conversations")
+        .select("*", { count: 'exact' });
 
-      // Apply filters
-      if (statusFilter !== "all") {
-        query = query.eq("status", statusFilter);
-      }
-
+      // Apply date filters  
       if (dateRange.start) {
-        query = query.gte("start_ts", dateRange.start);
+        query = query.gte("started_at", dateRange.start);
       }
 
       if (dateRange.end) {
-        query = query.lte("start_ts", dateRange.end + "T23:59:59");
+        query = query.lte("started_at", dateRange.end + "T23:59:59");
       }
 
       const { data, error, count } = await query
-        .order("start_ts", { ascending: false })
+        .order("started_at", { ascending: false })
         .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
 
       if (error) throw error;
 
-      // Load message counts for each session
-      const sessionsWithMessageCounts = await Promise.all(
-        (data || []).map(async (session) => {
-          const { count: messageCount } = await supabase
-            .from("messages")
-            .select("*", { count: 'exact', head: true })
-            .eq("session_id", session.id);
+      // Load user profiles separately for each conversation
+      const userIds = [...new Set((data || []).map(conv => conv.user_id).filter(Boolean))];
+      const userProfiles = new Map();
+      
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("user_profiles")
+          .select("id, nickname, email, avatar_url, subscription_tier")
+          .in("id", userIds);
+        
+        (profiles || []).forEach(profile => {
+          userProfiles.set(profile.id, profile);
+        });
+      }
 
-          return {
-            ...session,
-            message_count: messageCount || 0
-          } as SessionHistoryRow;
-        })
-      );
+      // For users without profiles, create a basic profile entry
+      (data || []).forEach(conv => {
+        if (conv.user_id && !userProfiles.has(conv.user_id)) {
+          userProfiles.set(conv.user_id, {
+            id: conv.user_id,
+            nickname: "Anonymous",
+            email: null,
+            avatar_url: null,
+            subscription_tier: "discovery"
+          });
+        }
+      });
 
-      setSessions(sessionsWithMessageCounts as SessionHistoryRow[]);
-      if (!count) return; // If we have no legacy sessions, don't update totalItems
+      // Transform NewMe conversations to look like sessions for display  
+      const transformedSessions = (data || []).map((conversation) => ({
+        id: conversation.id,
+        user_id: conversation.user_id,
+        start_ts: conversation.started_at,
+        end_ts: conversation.ended_at,
+        status: conversation.ended_at ? 'ended' : 'active',
+        duration_seconds: conversation.duration_seconds,
+        message_count: conversation.message_count || 0,
+        user_profiles: userProfiles.get(conversation.user_id) || null,
+        agents: { name: 'NewMe Assistant' }, // All conversations are with NewMe
+        cost_usd: 0, // NewMe conversations don't have cost tracking yet
+        tokens_used: 0
+      }));
 
-      setTotalItems(count);
+      setSessions(transformedSessions as SessionHistoryRow[]);
+      if (count !== null) setTotalItems(count);
     } catch (error) {
-      console.error("Error loading legacy sessions:", error);
+      console.error("Error loading sessions:", error);
       toast.error("Failed to load session history");
     } finally {
-      if (newMeConversations.length === 0) {
-        setLoading(false); // Only set loading to false if we haven't loaded newMeConversations
-      }
+      setLoading(false);
     }
   };
 
@@ -156,10 +177,7 @@ export default function SessionsHistory() {
     try {
       let query = supabase
         .from("newme_conversations")
-        .select(`
-          *,
-          user_profiles!inner(nickname, email, avatar_url, subscription_tier)
-        `, { count: 'exact' });
+        .select("*", { count: 'exact' });
 
       // Apply date filters
       if (dateRange.start) {
@@ -202,40 +220,47 @@ export default function SessionsHistory() {
 
   const loadAnalytics = async () => {
     try {
-      // Get total sessions count
-      const { count: totalSessions, error: sessionsError } = await supabase
+      // Get comprehensive analytics including both sessions and NewMe conversations
+      const [sessionsResult, newMeResult, messagesResult, newMeMessagesResult] = await Promise.all([
+        supabase.from("sessions").select("*", { count: 'exact', head: true }),
+        supabase.from("newme_conversations").select("*", { count: 'exact', head: true }),
+        supabase.from("messages").select("*", { count: 'exact', head: true }),
+        supabase.from("newme_messages").select("*", { count: 'exact', head: true })
+      ]);
+
+      if (sessionsResult.error) throw sessionsResult.error;
+      if (newMeResult.error) throw newMeResult.error;
+      if (messagesResult.error) throw messagesResult.error;
+      if (newMeMessagesResult.error) throw newMeMessagesResult.error;
+
+      // Get detailed session statistics
+      const { data: sessionStats } = await supabase
         .from("sessions")
-        .select("*", { count: 'exact', head: true });
+        .select("duration_seconds, status");
 
-      if (sessionsError) throw sessionsError;
+      const { data: newMeStats } = await supabase
+        .from("newme_conversations")
+        .select("duration_seconds, started_at, ended_at");
 
-      // Get total messages count
-      const { count: totalMessages, error: messagesError } = await supabase
-        .from("messages")
-        .select("*", { count: 'exact', head: true });
+      const totalSessions = (sessionsResult.count || 0) + (newMeResult.count || 0);
+      const totalMessages = (messagesResult.count || 0) + (newMeMessagesResult.count || 0);
 
-      if (messagesError) throw messagesError;
+      // Calculate durations
+      const sessionDuration = sessionStats?.reduce((acc, curr) => acc + (curr.duration_seconds || 0), 0) || 0;
+      const newMeDuration = newMeStats?.reduce((acc, curr) => acc + (curr.duration_seconds || 0), 0) || 0;
+      const totalDuration = sessionDuration + newMeDuration;
+      const avgDuration = totalSessions > 0 ? totalDuration / totalSessions : 0;
 
-      // Get session statistics
-      const { data: sessionStats, error: statsError } = await supabase
-        .from("sessions")
-        .select("duration_seconds, status")
-        .not("duration_seconds", "is", null);
-
-      if (statsError) throw statsError;
-
-      const avgDuration = sessionStats?.length
-        ? sessionStats.reduce((acc, curr) => acc + (curr.duration_seconds || 0), 0) / sessionStats.length
-        : 0;
-
-      const activeSessions = sessionStats?.filter(s => s.status === "active").length || 0;
+      // Calculate session statuses
+      const activeSessions = (sessionStats?.filter(s => s.status === "active").length || 0) +
+                           (newMeStats?.filter(s => !s.ended_at).length || 0);
       const completedSessions = sessionStats?.filter(s => s.status === "completed").length || 0;
 
       setAnalytics({
-        totalSessions: totalSessions || 0,
-        totalMessages: totalMessages || 0,
+        totalSessions,
+        totalMessages,
         avgDuration,
-        avgMessagesPerSession: totalSessions ? (totalMessages || 0) / totalSessions : 0,
+        avgMessagesPerSession: totalSessions ? totalMessages / totalSessions : 0,
         activeSessions,
         completedSessions
       });
@@ -244,40 +269,28 @@ export default function SessionsHistory() {
     }
   };
 
-  const loadConversation = async (sessionId: string, isNewMe = false) => {
+  const loadConversation = async (sessionId: string, isNewMe = true) => {
     try {
-      if (isNewMe) {
-        // Load from newme_messages
-        const { data, error } = await supabase
-          .from("newme_messages")
-          .select("*")
-          .eq("conversation_id", sessionId)
-          .order("timestamp", { ascending: true });
+      // Since we're now loading NewMe conversations, always load from newme_messages
+      const { data, error } = await supabase
+        .from("newme_messages")
+        .select("*")
+        .eq("conversation_id", sessionId)
+        .order("timestamp", { ascending: true });
 
-        if (error) throw error;
-        setConversationMessages(data as NewMeMessageRow[] || []);
-      } else {
-        // Load from legacy messages
-        const { data, error } = await supabase
-          .from("messages")
-          .select("*")
-          .eq("session_id", sessionId)
-          .order("ts", { ascending: true });
-
-        if (error) throw error;
-        setConversationMessages(data as MessageHistoryRow[] || []);
-      }
+      if (error) throw error;
+      setConversationMessages(data as NewMeMessageRow[] || []);
     } catch (error) {
       console.error("Error loading conversation:", error);
-      toast.error("Failed to load conversation");
+      toast.error("Failed to load conversation history");
     }
   };
 
-  const viewConversation = async (session: SessionHistoryRow | NewMeConversationRow, isNewMe = false) => {
+  const viewConversation = async (session: SessionHistoryRow | NewMeConversationRow, isNewMe = true) => {
     setSelectedSession(session);
-    setIsNewMeConversation(isNewMe);
+    setIsNewMeConversation(true); // Always NewMe since we're loading NewMe conversations
     setViewingConversation(true);
-    await loadConversation(session.id, isNewMe);
+    await loadConversation(session.id, true);
   };
 
   const downloadTranscript = () => {
@@ -483,7 +496,7 @@ export default function SessionsHistory() {
                                 {session.user_profiles?.nickname || "Anonymous"}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {session.user_profiles?.email}
+                                {session.user_profiles?.email || `User ID: ${session.user_id?.slice(0, 8)}...`}
                               </div>
                             </div>
                           </div>
@@ -562,7 +575,7 @@ export default function SessionsHistory() {
                                 {conversation.user_profiles?.nickname || "Anonymous"}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {conversation.user_profiles?.email}
+                                {conversation.user_profiles?.email || `User ID: ${conversation.user_id?.slice(0, 8)}...`}
                               </div>
                             </div>
                           </div>

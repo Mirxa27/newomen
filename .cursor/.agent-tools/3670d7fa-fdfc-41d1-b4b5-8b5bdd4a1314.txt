@@ -1,0 +1,80 @@
+════════════════════════════════════════════════════════════════
+🚀 PRODUCTION BUILD & DEPLOYMENT
+════════════════════════════════════════════════════════════════
+
+Step 1️⃣  Clean Build
+dist/assets/APISettings-5MQwDLzM.js                    31.85 kB │ gzip:   4.76 kB                                                                               
+dist/assets/CouplesChallengeChat-BidqJwHP.js           34.85 kB │ gzip:   7.29 kB                                                                               
+dist/assets/AIAssessmentManagement-DZWoRFZY.js         35.60 kB │ gzip:   5.26 kB                                                                               
+dist/assets/Analytics-Bxa6I3kg.js                      37.05 kB │ gzip:   4.48 kB                                                                               
+dist/assets/AccountSettings-Bd_zrsW8.js                38.28 kB │ gzip:   5.55 kB                                                                               
+dist/assets/AIAgentBrowserPage-BNYdmS34.js             41.73 kB │ gzip:   5.73 kB                                                                               
+dist/assets/Onboarding-CYCWtOXQ.js                     44.24 kB │ gzip:   6.13 kB                                                                               
+dist/assets/SessionsHistory-FmAU-9dz.js                46.32 kB │ gzip:   6.67 kB                                                                               
+dist/assets/Profile-CK1WlFor.js                        48.28 kB │ gzip:  11.37 kB                                                                               
+dist/assets/ContentManagement-BLhAkzOG.js              48.36 kB │ gzip:   5.82 kB                                                                               
+dist/assets/Assessment-BMGpc5Jy.js                     61.50 kB │ gzip:   9.10 kB                                                                               
+dist/assets/Community-CC5sUDen.js                      72.12 kB │ gzip:  11.75 kB                                                                               
+dist/assets/Chat-_Oszu6vu.js                           73.96 kB │ gzip:  17.90 kB                                                                               
+dist/assets/WellnessHub-DGdyl3v2.js                   103.10 kB │ gzip:  16.25 kB                                                                               
+dist/assets/ui-vendor-CDtVGQIU.js                     144.19 kB │ gzip:  47.09 kB                                                                               
+dist/assets/react-vendor-DNg8V-Dy.js                  346.49 kB │ gzip: 108.02 kB                                                                               
+dist/assets/UnifiedAIManagement-HFVxsmZC.js           412.78 kB │ gzip:  48.88 kB                                                                               
+dist/assets/charts-DbmPzxPf.js                        448.01 kB │ gzip: 119.20 kB                                                                               
+dist/assets/index-mpLuIrFE.js                         472.41 kB │ gzip: 132.93 kB                                                                               
+✓ built in 6.29s
+
+Step 2️⃣  Verify Build
+✓ Build successful
+Like du but more intuitive
+
+Usage: dust [OPTIONS] [PATH]...
+
+Arguments:
+  [PATH]...  Input files or directories
+
+Options:
+  -d, --depth <DEPTH>              Depth to show
+  -T, --threads <THREADS>          Number of threads to use
+      --config <FILE>              Specify a config file to use
+  -n, --number-of-lines <NUMBER>   Number of lines of output to show. (Default is terminal_height - 10)                                                         
+  -p, --full-paths                 Subdirectories will not have their path shortened                                                                            
+  -X, --ignore-directory <PATH>    Exclude any file or directory with this path
+  -I, --ignore-all-in-file <FILE>  Exclude any file or directory with a regex matching that listed in this file, the file entries will be added to the ignore regexs provided by --invert_filter                                                
+  -L, --dereference-links          dereference sym links - Treat sym links as directories and go into them                                                      
+  -x, --limit-filesystem           Only count the files and directories on the same filesystem as the supplied directory                                        
+  -s, --apparent-size              Use file length instead of blocks
+  -r, --reverse                    Print tree upside down (biggest highest)
+  -c, --no-colors                  No colors will be printed (Useful for commands like: watch)                                                                  
+  -C, --force-colors               Force colors print
+  -b, --no-percent-bars            No percent bars or percentages will be displayed                                                                             
+  -B, --bars-on-right              percent bars moved to right side of screen
+  -z, --min-size <MIN_SIZE>        Minimum size file to include in output
+  -R, --screen-reader              For screen readers. Removes bars. Adds new column: depth level (May want to use -p too for full path)                        
+      --skip-total                 No total row will be displayed
+  -f, --filecount                  Directory 'size' is number of child files instead of disk size                                                               
+  -i, --ignore-hidden              Do not display hidden files
+  -v, --invert-filter <REGEX>      Exclude filepaths matching this regex. To ignore png files type: -v "\.png$"                                                 
+  -e, --filter <REGEX>             Only include filepaths matching this regex. For png files type: -e "\.png$"                                                  
+  -t, --file-types                 show only these file types
+  -w, --terminal-width <WIDTH>     Specify width of output overriding the auto detection of terminal width                                                      
+  -P, --no-progress                Disable the progress indication
+      --print-errors               Print path with errors
+  -D, --only-dir                   Only directories will be displayed
+  -F, --only-file                  Only files will be displayed. (Finds your largest files)                                                                     
+  -o, --output-format <FORMAT>     Changes output display size. si will print sizes in powers of 1000. b k m g t kb mb gb tb will print the whole tree in that size [possible values: si, b, k, m, g, t, kb, mb, gb, tb]                        
+  -S, --stack-size <STACK_SIZE>    Specify memory to use as stack size - use if you see: 'fatal runtime error: stack overflow' (default low memory=1048576, high memory=1073741824)                                                             
+  -j, --output-json                Output the directory tree as json to the current directory                                                                   
+  -M, --mtime <MTIME>              +/-n matches files modified more/less than n days ago , and n matches files modified exactly n days ago, days are rounded down.That is +n => (−∞, curr−(n+1)), n => [curr−(n+1), curr−n), and -n => (𝑐𝑢𝑟𝑟−𝑛, +∞)                                                                             
+  -A, --atime <ATIME>              just like -mtime, but based on file access time                                                                              
+  -y, --ctime <CTIME>              just like -mtime, but based on file change time                                                                              
+      --files0-from <FILES0_FROM>  run dust on NUL-terminated file names specified in file; if argument is -, then read names from standard input               
+      --collapse <COLLAPSE>        Keep these directories collapsed
+  -m, --filetime <FILETIME>        Directory 'size' is max filetime of child files instead of disk size. while a/c/m for last accessed/changed/modified time [possible values: a, c, m]                                                         
+  -h, --help                       Print help (see more with '--help')
+  -V, --version                    Print version
+
+Step 3️⃣  Build Statistics
+Permissions Size User          Date Modified Name
+.rw-r--r--  7.0k abdullahmirxa 16 Oct 05:25  dist/assets/index-DK85VZSI.js
+.rw-r--r--  472k abdullahmirxa 16 Oct 05:25  dist/assets/index-mpLuIrFE.js

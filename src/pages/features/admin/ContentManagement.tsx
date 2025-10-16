@@ -150,6 +150,13 @@ export default function ContentManagement() {
     setGeneratingAssessment(true);
     try {
       // Call Supabase edge function to generate assessment with AI
+      console.log('Calling ai-content-builder with data:', {
+        topic: assessmentFormData.title,
+        type: 'assessment',
+        isPublic: assessmentFormData.is_public === 'public',
+        context: `${assessmentFormData.description}. Category: ${assessmentFormData.category}. Difficulty: ${assessmentFormData.difficulty_level}. ${assessmentFormData.ai_prompt ? `Custom instructions: ${assessmentFormData.ai_prompt}` : ''}`,
+      });
+
       const { data, error } = await supabase.functions.invoke('ai-content-builder', {
         body: {
           topic: assessmentFormData.title,
@@ -159,7 +166,12 @@ export default function ContentManagement() {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
+      }
+
+      console.log('Edge function response:', data);
 
       // Map visibility option to is_public
       const isPublic = assessmentFormData.is_public === 'public';
@@ -182,13 +194,56 @@ export default function ContentManagement() {
         order: q.order || 0,
       }));
 
+      // Get current user ID for created_by field
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Map form values to database constraint values
+      const typeMapping: Record<string, string> = {
+        'personality': 'assessment',
+        'cognitive': 'quiz',
+        'emotional': 'assessment',
+        'behavioral': 'challenge'
+      };
+
+      const difficultyMapping: Record<string, string> = {
+        'easy': 'easy',
+        'medium': 'medium', 
+        'hard': 'hard',
+        'expert': 'expert',
+        'intermediate': 'medium', // AI returns 'intermediate', map to 'medium'
+        'beginner': 'easy', // AI might return 'beginner', map to 'easy'
+        'advanced': 'hard' // AI might return 'advanced', map to 'hard'
+      };
+
+      const mappedType = typeMapping[assessmentFormData.assessment_type] || 'assessment';
+      
+      console.log('Type mapping debug:', {
+        assessmentType: assessmentFormData.assessment_type,
+        mappedType,
+        typeMappingKeys: Object.keys(typeMapping)
+      });
+      // Use AI response difficulty if available, otherwise use form value
+      const aiDifficulty = data.difficulty || assessmentFormData.difficulty_level;
+      const mappedDifficulty = difficultyMapping[aiDifficulty] || 'medium';
+
+      console.log('Mapped values:', {
+        originalType: assessmentFormData.assessment_type,
+        mappedType,
+        aiDifficulty: data.difficulty,
+        originalDifficulty: assessmentFormData.difficulty_level,
+        mappedDifficulty
+      });
+
       // Insert the generated assessment into the database
       const { error: insertError } = await supabase.from("assessments_enhanced").insert({
         title: data.title || assessmentFormData.title,
         description: data.description || assessmentFormData.description || null,
         category: assessmentFormData.category,
-        type: assessmentFormData.assessment_type,
-        difficulty_level: assessmentFormData.difficulty_level,
+        type: mappedType,
+        difficulty_level: mappedDifficulty,
         questions: questions,
         scoring_rubric: {
           passing_score: 70,
@@ -196,6 +251,9 @@ export default function ContentManagement() {
         },
         is_public: isPublic,
         is_active: true,
+        created_by: user.id,
+        ai_generated: true,
+        generation_prompt: assessmentFormData.ai_prompt || null,
       });
 
       if (insertError) throw insertError;
@@ -308,7 +366,7 @@ export default function ContentManagement() {
                       <TableRow key={assessment.id}>
                         <TableCell className="font-medium">{assessment.title}</TableCell>
                         <TableCell>{assessment.type}</TableCell>
-                        <TableCell>{Array.isArray(assessment.questions) ? assessment.questions.length : 0}</TableCell>
+                        <TableCell>{Array.isArray(assessment.questions) ? assessment.questions.length : (typeof assessment.questions === 'object' && assessment.questions !== null ? Object.keys(assessment.questions).length : 0)}</TableCell>
                         <TableCell>
                           <Badge variant={getVisibilityBadge(assessment.is_public ? 'public' : 'members_only').variant}>
                             {getVisibilityBadge(assessment.is_public ? 'public' : 'members_only').label}
@@ -437,7 +495,7 @@ export default function ContentManagement() {
                       <div className="space-y-2">
                         <p className="text-sm font-medium">Questions:</p>
                         <ul className="list-disc list-inside space-y-1">
-                          {Array.isArray(challenge.questions) ? (challenge.questions as string[]).map((question, idx) => <li key={`q-${idx}`} className="text-sm text-muted-foreground">{question}</li>) : null}
+                          {Array.isArray(challenge.questions) ? (challenge.questions as any[]).map((question, idx) => <li key={`q-${idx}`} className="text-sm text-muted-foreground">{typeof question === 'string' ? question : question.question || question.text || 'Question'}</li>) : null}
                         </ul>
                       </div>
                     </CardContent>

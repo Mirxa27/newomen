@@ -64,12 +64,54 @@ export function useChat() {
   const [audioLevel, setAudioLevel] = useState(0);
   const chatRef = useRef<RealtimeChat | null>(null);
   const durationInterval = useRef<NodeJS.Timeout>();
+  const inactivityTimer = useRef<NodeJS.Timeout>();
+  const lastActivityRef = useRef<number>(Date.now());
   const conversationIdRef = useRef<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Reset inactivity timer when there's activity
+  const resetInactivityTimer = useCallback(() => {
+    lastActivityRef.current = Date.now();
+    if (inactivityTimer.current) {
+      clearTimeout(inactivityTimer.current);
+    }
+    
+    // Set timer for 2 minutes (120,000 ms) of inactivity
+    inactivityTimer.current = setTimeout(async () => {
+      if (isConnected && conversationIdRef.current) {
+        console.log('Auto-ending conversation due to 2 minutes of inactivity');
+        // End conversation directly without calling endConversation to avoid circular dependency
+        chatRef.current?.disconnect();
+        setIsConnected(false);
+        setIsSpeaking(false);
+        setIsRecording(false);
+        if (durationInterval.current) clearInterval(durationInterval.current);
+        if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+
+        const activeConversationId = conversationIdRef.current;
+        if (activeConversationId) {
+          void newMeMemoryService.updateConversation(activeConversationId, { 
+            ended_at: new Date().toISOString(), 
+            duration_seconds: duration, 
+            message_count: messages.length 
+          });
+          conversationIdRef.current = null;
+        }
+
+        toast({ 
+          title: "Session Auto-Ended", 
+          description: "Conversation ended due to 2 minutes of inactivity" 
+        });
+      }
+    }, 120000); // 2 minutes
+  }, [isConnected, duration, messages.length, toast]);
+
   const handleMessage = useCallback((event: ChatEvent) => {
     console.log('Event from AI:', event.type);
+    
+    // Reset inactivity timer on any activity
+    resetInactivityTimer();
 
     switch (event.type) {
       case 'response.text.delta':
@@ -108,7 +150,7 @@ export function useChat() {
         toast({ title: "Error", description: event.error?.message || "An error occurred", variant: "destructive" });
         break;
     }
-  }, [toast]);
+  }, [toast, resetInactivityTimer]);
 
   const setupConversation = async (user: User) => {
     const [profileRes, memoryContext] = await Promise.all([
@@ -218,6 +260,9 @@ export function useChat() {
       if (durationInterval.current) clearInterval(durationInterval.current);
       durationInterval.current = setInterval(() => setDuration(prev => prev + 1), 1000);
 
+      // Start inactivity timer
+      resetInactivityTimer();
+
       toast({ title: "Connected", description: "Your conversation with NewMe has started" });
     } catch (error) {
       if (conversationIdRef.current) {
@@ -258,6 +303,7 @@ export function useChat() {
     setIsSpeaking(false);
     setIsRecording(false);
     if (durationInterval.current) clearInterval(durationInterval.current);
+    if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
 
     const activeConversationId = conversationIdRef.current;
     if (activeConversationId) {
@@ -280,27 +326,34 @@ export function useChat() {
       if (conversationIdRef.current) {
         void newMeMemoryService.addMessage({ conversation_id: conversationIdRef.current, role: 'user', content: text });
       }
+      // Reset inactivity timer on text message
+      resetInactivityTimer();
     } catch (error) {
       toast({ title: "Error", description: "Failed to send message", variant: "destructive" });
     }
-  }, [toast]);
+  }, [toast, resetInactivityTimer]);
 
   const toggleRecording = useCallback(() => {
     const newRecordingState = !isRecording;
     chatRef.current?.toggleRecording(newRecordingState);
     setIsRecording(newRecordingState);
-  }, [isRecording]);
+    // Reset inactivity timer on recording toggle
+    resetInactivityTimer();
+  }, [isRecording, resetInactivityTimer]);
 
   const toggleSpeakerMute = useCallback(() => {
     const newMuteState = !isSpeakerMuted;
     chatRef.current?.toggleSpeakerMute(newMuteState);
     setIsSpeakerMuted(newMuteState);
-  }, [isSpeakerMuted]);
+    // Reset inactivity timer on speaker mute toggle
+    resetInactivityTimer();
+  }, [isSpeakerMuted, resetInactivityTimer]);
 
   useEffect(() => {
     return () => {
       chatRef.current?.disconnect();
       if (durationInterval.current) clearInterval(durationInterval.current);
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
     };
   }, []);
 

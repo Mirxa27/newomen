@@ -89,7 +89,7 @@ export function useUserProfile(options: UseUserProfileOptions = {}) {
         .select(`
           status,
           ai_analysis,
-          assessments (
+          assessments_enhanced (
             category
           )
         `)
@@ -101,9 +101,9 @@ export function useUserProfile(options: UseUserProfileOptions = {}) {
       }
       
       const scoresByCategory = data.reduce((acc, attempt) => {
-        if (attempt.ai_analysis && attempt.assessments) {
+        if (attempt.ai_analysis && attempt.assessments_enhanced) {
           const score = (attempt.ai_analysis as Record<string, unknown>)?.score;
-          const category = (attempt.assessments as Record<string, unknown>)?.category;
+          const category = (attempt.assessments_enhanced as Record<string, unknown>)?.category;
           if (typeof score === 'number' && category) {
             if (!acc[category]) {
               acc[category] = { totalScore: 0, count: 0 };

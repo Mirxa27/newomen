@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
-import fs from 'fs';
-import path from 'path';
+
+// Note: fs and path are only available in Node.js environment
+// They are conditionally imported in FileTransport constructor
 
 // Log levels
 export enum LogLevel {
@@ -291,13 +292,22 @@ export class FileTransport implements LogTransport {
 
   constructor(private config: Required<LoggerConfig>) {
     if (typeof window === 'undefined') {
-      // Node.js environment
-      const logDir = path.dirname(this.config.filePath);
-      if (!fs.existsSync(logDir)) {
-        fs.mkdirSync(logDir, { recursive: true });
-      }
+      // Node.js environment - dynamically import fs and path
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const fs = require('fs');
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const path = require('path');
+        
+        const logDir = path.dirname(this.config.filePath);
+        if (!fs.existsSync(logDir)) {
+          fs.mkdirSync(logDir, { recursive: true });
+        }
 
-      this.writeStream = fs.createWriteStream(this.config.filePath, { flags: 'a' });
+        this.writeStream = fs.createWriteStream(this.config.filePath, { flags: 'a' });
+      } catch (error) {
+        console.warn('FileTransport: fs module not available, file logging disabled');
+      }
     }
   }
 

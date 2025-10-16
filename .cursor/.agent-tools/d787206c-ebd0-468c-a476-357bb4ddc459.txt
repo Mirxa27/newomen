@@ -1,0 +1,33 @@
+[main 2187b95] 🔧 Fix: ESLint warning in button component exports - fast refresh optimization                                                                   
+ 140 files changed, 8930 insertions(+), 1790 deletions(-)
+ create mode 100644 .cursor/.agent-tools/241a6fba-9ca8-4f1d-9bce-2cdc29a5ada3.txt                                                                               
+ create mode 100644 .cursor/.agent-tools/2fdab490-e20d-40e6-8253-f324339341d8.txt                                                                               
+ create mode 100644 .cursor/.agent-tools/32b952d8-9e4d-46ed-a993-b1be08407df0.txt                                                                               
+ create mode 100644 .cursor/.agent-tools/48d20c0b-0325-4ebf-a7c5-5811a3136df8.txt                                                                               
+ create mode 100644 .cursor/.agent-tools/621c4dac-c836-4cb9-9949-a7ab835f0e5b.txt                                                                               
+ create mode 100644 .cursor/.agent-tools/661e8aa4-99a3-4b38-857a-c21cd533ca66.txt                                                                               
+ create mode 100644 .cursor/.agent-tools/d1661b4c-a389-4afe-bcba-896097a5bf56.txt                                                                               
+ create mode 100644 .cursor/.agent-tools/dbaa94ab-d27f-4da2-97cb-1688d5f9b036.txt                                                                               
+ create mode 100644 .cursor/.agent-tools/e99c5f09-b2ec-4610-990c-10607b8acd3e.txt                                                                               
+ create mode 100644 .cursor/.agent-tools/fabbdece-7f57-4421-900d-307a42de35ac.txt                                                                               
+ mode change 100644 => 100755 deploy-web.sh
+ create mode 100644 netlify.toml
+ create mode 100644 src/components/features/community/CommunityFeed.tsx
+ create mode 100644 src/components/features/dashboard/LifeBalanceChart.tsx
+ create mode 100644 src/components/features/wellness/Affirmations.tsx
+ create mode 100644 src/components/features/wellness/AudioLibrary.tsx
+ create mode 100644 src/components/features/wellness/CardReading.tsx
+ create mode 100644 src/components/features/wellness/Diaries.tsx
+ create mode 100644 src/components/features/wellness/HabitTracker.tsx
+ create mode 100644 src/components/features/wellness/MeditationRecipes.tsx
+ create mode 100644 src/hooks/features/community/useCommunityPost.ts
+ create mode 100644 src/pages/features/community/PostPage.tsx
+ create mode 100644 src/services/features/user/UserPreferencesService.ts
+ create mode 100644 src/services/features/wellness/AudioService.ts
+ create mode 100644 src/services/features/wellness/MeditationRecipeService.ts
+ create mode 100644 supabase/functions/delete-user/index.ts
+ create mode 100644 supabase/functions/export-user-data/index.ts
+ delete mode 100644 supabase/migrations/20251009000000_add_frontend_name_to_user_profiles.sql                                                                   
+ delete mode 100644 supabase/migrations/20251009000001_add_frontend_name_to_user_profiles.sql                                                                   
+ rename supabase/migrations/{20251012100000_fix_zai_key_retrieval.sql => 20251012100001_fix_zai_key_retrieval.sql} (58%)                                        
+ create mode 100644 supabase/migrations/20251016000000_add_preferences_to_user_profiles.sql                                                                     

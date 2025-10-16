@@ -48,7 +48,7 @@ export const RolePermissions: Record<UserRole, UserPermissions> = {
     canManageAPIs: false,
     canViewAnalytics: false,
     canManageAIProviders: false,
-    canManageAssessments: false,
+    canManageAssessments: true, // Allow access to AI Assessments
   },
   user: {
     canViewHistory: false,

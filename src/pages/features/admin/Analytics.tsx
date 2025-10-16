@@ -63,33 +63,36 @@ export default function Analytics() {
 
   const loadMetrics = async () => {
     try {
-      const [usersData, sessionsData, recentUsersData, recentSessionsData] = await Promise.all([
+      const [usersData, sessionsData, newMeData, recentUsersData, recentSessionsData] = await Promise.all([
         supabase.from("user_profiles").select("id, crystal_balance, created_at"),
         supabase.from("sessions").select("user_id, duration_seconds, cost_usd, start_ts, status"),
+        supabase.from("newme_conversations").select("user_id, duration_seconds, started_at"),
         supabase.from("user_profiles")
           .select("id, nickname, email, subscription_tier, created_at")
           .order("created_at", { ascending: false })
           .limit(10),
-        supabase.from("sessions")
-          .select(`
-            *,
-            user_profiles!inner(nickname, email),
-            agents(name)
-          `)
+        supabase
+          .from("session_analytics")
+          .select("*")
           .order("start_ts", { ascending: false })
           .limit(10)
       ]);
 
       const userRows = (usersData.data ?? []) as Array<Pick<UserProfileRow, "id" | "crystal_balance" | "created_at">>;
       const sessionRows = (sessionsData.data ?? []) as Array<Pick<SessionRow, "user_id" | "duration_seconds" | "cost_usd" | "start_ts" | "status">>;
+      const newMeRows = (newMeData.data ?? []) as Array<{ user_id: string; duration_seconds?: number; started_at: string }>;
       const recentUserRows = (recentUsersData.data ?? []) as Array<Pick<UserProfileRow, "id" | "nickname" | "email" | "subscription_tier" | "created_at">>;
-      const recentSessionRows = (recentSessionsData.data as unknown as SessionWithRelations[]) ?? [];
+      const recentSessionRows = (recentSessionsData.data ?? []) as any[];
 
       const totalUsers = userRows.length;
-      const totalSessions = sessionRows.length;
-      const totalMinutes = Math.floor(
+      const totalSessions = sessionRows.length + newMeRows.length;
+      const totalSessionMinutes = Math.floor(
         sessionRows.reduce((sum, session) => sum + (session.duration_seconds ?? 0), 0) / 60
       );
+      const totalNewMeMinutes = Math.floor(
+        newMeRows.reduce((sum, conv) => sum + (conv.duration_seconds ?? 0), 0) / 60
+      );
+      const totalMinutes = totalSessionMinutes + totalNewMeMinutes;
       const totalCost = sessionRows.reduce((sum, session) => sum + (session.cost_usd ?? 0), 0);
       const totalCrystals = userRows.reduce((sum, user) => sum + (user.crystal_balance ?? 0), 0);
 
@@ -137,9 +140,9 @@ export default function Analytics() {
         durationSeconds: row.duration_seconds ?? null,
         status: row.status ?? null,
         startTimestamp: row.start_ts ?? null,
-        userNickname: row.user_profiles?.nickname ?? null,
-        userEmail: row.user_profiles?.email ?? null,
-        agentName: (row.agents?.name as string) ?? null,
+        userNickname: row.nickname ?? null,
+        userEmail: row.email ?? null,
+        agentName: row.agent_name ?? null,
       }));
 
       setRecentUsers(recentUserEntries);

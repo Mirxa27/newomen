@@ -62,19 +62,6 @@ export default function UnifiedAIManagement() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
 
-  // Initialize AI Provider Manager
-  const initializeAIManager = useCallback(async () => {
-    try {
-      await aiProviderManager.initialize();
-      await loadDashboardData();
-    } catch (error) {
-      console.error('Failed to initialize AI manager:', error);
-      toast.error('Failed to initialize AI management system');
-    } finally {
-      setLoading(false);
-    }
-  }, [loadDashboardData]);
-
   // Load dashboard data
   const loadDashboardData = useCallback(async () => {
     try {
@@ -107,6 +94,19 @@ export default function UnifiedAIManagement() {
       toast.error('Failed to load dashboard data');
     }
   }, []);
+
+  // Initialize AI Provider Manager
+  const initializeAIManager = useCallback(async () => {
+    try {
+      await aiProviderManager.initialize();
+      await loadDashboardData();
+    } catch (error) {
+      console.error('Failed to initialize AI manager:', error);
+      toast.error('Failed to initialize AI management system');
+    } finally {
+      setLoading(false);
+    }
+  }, [loadDashboardData]);
 
   // Handle sync all providers
   const handleSyncAll = async () => {

@@ -1,14 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-export type DailyAffirmation = Database["public"]["Tables"]["daily_affirmations"]["Row"];
+export type DailyAffirmation = Database["public"]["Tables"]["affirmations"]["Row"];
 export type UserAffirmationSettings = Database["public"]["Tables"]["user_affirmation_settings"]["Row"];
 
 export class AffirmationService {
   static async getDailyAffirmations(limit: number = 10) {
     try {
       const { data, error } = await supabase
-        .from("daily_affirmations")
+        .from("affirmations")
         .select("*")
         .eq("is_active", true)
         .order("display_order", { ascending: true })
@@ -43,7 +43,7 @@ export class AffirmationService {
     try {
       // Get a random affirmation for today
       const { data, error } = await supabase
-        .from("daily_affirmations")
+        .from("affirmations")
         .select("*")
         .eq("is_active", true)
         .limit(1);
