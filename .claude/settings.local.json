@@ -11,7 +11,13 @@
       "WebSearch",
       "mcp__desktop-commander__list_directory",
       "Bash(mkdir:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(pod install:*)",
+      "Bash(npx cap sync:*)",
+      "Bash(npx cap add:*)",
+      "Bash(git checkout:*)",
+      "Bash(./scripts/rebuild-ios-project.sh:*)",
+      "Bash(./rebuild-ios.sh:*)"
     ],
     "deny": [],
     "ask": []

@@ -139,15 +139,15 @@ export default function Header() {
             >
               {isScrolled ? (
                 <img 
-                  src="/dist/Newomen icon.svg" 
+                  src="/newomen-logo.png" 
                   alt="Newomen"
-                  className="w-14 h-14 object-contain max-h-full"
+                  className="h-12 w-auto object-contain"
                 />
               ) : (
                 <img 
-                  src="/public/newomen-logo.png" 
+                  src="/newomen-logo.svg" 
                   alt="Newomen"
-                  className="w-26 h-26 object-contain max-h-full"
+                  className="h-16 w-auto object-contain"
                 />
               )}
             </Link>
