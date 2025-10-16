@@ -282,10 +282,38 @@ export class EnhancedConflictResolutionService {
          Object.values(patternImprovement).reduce((a, b) => a + b, 0) / patternTypes.length * 0.3)
       );
 
+      // Calculate emotional recovery time (minutes):
+      // Average time from each detected conflict pattern to the nearest completed exercise
+      let emotionalRecoveryTime = 0;
+      if (patterns && patterns.length > 0 && exercises && exercises.length > 0) {
+        const deltas: number[] = [];
+        for (const p of (patterns as Array<{ detected_at: string }>)) {
+          const detectedAt = new Date((p as any).detected_at).getTime();
+          if (isNaN(detectedAt)) continue;
+
+          // Find the earliest completed exercise after the pattern was detected
+          const completedAfter = (exercises as Array<{ completed_at: string | null }>)
+            .filter((e: any) => e.completed_at)
+            .map((e: any) => new Date(e.completed_at as string).getTime())
+            .filter((t: number) => !isNaN(t) && t >= detectedAt)
+            .sort((a: number, b: number) => a - b);
+
+          if (completedAfter.length > 0) {
+            const deltaMs = completedAfter[0] - detectedAt;
+            // convert ms to minutes with 1 decimal precision
+            deltas.push(deltaMs / 60000);
+          }
+        }
+
+        if (deltas.length > 0) {
+          emotionalRecoveryTime = Math.round((deltas.reduce((a, b) => a + b, 0) / deltas.length) * 10) / 10;
+        }
+      }
+
       return {
         conflictFrequency,
         resolutionSuccessRate,
-        emotionalRecoveryTime: 0, // TODO: Calculate based on timestamps
+        emotionalRecoveryTime,
         communicationImprovement,
         patternImprovement,
         overallScore
