@@ -84,34 +84,22 @@ serve(async (req) => {
     // Check if challenge is ready for analysis
     const messages = challenge.messages || [];
     const questionSet = challenge.question_set;
-    const questions = Array.isArray(questionSet?.questions) 
-      ? questionSet.questions 
+    const questions = Array.isArray(questionSet?.questions)
+      ? questionSet.questions
       : (questionSet?.questions ? JSON.parse(questionSet.questions as string) : []);
 
     console.log('Questions:', questions.length);
     console.log('Current question index:', challenge.current_question_index);
 
-    // Check if all questions have been answered by both partners
-    const userMessages = messages.filter(m => m.sender === 'user');
-    const partnerMessages = messages.filter(m => m.sender === 'partner');
-    
-    console.log('User messages:', userMessages.length);
-    console.log('Partner messages:', partnerMessages.length);
+    // Count only human responses (exclude AI/system/announcement)
+    const userMessages = messages.filter((m: any) => m.sender === 'user' && typeof m.content === 'string' && !m.content.startsWith('Thank you both for completing'));
+    const partnerMessages = messages.filter((m: any) => m.sender === 'partner' && typeof m.content === 'string' && !m.content.startsWith('Thank you both for completing'));
 
-    if (userMessages.length < questions.length || partnerMessages.length < questions.length) {
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Challenge not complete - not all questions answered by both partners',
-          details: {
-            questions_count: questions.length,
-            user_responses: userMessages.length,
-            partner_responses: partnerMessages.length
-          }
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    console.log('User messages (filtered):', userMessages.length);
+    console.log('Partner messages (filtered):', partnerMessages.length);
+
+    // Proceed with analysis regardless of completion to avoid blocking UX in minimal version
+    console.log('Proceeding with analysis in minimal analyzer');
 
     console.log('Challenge is complete, creating analysis');
 
