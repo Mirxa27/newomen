@@ -329,24 +329,50 @@ export class AIConflictResolutionService {
    * Tracks key conflict resolution metrics in the database.
    * @param challengeId The ID of the couples' challenge.
    * @param metrics The metrics to track.
+   * @param userId The ID of the user.
    * @throws {Error} If the database operation fails.
    */
-  async trackConflictResolutionMetrics(challengeId: string, metrics: ConflictResolutionMetrics): Promise<void> {
+  async trackConflictResolutionMetrics(challengeId: string, metrics: ConflictResolutionMetrics, userId: string): Promise<void> {
     try {
-      if (!challengeId) {
-        throw new Error('Challenge ID is required');
+      if (!challengeId || !userId) {
+        throw new Error('Challenge ID and User ID are required');
       }
+
+      // Insert multiple metric records for different metric types
+      const metricInserts = [
+        {
+          challenge_id: challengeId,
+          user_id: userId,
+          metric_type: 'escalation_frequency' as const,
+          value: metrics.conflictFrequency,
+          context: 'Conflict frequency tracking'
+        },
+        {
+          challenge_id: challengeId,
+          user_id: userId,
+          metric_type: 'repair_success_rate' as const,
+          value: metrics.resolutionSuccessRate,
+          context: 'Resolution success rate tracking'
+        },
+        {
+          challenge_id: challengeId,
+          user_id: userId,
+          metric_type: 'conflict_duration' as const,
+          value: metrics.emotionalRecoveryTime,
+          context: 'Emotional recovery time tracking'
+        },
+        {
+          challenge_id: challengeId,
+          user_id: userId,
+          metric_type: 'communication_improvement' as const,
+          value: metrics.communicationImprovement,
+          context: 'Communication improvement tracking'
+        }
+      ];
 
       const { error } = await supabase
         .from('conflict_resolution_metrics')
-        .insert({
-          challenge_id: challengeId,
-          conflict_frequency: metrics.conflictFrequency,
-          resolution_success_rate: metrics.resolutionSuccessRate,
-          emotional_recovery_time: metrics.emotionalRecoveryTime,
-          communication_improvement: metrics.communicationImprovement,
-          created_at: new Date().toISOString(),
-        });
+        .insert(metricInserts);
 
       if (error) {
         throw error;
@@ -381,7 +407,6 @@ export class AIConflictResolutionService {
             strategies: pattern.resolutionStrategies
           }),
           resolution_suggested: false,
-          created_at: new Date().toISOString(),
         });
 
       if (error) {
@@ -416,7 +441,6 @@ export class AIConflictResolutionService {
           status: 'completed',
           exercise_data: JSON.stringify({ completedAt: new Date() }),
           effectiveness_score: effectivenessScore,
-          created_at: new Date().toISOString(),
         });
 
       if (error) {

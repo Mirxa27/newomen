@@ -106,6 +106,190 @@ export type Database = {
         }
         Relationships: []
       }
+      conflict_patterns: {
+        Row: {
+          id: string
+          challenge_id: string
+          pattern_type: 'escalation' | 'defensiveness' | 'stonewalling' | 'criticism' | 'contempt'
+          severity: number
+          detected_at: string
+          trigger_message: string | null
+          context: string | null
+          resolution_suggested: boolean
+          resolved_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          challenge_id: string
+          pattern_type: 'escalation' | 'defensiveness' | 'stonewalling' | 'criticism' | 'contempt'
+          severity: number
+          detected_at?: string
+          trigger_message?: string | null
+          context?: string | null
+          resolution_suggested?: boolean
+          resolved_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          challenge_id?: string
+          pattern_type?: 'escalation' | 'defensiveness' | 'stonewalling' | 'criticism' | 'contempt'
+          severity?: number
+          detected_at?: string
+          trigger_message?: string | null
+          context?: string | null
+          resolution_suggested?: boolean
+          resolved_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conflict_patterns_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "couples_challenges"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      conflict_resolution_exercises: {
+        Row: {
+          id: string
+          challenge_id: string
+          exercise_type: 'active_listening' | 'i_feel_statements' | 'perspective_taking' | 'de_escalation' | 'repair_attempt'
+          status: 'pending' | 'in_progress' | 'completed' | 'skipped'
+          exercise_data: Json
+          user_response: Json | null
+          partner_response: Json | null
+          completed_at: string | null
+          effectiveness_score: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          challenge_id: string
+          exercise_type: 'active_listening' | 'i_feel_statements' | 'perspective_taking' | 'de_escalation' | 'repair_attempt'
+          status?: 'pending' | 'in_progress' | 'completed' | 'skipped'
+          exercise_data: Json
+          user_response?: Json | null
+          partner_response?: Json | null
+          completed_at?: string | null
+          effectiveness_score?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          challenge_id?: string
+          exercise_type?: 'active_listening' | 'i_feel_statements' | 'perspective_taking' | 'de_escalation' | 'repair_attempt'
+          status?: 'pending' | 'in_progress' | 'completed' | 'skipped'
+          exercise_data?: Json
+          user_response?: Json | null
+          partner_response?: Json | null
+          completed_at?: string | null
+          effectiveness_score?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conflict_resolution_exercises_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "couples_challenges"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      conflict_resolution_metrics: {
+        Row: {
+          id: string
+          challenge_id: string
+          user_id: string
+          metric_type: 'escalation_frequency' | 'repair_success_rate' | 'conflict_duration' | 'emotional_regulation' | 'communication_improvement'
+          value: number
+          measured_at: string
+          context: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          challenge_id: string
+          user_id: string
+          metric_type: 'escalation_frequency' | 'repair_success_rate' | 'conflict_duration' | 'emotional_regulation' | 'communication_improvement'
+          value: number
+          measured_at?: string
+          context?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          challenge_id?: string
+          user_id?: string
+          metric_type?: 'escalation_frequency' | 'repair_success_rate' | 'conflict_duration' | 'emotional_regulation' | 'communication_improvement'
+          value?: number
+          measured_at?: string
+          context?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conflict_resolution_metrics_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "couples_challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conflict_resolution_metrics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      conflict_resolution_templates: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          template_type: 'i_feel_statement' | 'active_listening' | 'timeout_request' | 'repair_attempt'
+          template_text: string
+          variables: Json | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          template_type: 'i_feel_statement' | 'active_listening' | 'timeout_request' | 'repair_attempt'
+          template_text: string
+          variables?: Json | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          template_type?: 'i_feel_statement' | 'active_listening' | 'timeout_request' | 'repair_attempt'
+          template_text?: string
+          variables?: Json | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       // Additional tables would be here...
     }
     Views: {

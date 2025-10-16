@@ -1,40 +1,63 @@
-import UIKit
-import Capacitor
-
-class SceneDelegate: UIResponder, UIWindowSceneDelegate {
-
-    var window: UIWindow?
-
-    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
-        guard let windowScene = (scene as? UIWindowScene) else { return }
-        
-        window = UIWindow(windowScene: windowScene)
-        
-        // Configure the Capacitor bridge
-        let bridge = CAPBridgeViewController()
-        bridge.setSourceURL(URL(string: "capacitor://localhost"))
-        
-        window?.rootViewController = bridge
-        window?.makeKeyAndVisible()
+{
+  "appId": "com.newomen.app",
+  "appName": "Newomen",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "launchAutoHide": true,
+      "backgroundColor": "#1a1428",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false,
+      "androidSpinnerStyle": "large",
+      "iosSpinnerStyle": "small",
+      "spinnerColor": "#9b87f5",
+      "splashFullScreen": true,
+      "splashImmersive": true,
+      "layoutName": "launch_screen",
+      "useDialog": true
+    },
+    "StatusBar": {
+      "style": "dark",
+      "backgroundColor": "#1a1428"
+    },
+    "Keyboard": {
+      "resize": "body",
+      "style": "dark",
+      "resizeOnFullScreen": true
+    },
+    "Haptics": {
+      "enabled": true
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon_config_sample",
+      "iconColor": "#9b87f5",
+      "sound": "beep.wav"
     }
-
-    func sceneDidDisconnect(_ scene: UIScene) {
-        // Called as the scene is being released by the system.
-    }
-
-    func sceneDidBecomeActive(_ scene: UIScene) {
-        // Called when the scene has moved from an inactive state to an active state.
-    }
-
-    func sceneWillResignActive(_ scene: UIScene) {
-        // Called when the scene will move from an active state to an inactive state.
-    }
-
-    func sceneWillEnterForeground(_ scene: UIScene) {
-        // Called as the scene transitions from the background to the foreground.
-    }
-
-    func sceneDidEnterBackground(_ scene: UIScene) {
-        // Called as the scene transitions from the foreground to the background.
-    }
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "scrollEnabled": true,
+    "backgroundColor": "#1a1428",
+    "allowsLinkPreview": false,
+    "handleApplicationURL": false
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false,
+    "appendUserAgent": "NewomenMobile",
+    "overrideUserAgent": "NewomenMobile"
+  },
+  "packageClassList": [
+    "HapticsPlugin",
+    "KeyboardPlugin",
+    "LocalNotificationsPlugin",
+    "SplashScreenPlugin",
+    "StatusBarPlugin"
+  ]
 }

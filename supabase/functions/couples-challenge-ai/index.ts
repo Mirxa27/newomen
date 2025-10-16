@@ -1,5 +1,15 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+// @ts-ignore - Supabase Edge Runtime
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// Type declarations for Deno Edge Runtime
+declare global {
+  const Deno: {
+    env: {
+      get(key: string): string | undefined;
+    };
+    serve(handler: (request: Request) => Response | Promise<Response>): void;
+  };
+}
 
 interface AIQuestionGeneration {
   question: string;
@@ -69,46 +79,57 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
-
 const supabase = createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 );
 
-async function callZAI(systemPrompt: string, userPrompt: string, supabaseClient: ReturnType<typeof createClient>, useFastModel: boolean = false): Promise<string> {
+async function callZAI(systemPrompt: string, userPrompt: string, useFastModel: boolean = false): Promise<string> {
   // Use provided API key directly for better performance
   const zaiApiKey = 'b8979b7827034e8ab50df3d09f975ca7.fQUeGKyLX1xtGJgN';
   
   const zaiBaseUrl = 'https://api.z.ai/api/coding/paas/v4';
   const zaiModel = useFastModel ? 'GLM-4.5-Air' : 'GLM-4.6'; // GLM-4.5-Air for fast operations, GLM-4.6 for results
 
-  const response = await fetch(`${zaiBaseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept-Language': 'en-US,en',
-      'Authorization': `Bearer ${zaiApiKey}`
-    },
-    body: JSON.stringify({
-      model: zaiModel,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      temperature: 0.7,
-      max_tokens: 1000,
-      stream: false,
-      response_format: { type: 'json_object' }
-    })
-  });
+  try {
+    const response = await fetch(`${zaiBaseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept-Language': 'en-US,en',
+        'Authorization': `Bearer ${zaiApiKey}`
+      },
+      body: JSON.stringify({
+        model: zaiModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 1000,
+        stream: false,
+        response_format: { type: 'json_object' }
+      })
+    });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Z.AI API error: ${errorText}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Z.AI API error (${response.status}):`, errorText);
+      throw new Error(`Z.AI API error: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    
+    if (!result.choices || !result.choices[0] || !result.choices[0].message) {
+      console.error('Invalid Z.AI response structure:', result);
+      throw new Error('Invalid response structure from Z.AI API');
+    }
+
+    return result.choices[0].message.content;
+  } catch (error) {
+    console.error('Error calling Z.AI API:', error);
+    throw new Error(`Failed to call Z.AI API: ${error.message}`);
   }
-
-  const result = await response.json();
-  return result.choices[0].message.content;
 }
 
 async function generateDynamicQuestion(
@@ -145,8 +166,13 @@ Generate a question that:
 
 Make the question engaging, thought-provoking, and relationship-building.`;
 
-  const result = await callZAI(systemPrompt, userPrompt, supabaseClient, false); // Use GLM-4.6 for result generation
-  return JSON.parse(result);
+  try {
+    const result = await callZAI(systemPrompt, userPrompt, false); // Use GLM-4.6 for result generation
+    return JSON.parse(result);
+  } catch (error) {
+    console.error('Error generating dynamic question:', error);
+    throw new Error(`Failed to generate dynamic question: ${error.message}`);
+  }
 }
 
 async function analyzePartnerQualities(
@@ -194,8 +220,13 @@ Provide psychological analysis including:
 
 Focus on deep psychological insights that will help them understand each other better.`;
 
-  const result = await callZAI(systemPrompt, userPrompt, supabaseClient, false); // Use GLM-4.6 for result generation
-  return JSON.parse(result);
+  try {
+    const result = await callZAI(systemPrompt, userPrompt, false); // Use GLM-4.6 for result generation
+    return JSON.parse(result);
+  } catch (error) {
+    console.error('Error analyzing partner qualities:', error);
+    throw new Error(`Failed to analyze partner qualities: ${error.message}`);
+  }
 }
 
 async function generateQualityApprovalQuestion(
@@ -232,8 +263,13 @@ Create a question that:
 4. Explains why their perspective matters
 5. Encourages open dialogue about the analysis`;
 
-  const result = await callZAI(systemPrompt, userPrompt, supabaseClient, true); // Use GLM-4.5-Air for fast approval questions
-  return JSON.parse(result);
+  try {
+    const result = await callZAI(systemPrompt, userPrompt, true); // Use GLM-4.5-Air for fast approval questions
+    return JSON.parse(result);
+  } catch (error) {
+    console.error('Error generating quality approval question:', error);
+    throw new Error(`Failed to generate quality approval question: ${error.message}`);
+  }
 }
 
 async function generateRealTimeInsight(
@@ -268,8 +304,13 @@ Provide:
 
 Keep it supportive, constructive, and focused on growth.`;
 
-  const result = await callZAI(systemPrompt, userPrompt, supabaseClient, true); // Use GLM-4.5-Air for fast real-time insights
-  return JSON.parse(result);
+  try {
+    const result = await callZAI(systemPrompt, userPrompt, true); // Use GLM-4.5-Air for fast real-time insights
+    return JSON.parse(result);
+  } catch (error) {
+    console.error('Error generating real-time insight:', error);
+    throw new Error(`Failed to generate real-time insight: ${error.message}`);
+  }
 }
 
 async function synthesizeChallengeAnalysis(
@@ -318,11 +359,16 @@ Create a comprehensive analysis that includes:
 
 Make it supportive, actionable, and focused on growth.`;
 
-  const result = await callZAI(systemPrompt, userPrompt, supabaseClient, false); // Use GLM-4.6 for comprehensive analysis
-  return JSON.parse(result);
+  try {
+    const result = await callZAI(systemPrompt, userPrompt, false); // Use GLM-4.6 for comprehensive analysis
+    return JSON.parse(result);
+  } catch (error) {
+    console.error('Error synthesizing challenge analysis:', error);
+    throw new Error(`Failed to synthesize challenge analysis: ${error.message}`);
+  }
 }
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -330,10 +376,18 @@ serve(async (req) => {
   try {
     const operation: AIOperation = await req.json();
     
+    // Validate operation structure
+    if (!operation || !operation.type || !operation.payload) {
+      throw new Error('Invalid operation structure: missing type or payload');
+    }
+    
     let result: unknown;
 
     switch (operation.type) {
       case 'generateDynamicQuestion':
+        if (!operation.payload.previousResponses || !operation.payload.currentContext || operation.payload.challengeProgress === undefined) {
+          throw new Error('Missing required parameters for generateDynamicQuestion');
+        }
         result = await generateDynamicQuestion(
           operation.payload.previousResponses,
           operation.payload.currentContext,
@@ -343,6 +397,9 @@ serve(async (req) => {
         break;
         
       case 'analyzePartnerQualities':
+        if (!operation.payload.userQualities || !operation.payload.partnerQualities) {
+          throw new Error('Missing required parameters for analyzePartnerQualities');
+        }
         result = await analyzePartnerQualities(
           operation.payload.userQualities,
           operation.payload.partnerQualities,
@@ -351,6 +408,9 @@ serve(async (req) => {
         break;
         
       case 'generateQualityApprovalQuestion':
+        if (!operation.payload.userPerspective || !operation.payload.partnerPerspective || !operation.payload.originalQualities) {
+          throw new Error('Missing required parameters for generateQualityApprovalQuestion');
+        }
         result = await generateQualityApprovalQuestion(
           operation.payload.userPerspective,
           operation.payload.partnerPerspective,
@@ -360,6 +420,9 @@ serve(async (req) => {
         break;
         
       case 'generateRealTimeInsight':
+        if (!operation.payload.recentMessages || operation.payload.challengeProgress === undefined) {
+          throw new Error('Missing required parameters for generateRealTimeInsight');
+        }
         result = await generateRealTimeInsight(
           operation.payload.recentMessages,
           operation.payload.challengeProgress,
@@ -368,6 +431,9 @@ serve(async (req) => {
         break;
         
       case 'synthesizeChallengeAnalysis':
+        if (!operation.payload.allResponses) {
+          throw new Error('Missing required parameters for synthesizeChallengeAnalysis');
+        }
         result = await synthesizeChallengeAnalysis(
           operation.payload.allResponses,
           operation.payload.partnerQualities,
