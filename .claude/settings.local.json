@@ -17,7 +17,8 @@
       "Bash(npx cap add:*)",
       "Bash(git checkout:*)",
       "Bash(./scripts/rebuild-ios-project.sh:*)",
-      "Bash(./rebuild-ios.sh:*)"
+      "Bash(./rebuild-ios.sh:*)",
+      "Bash(xcodebuild:*)"
     ],
     "deny": [],
     "ask": []
