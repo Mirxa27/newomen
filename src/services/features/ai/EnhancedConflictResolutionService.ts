@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { aiConflictResolutionService } from './AIConflictResolutionService';
 
 export interface ConflictPattern {
@@ -54,6 +55,20 @@ export class EnhancedConflictResolutionService {
 
   private constructor() {}
 
+  private async rpc<T>(
+    name: string,
+    args: Record<string, unknown>
+  ): Promise<{ data: T | null; error: Error | null }> {
+    const client = supabase as unknown as {
+      rpc: (
+        fn: string,
+        a: Record<string, unknown>
+      ) => Promise<{ data: T | null; error: unknown }>;
+    };
+    const { data, error } = await client.rpc(name, args);
+    return { data, error: (error as Error) ?? null };
+  }
+
   static getInstance(): EnhancedConflictResolutionService {
     if (!EnhancedConflictResolutionService.instance) {
       EnhancedConflictResolutionService.instance = new EnhancedConflictResolutionService();
@@ -73,7 +88,12 @@ export class EnhancedConflictResolutionService {
 
       // Use database function for basic pattern detection
       for (const message of messages) {
-        const { data: patterns, error } = await supabase.rpc('detect_conflict_pattern', {
+        const { data: patterns, error } = await this.rpc<Array<{
+          pattern_type: string;
+          severity: number;
+          trigger_message: string;
+          context: string;
+        }>>('detect_conflict_pattern', {
           challenge_id: challengeId,
           message_content: message.content,
           sender_role: message.sender
@@ -86,9 +106,14 @@ export class EnhancedConflictResolutionService {
 
         if (patterns && patterns.length > 0) {
           for (const pattern of patterns) {
+            const allowedTypes = ['escalation','defensiveness','stonewalling','criticism','contempt'] as const;
+            const narrowedType: ConflictPattern['patternType'] = (allowedTypes as readonly string[]).includes(pattern.pattern_type)
+              ? (pattern.pattern_type as ConflictPattern['patternType'])
+              : 'escalation';
+
             const conflictPattern: ConflictPattern = {
               id: crypto.randomUUID(),
-              patternType: pattern.pattern_type,
+              patternType: narrowedType,
               severity: pattern.severity,
               detectedAt: message.timestamp,
               triggerMessage: pattern.trigger_message,
@@ -138,7 +163,12 @@ export class EnhancedConflictResolutionService {
 
     try {
       // Quick pattern detection
-      const { data: patterns, error } = await supabase.rpc('detect_conflict_pattern', {
+      const { data: patterns, error } = await this.rpc<Array<{
+        pattern_type: string;
+        severity: number;
+        trigger_message: string;
+        context: string;
+      }>>('detect_conflict_pattern', {
         challenge_id: challengeId,
         message_content: newMessage.content,
         sender_role: newMessage.sender
@@ -216,8 +246,8 @@ export class EnhancedConflictResolutionService {
       const { error } = await supabase
         .from('conflict_resolution_exercises')
         .update({
-          user_response: userResponse,
-          partner_response: partnerResponse,
+          user_response: userResponse as unknown as Json,
+          partner_response: partnerResponse as unknown as Json,
           effectiveness_score: effectivenessScore,
           status: 'completed',
           completed_at: new Date().toISOString()
@@ -285,18 +315,20 @@ export class EnhancedConflictResolutionService {
       // Calculate emotional recovery time (minutes):
       // Average time from each detected conflict pattern to the nearest completed exercise
       let emotionalRecoveryTime = 0;
-      if (patterns && patterns.length > 0 && exercises && exercises.length > 0) {
+      const patternsArr = (patterns ?? []) as Array<{ detected_at: string }>;
+      const exercisesArr = (exercises ?? []) as Array<{ completed_at: string | null }>;
+      if (patternsArr.length > 0 && exercisesArr.length > 0) {
         const deltas: number[] = [];
-        for (const p of (patterns as Array<{ detected_at: string }>)) {
-          const detectedAt = new Date((p as any).detected_at).getTime();
+        for (const p of patternsArr) {
+          const detectedAt = new Date(p.detected_at).getTime();
           if (isNaN(detectedAt)) continue;
 
           // Find the earliest completed exercise after the pattern was detected
-          const completedAfter = (exercises as Array<{ completed_at: string | null }>)
-            .filter((e: any) => e.completed_at)
-            .map((e: any) => new Date(e.completed_at as string).getTime())
-            .filter((t: number) => !isNaN(t) && t >= detectedAt)
-            .sort((a: number, b: number) => a - b);
+          const completedAfter = exercisesArr
+            .filter((e) => e.completed_at)
+            .map((e) => new Date(e.completed_at as string).getTime())
+            .filter((t) => !isNaN(t) && t >= detectedAt)
+            .sort((a, b) => a - b);
 
           if (completedAfter.length > 0) {
             const deltaMs = completedAfter[0] - detectedAt;
@@ -421,9 +453,13 @@ export class EnhancedConflictResolutionService {
       id: exercise.id,
       exerciseType: exercise.exercise_type,
       status: exercise.status,
-      exerciseData: exercise.exercise_data,
-      userResponse: exercise.user_response,
-      partnerResponse: exercise.partner_response,
+      exerciseData: exercise.exercise_data as unknown as ConflictExercise['exerciseData'],
+      userResponse: (exercise.user_response && typeof exercise.user_response === 'object' && !Array.isArray(exercise.user_response))
+        ? (exercise.user_response as Record<string, unknown>)
+        : undefined,
+      partnerResponse: (exercise.partner_response && typeof exercise.partner_response === 'object' && !Array.isArray(exercise.partner_response))
+        ? (exercise.partner_response as Record<string, unknown>)
+        : undefined,
       effectivenessScore: exercise.effectiveness_score,
       completedAt: exercise.completed_at
     })) || [];
@@ -525,7 +561,7 @@ export class EnhancedConflictResolutionService {
   }
 
   private async updateConflictResolutionScore(challengeId: string): Promise<void> {
-    const { error } = await supabase.rpc('calculate_conflict_score', {
+    const { error } = await this.rpc<unknown>('calculate_conflict_score', {
       challenge_id: challengeId
     });
 
